@@ -20,7 +20,7 @@ import { SETTINGS_ID, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
 import { generatePosts } from './social'
-import { claimNextAgentTask, enqueueAgentTasks, failAgentTask, finishAgentTask } from './agent-queue'
+import { claimNextAgentTask, deferAgentTask, enqueueAgentTasks, failAgentTask, finishAgentTask } from './agent-queue'
 
 /**
  * The autopilot runs as request-driven work, never as a background timer: a
@@ -733,6 +733,9 @@ export async function runAgentTask(task: AutopilotTask, directive = ''): Promise
 }
 
 export async function processNextQueuedAgentTask(): Promise<{ processed: boolean; task?: string; summary?: string; reason?: string }> {
+  const current = await getSettings()
+  if (current.aiPaused) return { processed: false, reason: 'Operasi dijeda oleh pemilik.' }
+
   const workerId = crypto.randomUUID()
   const job = await claimNextAgentTask(workerId)
   if (!job) return { processed: false, reason: 'Tidak ada tugas antrean yang siap.' }
@@ -740,7 +743,11 @@ export async function processNextQueuedAgentTask(): Promise<{ processed: boolean
   try {
     const result = await runAgentTask(job.task, job.directive)
     if (!result.ok) {
-      await failAgentTask(job.id, workerId, result.summary)
+      if (result.blocked === 'paused' || result.blocked === 'agent-paused') {
+        await deferAgentTask(job.id, workerId)
+      } else {
+        await failAgentTask(job.id, workerId, result.summary)
+      }
       return { processed: true, task: job.task, summary: result.summary }
     }
     await finishAgentTask(job.id, workerId, result.summary)
