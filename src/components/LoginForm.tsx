@@ -26,8 +26,8 @@ export function LoginForm({ needsSetup, restricted }: { needsSetup: boolean; res
         setSaving(false)
         return
       }
-      const next = typeof router.query.next === 'string' ? router.query.next : '/owner'
-      router.replace(next.startsWith('/') ? next : '/owner')
+      const next = typeof router.query.next === 'string' ? router.query.next : '/dashboard'
+      router.replace(next.startsWith('/') ? next : '/dashboard')
     } catch {
       setError('Koneksi terputus. Periksa jaringan lalu coba lagi.')
       setSaving(false)
