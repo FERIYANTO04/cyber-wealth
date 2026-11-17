@@ -356,6 +356,26 @@ export const agentRuns = pgTable('agent_run', {
   finishedAt: timestamp('finished_at'),
 })
 
+export const agentTaskQueue = pgTable('agent_task_queue', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workflowId: text('workflow_id').notNull(),
+  task: text('task').notNull(),
+  agentRole: text('agent_role').notNull(),
+  directive: text('directive').notNull(),
+  status: text('status').notNull().default('queued'), // queued | running | succeeded | failed
+  priority: integer('priority').notNull().default(100),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(2),
+  availableAt: timestamp('available_at').notNull().defaultNow(),
+  lockedAt: timestamp('locked_at'),
+  lockedBy: text('locked_by'),
+  lastError: text('last_error'),
+  resultSummary: text('result_summary'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  finishedAt: timestamp('finished_at'),
+})
+
 export const marketSignals = pgTable('market_signal', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),
