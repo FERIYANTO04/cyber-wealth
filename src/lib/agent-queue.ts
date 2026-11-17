@@ -75,3 +75,13 @@ export async function failAgentTask(id: string, workerId: string, reason: string
     WHERE id = ${id} AND status = 'running' AND locked_by = ${workerId}
   `)
 }
+
+export async function deferAgentTask(id: string, workerId: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE agent_task_queue
+    SET status = 'queued', attempts = GREATEST(attempts - 1, 0),
+        available_at = now() + interval '5 minutes',
+        locked_at = NULL, locked_by = NULL, updated_at = now()
+    WHERE id = ${id} AND status = 'running' AND locked_by = ${workerId}
+  `)
+}
