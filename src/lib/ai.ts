@@ -19,7 +19,8 @@ const MODEL = USE_KIOSAPI
   ? (process.env.KIOSAPI_MODEL || 'openai/gpt-6-astra')
   : (process.env.AI_MODEL || 'openai/gpt-oss-120b')
 // Kiosapi Chat Completions documents a single "model" field.
-// Try the flagship first, then fall back only when that model is unavailable.
+// Try the flagship first. Give each Kiosapi model a bounded attempt so a slow
+// flagship does not consume the entire request budget before fallbacks can run.
 const KIOSAPI_FALLBACK_MODELS = [
   MODEL,
   'openai/gpt-6.1-sol',
@@ -60,7 +61,8 @@ export async function chatWithAi(args: {
     if (remaining <= 1_000) break
 
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), remaining)
+    const attemptBudget = USE_KIOSAPI ? Math.min(remaining, 12_000) : remaining
+    const timer = setTimeout(() => controller.abort(), attemptBudget)
     try {
       const response = await fetch(`${BASE_URL}/chat/completions`, {
         method: 'POST',
@@ -107,7 +109,10 @@ export async function chatWithAi(args: {
       return { ok: true, text, model: body?.model || model }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        lastReason = 'Model AI melewati batas waktu pengujian.'
+        lastReason = `Model ${model} melewati batas waktu percobaan.`
+        // Continue to the next configured Kiosapi model while the shared deadline
+        // still has room. Non-Kiosapi providers keep their single-model behavior.
+        if (USE_KIOSAPI && Date.now() < deadline - 1_000) continue
         break
       }
       lastReason = 'Tidak bisa menghubungi penyedia model AI. Periksa koneksi lalu coba lagi.'
