@@ -152,7 +152,7 @@ async function runCeo(trigger: string) {
 
   let plan: { condition?: string; decision?: string; tasks?: { task: AutopilotTask; directive: string; priority?: number }[]; owner_approval?: string[] } | null = null
   try {
-    const json = outcome.text.match(/\\{[\\s\\S]*\\}/)?.[0]
+    const json = outcome.text.match(/\{[\s\S]*\}/)?.[0]
     if (json) plan = JSON.parse(json)
   } catch {
     plan = null
