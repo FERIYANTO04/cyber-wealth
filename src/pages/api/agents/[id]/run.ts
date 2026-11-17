@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { agents } from '@/lib/db/schema'
 import { getSession } from '@/lib/auth'
 import { runAgentTask } from '@/lib/autopilot'
+import { enqueueAgentTasks } from '@/lib/agent-queue'
 import { TASKS } from '@/lib/labels'
 
 // One agent's task does database work and, when configured, a model call. Only one
@@ -34,12 +35,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   busy.add(id)
   try {
+    if (task !== 'ceo') {
+      const workflowId = crypto.randomUUID()
+      const queued = await enqueueAgentTasks(workflowId, [{
+        task,
+        directive: `Jalankan pekerjaan standar sesuai mandat ${agent.name}. Gunakan hanya data bisnis yang tercatat dan simpan hasil sebagai draf atau laporan untuk ditinjau pemilik.`,
+        priority: 50,
+      }])
+      return res.status(202).json({ ok: true, queued, message: 'Tugas masuk antrean. Worker akan mengambilnya satu per satu.' })
+    }
     const result = await runAgentTask(task)
     if (!result.ok) {
       return res.status(409).json({ error: result.summary, blocked: result.blocked })
     }
-    // The task itself already wrote its own audit entry; logging again here would
-    // double every line in the owner's log.
     return res.status(200).json({ ok: true, summary: result.summary })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui'
