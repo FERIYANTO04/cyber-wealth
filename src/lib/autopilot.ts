@@ -811,9 +811,14 @@ export async function getLastRun() {
 export async function autopilotDue(): Promise<boolean> {
   const current = await getSettings()
   if (current.aiPaused) return false
-  const last = await getLastRun()
-  if (!last) return true
-  return Date.now() - last.startedAt.getTime() > DAY_MS
+  const [lastCeoRun] = await db
+    .select()
+    .from(agentRuns)
+    .where(eq(agentRuns.task, 'ceo'))
+    .orderBy(desc(agentRuns.startedAt))
+    .limit(1)
+  if (!lastCeoRun) return true
+  return Date.now() - lastCeoRun.startedAt.getTime() > DAY_MS
 }
 
 export async function getAgentRuns(limit = 40) {
