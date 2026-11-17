@@ -1,0 +1,1 @@
+ALTER TABLE "order" ALTER COLUMN "provider" SET DEFAULT 'manual_transfer';
