@@ -72,8 +72,7 @@ export function AiChat({ configured, initialTurns }: { configured: boolean; init
       <PanelBody className="gap-block">
         {!configured && (
           <Notice tone="hold">
-            Asisten belum bisa menjawab karena kunci Groq belum ada di server. Isi kuncinya di pengaturan aplikasi
-            lalu terbitkan ulang; pertanyaan Anda tetap tersimpan.
+            Asisten belum bisa menjawab karena kredensial AI Gateway belum tersedia di server. Pertanyaan Anda tetap tersimpan.
           </Notice>
         )}
 
