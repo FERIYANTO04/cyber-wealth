@@ -825,6 +825,7 @@ export async function autopilotDue(): Promise<boolean> {
     .orderBy(desc(agentRuns.startedAt))
     .limit(1)
   if (!lastCeoRun) return true
+  if (lastCeoRun.status === 'running') return false
   return Date.now() - lastCeoRun.startedAt.getTime() > DAY_MS
 }
 
