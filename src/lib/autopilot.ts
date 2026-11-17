@@ -159,17 +159,18 @@ async function runCeo(trigger: string) {
   }
   if (!plan || !Array.isArray(plan.tasks)) {
     const summary = 'AI CEO memberi jawaban yang tidak sesuai format rencana. Tidak ada tugas yang dimasukkan ke antrean.'
-    await finishRun(run.id, 'failed', summary, `${facts}\\n\\nJawaban model ${outcome.model}:\\n${outcome.text}`, 0)
+    await finishRun(run.id, 'failed', summary, `${facts}\n\nJawaban model ${outcome.model}:\n${outcome.text}`, 0)
     await noteAgent('AI CEO', 'Rencana CEO perlu diperbaiki', summary)
     return { summary }
   }
 
   const workflowId = crypto.randomUUID()
-  const queued = await enqueueAgentTasks(workflowId, plan.tasks)
+  const safeTasks = plan.tasks.filter((item) => item && typeof item.task === 'string' && typeof item.directive === 'string')
+  const queued = await enqueueAgentTasks(workflowId, safeTasks)
   const decision = (plan.decision || plan.condition || 'Rencana CEO disusun.').slice(0, 320)
   const summary = `${factualSummary} CEO memasukkan ${queued} tugas spesialis ke antrean. ${decision}`
   const approvals = Array.isArray(plan.owner_approval) ? plan.owner_approval.join('; ') : ''
-  await finishRun(run.id, 'ok', summary, `${facts}\\n\\nRencana model ${outcome.model}:\\n${JSON.stringify(plan, null, 2)}\\n\\nMenunggu persetujuan pemilik: ${approvals || 'Tidak ada tindakan eksternal yang diusulkan.'}`, queued)
+  await finishRun(run.id, 'ok', summary, `${facts}\n\nRencana model ${outcome.model}:\n${JSON.stringify(plan, null, 2)}\n\nMenunggu persetujuan pemilik: ${approvals || 'Tidak ada tindakan eksternal yang diusulkan.'}`, queued)
   await noteAgent('AI CEO', 'Analisis dan arahan kerja CEO diperbarui', summary)
   return { summary }
 }
