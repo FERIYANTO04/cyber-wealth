@@ -20,7 +20,7 @@ import { SETTINGS_ID, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
 import { generatePosts } from './social'
-import { enqueueAgentTasks } from './agent-queue'
+import { claimNextAgentTask, enqueueAgentTasks, failAgentTask, finishAgentTask } from './agent-queue'
 
 /**
  * The autopilot runs as request-driven work, never as a background timer: a
@@ -175,7 +175,7 @@ async function runCeo(trigger: string) {
   return { summary }
 }
 
-async function runResearch(trigger: string) {
+async function runResearch(trigger: string, directive = '') {
   const run = await startRun('AI Market Research', 'research', trigger)
 
   const demand = await db
@@ -233,6 +233,7 @@ async function runResearch(trigger: string) {
         'Anda analis pasar untuk usaha digital kecil di Indonesia. Usulkan peluang yang bisa diuji minggu ini. ' +
         'Jangan mengarang angka pasar, ukuran industri, atau klaim riset. Tulis setiap peluang dalam tiga baris tetap.',
       prompt: [
+        directive ? `Arahan CEO: ${directive}` : '',
         catalog.length > 0
           ? `Katalog saat ini: ${catalog.map((p) => `${p.name} (${p.category}, Rp ${Number(p.priceIdr).toLocaleString('id-ID')}, ${p.status})`).join('; ')}.`
           : 'Katalog masih kosong.',
@@ -290,7 +291,7 @@ async function runResearch(trigger: string) {
   return { summary, created: created + suggested }
 }
 
-async function runProduct(trigger: string) {
+async function runProduct(trigger: string, directive = '') {
   const run = await startRun('AI Product Creator', 'product', trigger)
 
   if (!aiConfigured()) {
@@ -305,6 +306,7 @@ async function runProduct(trigger: string) {
     system:
       'Anda perancang produk digital untuk pasar Indonesia dan internasional. Usulkan SATU produk digital yang realistis dan bisa dibuat hari ini oleh satu orang. Jangan mengarang angka penjualan atau klaim hasil.',
     prompt: [
+      directive ? `Arahan CEO: ${directive}` : '',
       existing.length > 0 ? `Produk yang sudah ada: ${existing.map((p) => p.name).join(', ')}.` : 'Belum ada produk.',
       'Jawab dalam format tepat seperti ini:',
       'JUDUL: <judul produk>',
@@ -373,7 +375,7 @@ async function runProduct(trigger: string) {
   return { summary, created: 2 }
 }
 
-async function runMarketing(trigger: string) {
+async function runMarketing(trigger: string, directive = '') {
   const run = await startRun('AI Marketing', 'marketing', trigger)
 
   const publishedProducts = await db
@@ -427,7 +429,7 @@ async function runMarketing(trigger: string) {
       const outcome = await askAi({
         system:
           'Anda penulis konten pemasaran yang jujur, dalam bahasa yang sama dengan materinya. Jangan menjanjikan hasil, jangan mengarang testimoni, angka penjualan, atau klien.',
-        prompt: material.prompt,
+        prompt: directive ? `${material.prompt}\nArahan CEO: ${directive}` : material.prompt,
         maxTokens: 400,
       })
       if (outcome.ok) {
@@ -474,7 +476,7 @@ async function runMarketing(trigger: string) {
   return { summary, created }
 }
 
-async function runSales(trigger: string) {
+async function runSales(trigger: string, directive = '') {
   const run = await startRun('AI Sales', 'sales', trigger)
 
   // Only leads that are still open and have no draft yet get one, so a repeated run
@@ -502,6 +504,7 @@ async function runSales(trigger: string) {
           system:
             'Anda penulis pesan pendekatan penjualan B2B yang sopan dan jujur. Tulis dalam bahasa yang sama dengan minat calon pelanggan. Jangan mengarang portofolio, klien, harga, atau janji hasil. Maksimal 110 kata, mudah dibaca di ponsel.',
           prompt: [
+            directive ? `Arahan CEO: ${directive}` : '',
             `Calon pelanggan: ${lead.name} (${lead.email})`,
             `Pasar: ${lead.market}`,
             `Kebutuhan yang dicatat: ${lead.interest}`,
@@ -549,7 +552,7 @@ async function runSales(trigger: string) {
   return { summary, created: drafted }
 }
 
-async function runFinance(trigger: string) {
+async function runFinance(trigger: string, directive = '') {
   const run = await startRun('AI Finance', 'finance', trigger)
 
   const since = new Date(Date.now() - 30 * DAY_MS)
@@ -629,7 +632,7 @@ async function runFinance(trigger: string) {
  * content, active subscriptions — and says what those numbers mean. Every figure is a
  * row in the database; nothing is estimated, projected, or invented.
  */
-async function runIntelligence(trigger: string) {
+async function runIntelligence(trigger: string, directive = '') {
   const run = await startRun('AI Business Intelligence', 'intelligence', trigger)
 
   const [paid] = await db
@@ -677,7 +680,7 @@ async function runIntelligence(trigger: string) {
     const outcome = await askAi({
       system:
         'Anda analis bisnis. Hanya gunakan angka yang diberikan. Jangan mengarang angka, tren, atau perkiraan. Tulis 2-3 kalimat dalam Bahasa Indonesia: apa yang tampak bekerja dan satu langkah berikutnya.',
-      prompt: `Data tercatat hari ini: ${facts.join('; ')}.`,
+      prompt: `Data tercatat hari ini: ${facts.join('; ')}. ${directive ? `Arahan CEO: ${directive}` : ''}`,
       maxTokens: 260,
     })
     if (outcome.ok) {
@@ -697,14 +700,14 @@ async function runIntelligence(trigger: string) {
 
 // ── Entry point ───────────────────────────────────────────────────────────
 
-const TASK_RUNNERS: Record<AutopilotTask, () => Promise<{ summary: string }>> = {
-  research: () => runResearch('owner'),
-  sales: () => runSales('owner'),
-  product: () => runProduct('owner'),
-  marketing: () => runMarketing('owner'),
-  finance: () => runFinance('owner'),
+const TASK_RUNNERS: Record<AutopilotTask, (directive?: string) => Promise<{ summary: string }>> = {
+  research: (directive) => runResearch(directive ? 'ceo-queue' : 'owner', directive),
+  sales: (directive) => runSales(directive ? 'ceo-queue' : 'owner', directive),
+  product: (directive) => runProduct(directive ? 'ceo-queue' : 'owner', directive),
+  marketing: (directive) => runMarketing(directive ? 'ceo-queue' : 'owner', directive),
+  finance: (directive) => runFinance(directive ? 'ceo-queue' : 'owner', directive),
   ceo: () => runCeo('owner'),
-  intelligence: () => runIntelligence('owner'),
+  intelligence: (directive) => runIntelligence(directive ? 'ceo-queue' : 'owner', directive),
 }
 
 export type AgentTaskResult = { ok: boolean; summary: string; blocked?: string }
@@ -713,7 +716,7 @@ export type AgentTaskResult = { ok: boolean; summary: string; blocked?: string }
  * Runs one agent's task on its own. Same implementations as the full pass, so what
  * an agent does from its own button is exactly what it does on autopilot.
  */
-export async function runAgentTask(task: AutopilotTask): Promise<AgentTaskResult> {
+export async function runAgentTask(task: AutopilotTask, directive = ''): Promise<AgentTaskResult> {
   const current = await getSettings()
   if (current.aiPaused) {
     return { ok: false, summary: 'Operasi dijeda oleh pemilik.', blocked: 'paused' }
@@ -725,8 +728,28 @@ export async function runAgentTask(task: AutopilotTask): Promise<AgentTaskResult
     return { ok: false, summary: `${agent.name} sedang dijeda.`, blocked: 'agent-paused' }
   }
 
-  const result = await TASK_RUNNERS[task]()
+  const result = await TASK_RUNNERS[task](directive)
   return { ok: true, summary: result.summary }
+}
+
+export async function processNextQueuedAgentTask(): Promise<{ processed: boolean; task?: string; summary?: string; reason?: string }> {
+  const workerId = crypto.randomUUID()
+  const job = await claimNextAgentTask(workerId)
+  if (!job) return { processed: false, reason: 'Tidak ada tugas antrean yang siap.' }
+
+  try {
+    const result = await runAgentTask(job.task, job.directive)
+    if (!result.ok) {
+      await failAgentTask(job.id, workerId, result.summary)
+      return { processed: true, task: job.task, summary: result.summary }
+    }
+    await finishAgentTask(job.id, workerId, result.summary)
+    return { processed: true, task: job.task, summary: result.summary }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Kesalahan agen tidak diketahui'
+    await failAgentTask(job.id, workerId, reason)
+    return { processed: true, task: job.task, reason }
+  }
 }
 
 export type AutopilotResult = {
@@ -746,14 +769,10 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
   }
 
   const outcomes: AutopilotResult['results'] = []
-  const sequence: [AutopilotTask, string, () => Promise<{ summary: string }>][] = [
-    ['ceo', 'Arahan AI CEO', () => runCeo(trigger)],
-    ['research', 'Riset pasar', () => runResearch(trigger)],
-    ['sales', 'Penjualan', () => runSales(trigger)],
-    ['product', 'Produk digital', () => runProduct(trigger)],
-    ['marketing', 'Pemasaran', () => runMarketing(trigger)],
-    ['finance', 'Keuangan', () => runFinance(trigger)],
-    ['intelligence', 'Intelijen bisnis', () => runIntelligence(trigger)],
+  // A full autopilot request now asks only the CEO to create a durable plan.
+  // Specialist work is performed by the queue worker one claimed task per request.
+  const sequence: [AutopilotTask, string, () => Promise<{ summary: string }>] [] = [
+    ['ceo', 'Rencana AI CEO', () => runCeo(trigger)],
   ]
 
   for (const [task, label, fn] of sequence) {
