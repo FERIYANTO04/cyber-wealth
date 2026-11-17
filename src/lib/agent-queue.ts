@@ -39,7 +39,7 @@ export async function claimNextAgentTask(workerId: string): Promise<QueueTask | 
         status = 'queued' AND available_at <= now()
       ) OR (
         status = 'running' AND locked_at < now() - interval '10 minutes'
-      )
+      ) AND attempts < max_attempts
       ORDER BY priority ASC, created_at ASC
       FOR UPDATE SKIP LOCKED
       LIMIT 1
