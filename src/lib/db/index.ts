@@ -7,10 +7,12 @@ const globalForDb = globalThis as unknown as {
   client: ReturnType<typeof postgres>
 }
 
-const databaseUrl = process.env.DATABASE_URL
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is missing. Set DATABASE_URL in Netlify Environment Variables to your Neon PostgreSQL connection string, then redeploy.')
-}
+// Do not throw while Next.js is collecting server-side pages during the image
+// build. Pages that use the database are server-rendered at request time; the
+// production host injects DATABASE_URL before the server starts. The fallback
+// is only to let the module be imported during build and must never be used for
+// a production request (the readiness endpoint rejects a missing DATABASE_URL).
+const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres@127.0.0.1:5432/build-only'
 if (!/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
   throw new Error('DATABASE_URL must be a PostgreSQL connection string beginning with postgres:// or postgresql://.')
 }
