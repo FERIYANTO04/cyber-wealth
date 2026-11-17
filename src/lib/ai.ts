@@ -1,17 +1,19 @@
 /**
  * Shared OpenAI-compatible chat-completions client.
- * Supports Neon AI Gateway first, with Groq kept as a backward-compatible fallback.
+ * Supports Kiosapi when configured, then Neon AI Gateway and Groq fallback.
  */
 import { isPlaceholder } from './env'
 
 const KIOSAPI_API_KEY = process.env.KIOSAPI_API_KEY || ''
 const USE_KIOSAPI = Boolean(KIOSAPI_API_KEY)
-).replace(/\/+$/, '')
+const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
 const BASE_URL = (
   USE_KIOSAPI
     ? (process.env.KIOSAPI_BASE_URL || 'https://api.kiosapi.id/v1')
-    : process.env.AI_BASE_URL ||
-      (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
+    : (
+        process.env.AI_BASE_URL ||
+        (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
+      )
 ).replace(/\/+$/, '')
 const MODEL = USE_KIOSAPI
   ? (process.env.KIOSAPI_MODEL || 'meta/llama-3.1-8b')
@@ -39,7 +41,7 @@ export async function chatWithAi(args: {
   temperature?: number
 }): Promise<AiOutcome> {
   if (isPlaceholder(API_KEY) || !API_KEY) {
-    return { ok: false, reason: 'Model AI belum terhubung. Kredensial AI Gateway belum tersedia di server.' }
+    return { ok: false, reason: 'Model AI belum terhubung. Kredensial penyedia AI belum tersedia di server.' }
   }
 
   const controller = new AbortController()
@@ -68,10 +70,10 @@ export async function chatWithAi(args: {
     if (!response.ok) {
       const detail = body?.error?.message
       if (response.status === 401 || response.status === 403) {
-        return { ok: false, reason: 'Kredensial atau akses model AI Gateway ditolak. Periksa izin dan kredit akun.' }
+        return { ok: false, reason: 'Kredensial atau akses model AI ditolak. Periksa izin dan kredit akun.' }
       }
       if (response.status === 429) {
-        return { ok: false, reason: 'Batas pemakaian model AI tercapai. Periksa kredit atau kuota, lalu coba lagi.' }
+        return { ok: false, reason: 'Batas pemakaian model AI tercapai. Periksa kredit atau kuota akun.' }
       }
       return { ok: false, reason: `Penyedia model AI menolak permintaan (${response.status})${detail ? `: ${detail}` : ''}.` }
     }
