@@ -10,7 +10,7 @@ import type { PageWithFrame } from '@/lib/frame'
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const session = await getSession(ctx.req)
-  if (session) return { redirect: { destination: '/owner', permanent: false } }
+  if (session) return { redirect: { destination: '/dashboard', permanent: false } }
   const rows = await db.select({ n: sql<number>`count(*)::int` }).from(ownerAccount)
   return { props: { needsSetup: (rows[0]?.n ?? 0) === 0, restricted: isRestricted() } }
 }
