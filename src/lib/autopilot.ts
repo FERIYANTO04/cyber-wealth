@@ -726,13 +726,13 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
 
   const outcomes: AutopilotResult['results'] = []
   const sequence: [AutopilotTask, string, () => Promise<{ summary: string }>][] = [
+    ['ceo', 'Arahan AI CEO', () => runCeo(trigger)],
     ['research', 'Riset pasar', () => runResearch(trigger)],
     ['sales', 'Penjualan', () => runSales(trigger)],
     ['product', 'Produk digital', () => runProduct(trigger)],
     ['marketing', 'Pemasaran', () => runMarketing(trigger)],
     ['finance', 'Keuangan', () => runFinance(trigger)],
     ['intelligence', 'Intelijen bisnis', () => runIntelligence(trigger)],
-    ['ceo', 'Strategi harian', () => runCeo(trigger)],
   ]
 
   for (const [task, label, fn] of sequence) {
