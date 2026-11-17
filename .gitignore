@@ -1,0 +1,9 @@
+node_modules
+.next/
+.next-smoke/
+out/
+.env
+*.db
+*.db-journal
+*.db-shm
+*.db-wal

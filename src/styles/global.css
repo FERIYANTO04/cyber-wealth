@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fonts come from next/font in src/pages/_app.tsx. Every colour the app shows is a
+   token below, mapped in tailwind.config.mjs. */
+
+:root {
+  color-scheme: light;
+  --canvas: 247 248 246;
+  --surface: 255 255 255;
+  --ink: 15 27 42;
+  --ink-quiet: 90 102 114;
+  --line: 226 230 226;
+  --signal: 20 116 111;
+  --signal-soft: 230 242 240;
+  --hold: 183 121 31;
+  --hold-soft: 248 239 224;
+  --danger: 168 62 62;
+}
+
+html,
+body {
+  background-color: rgb(var(--canvas));
+  color: rgb(var(--ink));
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ledger figures line up in columns. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--signal));
+  outline-offset: 2px;
+}
+
+/* Backs the swatches on /styles-check (dev only). */
+:where([data-check]) {
+  background-color: #dc2626;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Named type styles — the shared type treatment for headings, eyebrows and ledger
+   figures. Sizes are still applied with utilities at each use. */
+@layer components {
+  .heading-tight {
+    @apply font-display font-semibold tracking-tight text-ink;
+  }
+  .eyebrow {
+    @apply font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-ink-quiet;
+  }
+  .field {
+    @apply w-full rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-quiet/70 focus:border-signal focus:outline-none focus:ring-1 focus:ring-signal;
+  }
+  .nav-quiet {
+    @apply flex min-h-10 items-center gap-2.5 rounded-md px-2.5 text-[0.8125rem] text-ink-quiet transition-colors hover:bg-canvas hover:text-ink;
+  }
+  .brand-mark {
+    @apply flex size-7 items-center justify-center rounded-sm bg-ink font-mono text-[0.6875rem] font-semibold text-canvas;
+  }
+  .tag-shape {
+    @apply inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[0.625rem] uppercase tracking-wider;
+  }
+  .panel-frame {
+    @apply rounded-lg border border-line bg-surface;
+  }
+  .panel-head-row {
+    @apply flex items-center justify-between gap-3 border-b border-line px-page py-block;
+  }
+  .inset-box {
+    @apply rounded-md border border-line bg-canvas;
+  }
+  .copy-value {
+    @apply message-box min-w-0 flex-1 overflow-x-auto bg-canvas font-mono text-[0.6875rem] text-signal;
+  }
+  .message-box {
+    @apply rounded-md border border-line px-2.5 py-2 text-xs leading-relaxed;
+  }
+  .inset-block {
+    @apply rounded-md border border-line bg-canvas px-page py-block;
+  }
+  /* The quiet numeric footnote under a list row: a metric, a market, a timestamp. */
+  .figure-note {
+    @apply tnum font-mono text-[0.6875rem] text-ink-quiet;
+  }
+  .go-arrow {
+    @apply text-ink-quiet transition-transform group-hover:-translate-y-0.5 group-hover:text-signal;
+  }
+  .link-quiet {
+    @apply text-xs text-ink-quiet transition-colors hover:text-ink;
+  }
+  .link-signal {
+    @apply text-[0.8125rem] font-medium text-signal hover:underline;
+  }
+  .item-title {
+    @apply truncate text-[0.8125rem] font-medium text-ink;
+  }
+  .row-line {
+    @apply flex flex-col gap-2 px-page py-block sm:flex-row sm:items-center sm:justify-between;
+  }
+  .list-lead {
+    @apply text-xs leading-relaxed text-ink-quiet;
+  }
+  .note-text {
+    @apply text-xs leading-relaxed text-ink;
+  }
+  .action-row {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .warn-icon {
+    @apply mt-0.5 size-3.5 shrink-0 text-hold;
+  }
+  .value-line {
+    @apply font-mono text-[0.6875rem] leading-relaxed text-ink;
+  }
+  .chip {
+    @apply min-h-8 rounded-full border px-3 text-xs font-medium transition-colors;
+  }
+  .filter-bar {
+    @apply flex flex-col gap-2 border-b border-line px-page py-block;
+  }
+  .panel-foot {
+    @apply border-t border-line px-page py-block;
+  }
+  .figure {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+    @apply font-mono font-semibold text-ink;
+  }
+}

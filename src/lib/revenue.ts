@@ -1,0 +1,203 @@
+import { and, desc, eq, sql } from 'drizzle-orm'
+import { db } from './db'
+import { activity, customers, orders, products, transactions } from './db/schema'
+import { sendEmail, notifyOwner } from './email'
+import { orderPaidEmail } from './messages'
+import { fileUrl } from './storage'
+import { money } from './format'
+
+/** Storefront-visible products: published and authored by the owner, never sample rows. */
+export async function getStoreProducts() {
+  return db
+    .select()
+    .from(products)
+    .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+    .orderBy(desc(products.createdAt))
+}
+
+export async function getPublishedProduct(slug: string) {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.slug, slug), eq(products.status, 'published'), eq(products.dataSource, 'live')))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+export async function getOwnerProducts() {
+  return db.select().from(products).orderBy(desc(products.createdAt))
+}
+
+export async function getProductById(id: string) {
+  const rows = await db.select().from(products).where(eq(products.id, id)).limit(1)
+  return rows[0] ?? null
+}
+
+export async function getOrders(limit = 60) {
+  return db.select().from(orders).orderBy(desc(orders.createdAt)).limit(limit)
+}
+
+export async function getOrderByToken(token: string) {
+  const rows = await db.select().from(orders).where(eq(orders.accessToken, token)).limit(1)
+  return rows[0] ?? null
+}
+
+export type OrderCounts = { paid: number; pending: number; revenueIdr: number }
+
+export async function getOrderCounts(): Promise<OrderCounts> {
+  const [paid] = await db
+    .select({ n: sql<number>`count(*)::int`, total: sql<number>`coalesce(sum(${orders.amountIdr}), 0)::bigint` })
+    .from(orders)
+    .where(and(eq(orders.status, 'paid'), eq(orders.dataSource, 'live')))
+  const [pending] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(orders)
+    .where(and(eq(orders.status, 'pending'), eq(orders.dataSource, 'live')))
+  return {
+    paid: paid?.n ?? 0,
+    pending: pending?.n ?? 0,
+    revenueIdr: Number(paid?.total ?? 0),
+  }
+}
+
+/** A short, readable order code the buyer can quote back to the owner. */
+export function orderCode(): string {
+  const stamp = new Date().toISOString().slice(2, 10).replace(/-/g, '')
+  const tail = crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()
+  return `CWA-${stamp}-${tail}`
+}
+
+/**
+ * Records money that a payment provider has officially confirmed.
+ *
+ * Idempotent: it only moves an order out of `pending`, so a webhook replayed five
+ * times still books exactly one payment. Nothing else in the app may insert a
+ * revenue row for an order.
+ */
+export async function settlePaidOrder(args: {
+  orderId: string
+  provider: string
+  paidAmountIdr?: number
+  invoiceId?: string
+}): Promise<{ settled: boolean; order: typeof orders.$inferSelect | null }> {
+  const [current] = await db.select().from(orders).where(eq(orders.id, args.orderId)).limit(1)
+  if (!current) return { settled: false, order: null }
+
+  if (current.status === 'paid') return { settled: false, order: current }
+
+  const amount = args.paidAmountIdr && args.paidAmountIdr > 0 ? args.paidAmountIdr : Number(current.amountIdr)
+
+  const [updated] = await db
+    .update(orders)
+    .set({
+      status: 'paid',
+      paidAt: new Date(),
+      invoiceId: args.invoiceId ?? current.invoiceId,
+      deliveryCount: sql`${orders.deliveryCount} + 1`,
+    })
+    .where(and(eq(orders.id, current.id), eq(orders.status, 'pending')))
+    .returning()
+
+  // Lost the race with another callback for the same payment — that one booked it.
+  if (!updated) {
+    const [fresh] = await db.select().from(orders).where(eq(orders.id, current.id)).limit(1)
+    return { settled: false, order: fresh ?? current }
+  }
+
+  await db
+    .insert(customers)
+    .values({ email: updated.buyerEmail.toLowerCase(), name: updated.buyerName })
+    .onConflictDoNothing()
+
+  const [buyer] = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(eq(customers.email, updated.buyerEmail.toLowerCase()))
+    .limit(1)
+
+  if (buyer && !updated.customerId) {
+    await db.update(orders).set({ customerId: buyer.id }).where(eq(orders.id, updated.id))
+  }
+
+  await db.insert(transactions).values({
+    kind: 'revenue',
+    category: 'Produk digital',
+    description: `${updated.productName} — pesanan ${updated.code}`,
+    amountIdr: amount,
+    dataSource: 'live',
+  })
+
+  await db.insert(activity).values({
+    actor: 'system',
+    action: 'Pembayaran terverifikasi',
+    detail: `${updated.productName} — ${updated.code}, ${updated.buyerEmail}. Dikonfirmasi oleh ${args.provider}.`,
+    dataSource: 'live',
+  })
+
+  await deliverOrder(updated, amount, args.provider)
+
+  return { settled: true, order: updated }
+}
+
+/**
+ * Sends what the buyer paid for. Runs only from `settlePaidOrder`, so an unpaid order
+ * never produces a delivery email. A missing email provider is recorded, not faked.
+ */
+async function deliverOrder(order: typeof orders.$inferSelect, amount: number, provider: string) {
+  const [product] = await db.select().from(products).where(eq(products.id, order.productId)).limit(1)
+  const downloadUrl =
+    product?.fileKey && (await fileUrl(product.fileKey, { download: product.fileName ?? undefined }).catch(() => null))
+
+  const email = orderPaidEmail({
+    code: order.code,
+    productName: order.productName,
+    buyerName: order.buyerName,
+    amountIdr: amount,
+    link: `/pesanan/${order.accessToken}`,
+    downloadUrl: downloadUrl ?? null,
+    deliverableNote: product?.deliverableNote ?? null,
+  })
+
+  await sendEmail({
+    to: order.buyerEmail,
+    subject: email.subject,
+    body: email.body,
+    kind: 'order-paid',
+    relatedType: 'order',
+    relatedId: order.code,
+  })
+
+  await notifyOwner({
+    subject: `Pesanan lunas: ${order.productName}`,
+    lines: [
+      `${order.buyerName} (${order.buyerEmail}) membayar ${money(amount)}.`,
+      `Pesanan: ${order.code}`,
+      `Dikonfirmasi oleh ${provider}.`,
+    ],
+    kind: 'owner-order-paid',
+    relatedId: order.code,
+  }).catch(() => undefined)
+}
+
+/**
+ * A refund for a one-off product order.
+ *
+ * Money only moves after the provider accepts the request, and only then does the order
+ * become `refunded` and an expense row appear. An order without a provider invoice, or
+ * an account without a payment key, is refused in plain words rather than half-done.
+ */
+export async function refundOrder(args: {
+  orderId: string
+  note?: string
+}): Promise<{ ok: true; refundId: string | null } | { ok: false; error: string }> {
+  const [order] = await db.select().from(orders).where(eq(orders.id, args.orderId)).limit(1)
+  if (!order) return { ok: false, error: 'Pesanan ini tidak ditemukan.' }
+  if (order.status === 'refunded') return { ok: false, error: 'Pesanan ini sudah dikembalikan dananya.' }
+  if (order.status !== 'paid') {
+    return { ok: false, error: 'Hanya pesanan yang sudah lunas yang bisa dikembalikan. Pesanan ini belum dibayar.' }
+  }
+  return {
+    ok: false,
+    error: 'Refund transfer bank manual tidak dapat dikirim otomatis oleh website. Lakukan transfer dari rekening bank, lalu catat refund setelah dana benar-benar dikirim.',
+  }
+}

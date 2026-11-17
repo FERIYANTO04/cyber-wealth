@@ -1,0 +1,22 @@
+CREATE TABLE "social_post" (
+	"id" text PRIMARY KEY NOT NULL,
+	"channel" text NOT NULL,
+	"market" text DEFAULT 'Indonesia' NOT NULL,
+	"body" text NOT NULL,
+	"headline" text NOT NULL,
+	"source_type" text DEFAULT 'general' NOT NULL,
+	"source_id" text,
+	"source_name" text,
+	"source" text DEFAULT 'template' NOT NULL,
+	"status" text DEFAULT 'draft' NOT NULL,
+	"publish_state" text DEFAULT 'not_connected' NOT NULL,
+	"publish_note" text,
+	"external_id" text,
+	"external_url" text,
+	"scheduled_at" timestamp,
+	"approved_at" timestamp,
+	"decision_note" text,
+	"data_source" text DEFAULT 'live' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);

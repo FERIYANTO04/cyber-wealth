@@ -1,0 +1,1 @@
+ALTER TABLE "plan" ADD COLUMN "service_id" text;
