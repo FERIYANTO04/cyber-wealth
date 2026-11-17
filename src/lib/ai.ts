@@ -52,77 +52,66 @@ export async function chatWithAi(args: {
     return { ok: false, reason: 'Model AI belum terhubung. Kredensial penyedia AI belum tersedia di server.' }
   }
 
-  const deadline = Date.now() + (USE_KIOSAPI ? 24_000 : 35_000)
-  const models = USE_KIOSAPI ? KIOSAPI_FALLBACK_MODELS : [MODEL]
+  const deadline = Date.now() + (USE_KIOSAPI ? 29_000 : 35_000)
   let lastReason = 'Penyedia model AI tidak mengembalikan jawaban.'
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), Math.max(1_000, deadline - Date.now()))
 
-  for (const model of models) {
-    const remaining = deadline - Date.now()
-    if (remaining <= 1_000) break
-
-    const controller = new AbortController()
-    const attemptBudget = USE_KIOSAPI ? Math.min(remaining, 12_000) : remaining
-    const timer = setTimeout(() => controller.abort(), attemptBudget)
-    try {
-      const response = await fetch(`${BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify({
-          model,
-          temperature: args.temperature ?? 0.4,
-          max_tokens: args.maxTokens ?? 1200,
-          messages: args.messages,
-        }),
-        signal: controller.signal,
-        cache: 'no-store',
-      })
-
-      const body = (await response.json().catch(() => null)) as
-        | { model?: string; choices?: { message?: { content?: string | null }; finish_reason?: string }[]; error?: { message?: string } }
-        | null
-
-      if (!response.ok) {
-        const detail = body?.error?.message
-        if (response.status === 401 || response.status === 403) {
-          return { ok: false, reason: 'Kredensial atau akses model AI ditolak. Periksa izin akun.' }
-        }
-        if (response.status === 402) {
-          return { ok: false, reason: 'Saldo Kiosapi tidak mencukupi untuk model berbayar.' }
-        }
-        lastReason = `Model ${model} gagal (${response.status})${detail ? `: ${detail}` : ''}.`
-        // Try the next configured model for unavailable models, rate limits, or upstream errors.
-        if (![400, 404, 429, 502, 503, 504].includes(response.status)) break
-        continue
-      }
-
-      const choice = body?.choices?.[0]
-      const text = choice?.message?.content?.trim()
-      if (!text) {
-        lastReason = choice?.finish_reason === 'length'
-          ? 'Jawaban model AI terpotong sebelum selesai. Coba pertanyaan yang lebih singkat.'
-          : `Model ${model} tidak mengembalikan jawaban.`
-        continue
-      }
-      return { ok: true, text, model: body?.model || model }
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        lastReason = `Model ${model} melewati batas waktu percobaan.`
-        // Continue to the next configured Kiosapi model while the shared deadline
-        // still has room. Non-Kiosapi providers keep their single-model behavior.
-        if (USE_KIOSAPI && Date.now() < deadline - 1_000) continue
-        break
-      }
-      lastReason = 'Tidak bisa menghubungi penyedia model AI. Periksa koneksi lalu coba lagi.'
-      break
-    } finally {
-      clearTimeout(timer)
+  try {
+    const payload = {
+      ...(USE_KIOSAPI
+        ? { models: KIOSAPI_FALLBACK_MODELS }
+        : { model: MODEL }),
+      temperature: args.temperature ?? 0.4,
+      max_tokens: args.maxTokens ?? 1200,
+      messages: args.messages,
     }
-  }
+    const response = await fetch(`${BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+      cache: 'no-store',
+    })
 
-  return { ok: false, reason: lastReason }
+    const body = (await response.json().catch(() => null)) as
+      | { model?: string; choices?: { message?: { content?: string | null }; finish_reason?: string }[]; error?: { message?: string } }
+      | null
+
+    if (!response.ok) {
+      const detail = body?.error?.message
+      if (response.status === 401 || response.status === 403) {
+        return { ok: false, reason: 'Kredensial atau akses model AI ditolak. Periksa izin akun.' }
+      }
+      if (response.status === 402) {
+        return { ok: false, reason: 'Saldo Kiosapi tidak mencukupi untuk model berbayar.' }
+      }
+      lastReason = `Penyedia model AI gagal (${response.status})${detail ? `: ${detail}` : ''}.`
+      return { ok: false, reason: lastReason }
+    }
+
+    const choice = body?.choices?.[0]
+    const text = choice?.message?.content?.trim()
+    if (!text) {
+      lastReason = choice?.finish_reason === 'length'
+        ? 'Jawaban model AI terpotong sebelum selesai. Coba pertanyaan yang lebih singkat.'
+        : 'Penyedia model AI tidak mengembalikan isi jawaban.'
+      return { ok: false, reason: lastReason }
+    }
+    return { ok: true, text, model: body?.model || (USE_KIOSAPI ? 'model Kiosapi (fallback otomatis)' : MODEL) }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      lastReason = 'Penyedia AI melewati batas waktu 29 detik. Permintaan fallback Kiosapi belum selesai.'
+    } else {
+      lastReason = 'Tidak bisa menghubungi penyedia model AI. Periksa koneksi lalu coba lagi.'
+    }
+    return { ok: false, reason: lastReason }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export async function askAi(args: { system: string; prompt: string; maxTokens?: number }): Promise<AiOutcome> {
