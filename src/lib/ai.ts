@@ -4,13 +4,21 @@
  */
 import { isPlaceholder } from './env'
 
-const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
+const KIOSAPI_API_KEY = process.env.KIOSAPI_API_KEY || ''
+const USE_KIOSAPI = Boolean(KIOSAPI_API_KEY)
+const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\\/+$/, '')
 const BASE_URL = (
-  process.env.AI_BASE_URL ||
-  (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
-).replace(/\/+$/, '')
-const MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
-const API_KEY = process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''
+  USE_KIOSAPI
+    ? (process.env.KIOSAPI_BASE_URL || 'https://api.kiosapi.id/v1')
+    : process.env.AI_BASE_URL ||
+      (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
+).replace(/\\/+$/, '')
+const MODEL = USE_KIOSAPI
+  ? (process.env.KIOSAPI_MODEL || 'meta/llama-3.1-8b')
+  : (process.env.AI_MODEL || 'openai/gpt-oss-120b')
+const API_KEY = USE_KIOSAPI
+  ? KIOSAPI_API_KEY
+  : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '')
 
 export function aiConfig() {
   return { baseUrl: BASE_URL, model: MODEL, key: API_KEY }
