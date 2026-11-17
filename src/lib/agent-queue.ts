@@ -18,7 +18,7 @@ export async function enqueueAgentTasks(
   workflowId: string,
   tasks: { task: AutopilotTask; directive: string; priority?: number }[]
 ): Promise<number> {
-  const accepted = tasks.filter((item) => allowed.has(item.task) && item.directive.trim().length > 0)
+  const accepted = tasks.filter((item) => item && allowed.has(item.task) && typeof item.directive === 'string' && item.directive.trim().length > 0)
   const unique = [...new Map(accepted.map((item) => [item.task, item])).values()].slice(0, 6)
   for (const item of unique) {
     const role = TASKS.find((entry) => entry.task === item.task)?.agentRole
@@ -26,7 +26,7 @@ export async function enqueueAgentTasks(
     await db.execute(sql`INSERT INTO agent_task_queue
       (id, workflow_id, task, agent_role, directive, status, priority)
       VALUES (${crypto.randomUUID()}, ${workflowId}, ${item.task}, ${role},
-        ${item.directive.slice(0, 2000)}, 'queued', ${item.priority ?? 100})`)
+        ${item.directive.slice(0, 2000)}, 'queued', ${Number.isInteger(item.priority) ? Math.max(1, Math.min(1000, item.priority!)) : 100})`)
   }
   return unique.length
 }
@@ -35,11 +35,11 @@ export async function claimNextAgentTask(workerId: string): Promise<QueueTask | 
   const result = await db.execute(sql`
     WITH candidate AS (
       SELECT id FROM agent_task_queue
-      WHERE (
+      WHERE ((
         status = 'queued' AND available_at <= now()
       ) OR (
         status = 'running' AND locked_at < now() - interval '10 minutes'
-      ) AND attempts < max_attempts
+      )) AND attempts < max_attempts
       ORDER BY priority ASC, created_at ASC
       FOR UPDATE SKIP LOCKED
       LIMIT 1
