@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!aiConfigured()) {
     return res.status(503).json({
       error:
-        'Model AI belum terhubung di server ini. Isi kunci Groq pada pengaturan aplikasi, lalu terbitkan ulang.',
+        'Model AI belum terhubung di server ini. Kredensial AI Gateway belum tersedia.',
       configured: false,
     })
   }
