@@ -1,4 +1,4 @@
-name: Restore Cyber Wealth source
+name: Restore and verify Cyber Wealth
 
 on:
   push:
@@ -22,12 +22,21 @@ jobs:
           test -s package.json
           test -s netlify.toml
           test -d src/pages
+      - name: Install dependencies and verify source
+        run: |
+          npm ci
+          npm run check
+          npm run build
+        env:
+          DATABASE_URL: postgres://build:build@127.0.0.1:5432/build
+          JWT_SECRET: build-only-secret-not-for-production-123456789
+          NETLIFY: "true"
       - name: Commit restored source
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m "Restore Cyber Wealth application source"
+            git commit -m "Restore and verify Cyber Wealth application"
             git push
           fi
