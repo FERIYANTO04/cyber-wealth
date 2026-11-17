@@ -115,7 +115,7 @@ async function runCeo(trigger: string) {
     (blockers.length > 0 ? `Perlu perhatian: ${blockers.join(', ')}.` : 'Tidak ada penghambat dasar yang terdeteksi.')
 
   if (!aiConfigured()) {
-    const summary = 'AI CEO belum dapat membuat keputusan strategis karena GROQ_API_KEY belum dipasang. ' + factualSummary
+    const summary = 'AI CEO belum dapat membuat keputusan strategis karena koneksi penyedia model AI belum dipasang. ' + factualSummary
     await finishRun(run.id, 'skipped', summary, 'Data operasional dibaca dari database, tetapi analisis model AI tidak dijalankan. Hubungkan kunci Groq pada variabel server untuk mengaktifkan analisis CEO.', 0)
     await noteAgent('AI CEO', 'Analisis CEO menunggu koneksi model AI', summary)
     return { summary }
