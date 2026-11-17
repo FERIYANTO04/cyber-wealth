@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { timingSafeEqual } from 'node:crypto'
-import { runAutopilot, autopilotDue } from '@/lib/autopilot'
+import { runAutopilot, autopilotDue, processNextQueuedAgentTask } from '@/lib/autopilot'
 import { logActivity } from '@/lib/data'
 import { runBillingPass } from '@/lib/billing'
 import { publishDuePosts } from '@/lib/social'
@@ -33,8 +33,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   running = true
   try {
-    // The billing pass and the tidy-up run on every call: reminders, expiry and stale
-    // links must not wait for the autopilot's own cadence.
+    // Process at most one specialist task per tick. The database queue uses
+    // SKIP LOCKED + a lease, so parallel cron instances cannot claim the same job.
+    const queue = await processNextQueuedAgentTask().catch((error) => {
+      console.error('[cron agent worker]', error)
+      return { processed: false, reason: 'Worker antrean gagal; periksa log server.' }
+    })
+
+    // Billing, housekeeping and CEO planning remain daily even though this endpoint
+    // is now called every five minutes to drain the specialist queue.
+    const due = await autopilotDue()
+    if (!due) return res.status(200).json({ ran: false, queue, reason: 'Pemeriksaan harian belum jatuh tempo atau operasi dijeda.' })
+
     const billing = await runBillingPass('schedule').catch((error) => {
       console.error('[cron billing]', error)
       return { error: 'Proses billing gagal; periksa log server.' }
@@ -44,11 +54,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return { error: 'Pembersihan gagal; periksa log server.' }
     })
 
-    const due = await autopilotDue()
-    if (!due) return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, housekeeping })
-
     const result = await runAutopilot('schedule')
-    if (result.paused) return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, housekeeping })
+    if (result.paused) return res.status(200).json({ ran: false, queue, reason: 'Operasi dijeda.', billing, housekeeping })
 
     const social = await publishDuePosts().catch((error) => {
       console.error('[cron social]', error)
@@ -59,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action: 'Putaran terjadwal autopilot berjalan',
       detail: result.results.map((item) => `${item.label}: ${item.summary}`).join(' · '),
     })
-    return res.status(200).json({ ran: true, results: result.results, billing, social, housekeeping })
+    return res.status(200).json({ ran: true, results: result.results, queue, billing, social, housekeeping })
   } catch (error) {
     console.error('[cron autopilot]', error)
     return res.status(500).json({ ran: false, reason: 'Putaran gagal. Periksa log server.' })
