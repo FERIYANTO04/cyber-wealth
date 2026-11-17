@@ -88,28 +88,69 @@ async function runCeo(trigger: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(subscriptions)
     .where(and(eq(subscriptions.status, 'active'), eq(subscriptions.dataSource, 'live')))
+  const [newLeads] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(revenueLeads)
+    .where(inArray(revenueLeads.status, ['new', 'qualified', 'proposal']))
 
   const blockers: string[] = []
   if ((pendingOrders?.n ?? 0) > 0) blockers.push(`${pendingOrders.n} pesanan belum dibayar`)
   if ((newJobs?.n ?? 0) > 0) blockers.push(`${newJobs.n} permintaan jasa belum ditinjau`)
   if ((liveProducts?.n ?? 0) === 0) blockers.push('belum ada produk yang terbit di katalog')
 
-  const summary =
+  const facts = [
+    `Pesanan lunas: ${paidOrders?.n ?? 0}`,
+    `Pendapatan terkonfirmasi: Rp ${Number(paidOrders?.total ?? 0).toLocaleString('id-ID')}`,
+    `Pesanan belum dibayar: ${pendingOrders?.n ?? 0}`,
+    `Permintaan jasa baru: ${newJobs?.n ?? 0}`,
+    `Produk terbit: ${liveProducts?.n ?? 0}`,
+    `Langganan aktif: ${activeSubs?.n ?? 0}`,
+    `Prospek yang perlu ditindaklanjuti: ${newLeads?.n ?? 0}`,
+  ].join('\n')
+
+  const factualSummary =
     `${paidOrders?.n ?? 0} pesanan lunas (Rp ${Number(paidOrders?.total ?? 0).toLocaleString('id-ID')}), ` +
     `${activeSubs?.n ?? 0} langganan aktif, ${liveProducts?.n ?? 0} produk terbit. ` +
-    (blockers.length > 0 ? `Perlu perhatian: ${blockers.join(', ')}.` : 'Tidak ada penghambat yang terdeteksi.')
+    (blockers.length > 0 ? `Perlu perhatian: ${blockers.join(', ')}.` : 'Tidak ada penghambat dasar yang terdeteksi.')
 
-  const detail =
-    'Ringkasan ini dihitung dari catatan di database aplikasi. Tidak ada angka pendapatan yang diperkirakan atau dijanjikan.'
+  if (!aiConfigured()) {
+    const summary = 'AI CEO belum dapat membuat keputusan strategis karena GROQ_API_KEY belum dipasang. ' + factualSummary
+    await finishRun(run.id, 'skipped', summary, 'Data operasional dibaca dari database, tetapi analisis model AI tidak dijalankan. Hubungkan kunci Groq pada variabel server untuk mengaktifkan analisis CEO.', 0)
+    await noteAgent('AI CEO', 'Analisis CEO menunggu koneksi model AI', summary)
+    return { summary }
+  }
 
-  const priority: string[] = []
-  if ((newJobs?.n ?? 0) > 0) priority.push('Tinjau permintaan jasa baru dan kirim penawaran.')
-  if ((liveProducts?.n ?? 0) === 0) priority.push('Terbitkan minimal satu produk digital agar katalog bisa dijual.')
-  if ((pendingOrders?.n ?? 0) > 0) priority.push('Cek pesanan yang belum dibayar; kirim pengingat manual bila perlu.')
-  if (priority.length === 0) priority.push('Pertahankan alur yang berjalan; tambah satu produk atau layanan baru.')
+  const outcome = await askAi({
+    system: [
+      'Anda adalah AI CEO dan kepala strategi operasional Cyber Wealth, bisnis digital kecil yang beroperasi dari Indonesia.',
+      'Analisis hanya fakta database yang diberikan. Jangan mengarang omzet, saldo, pelanggan, ukuran pasar, atau pekerjaan yang sudah dilakukan.',
+      'Tugas Anda: diagnosis kondisi, pilih maksimal 3 prioritas paling berdampak, dan pecah tiap prioritas menjadi langkah kerja konkret untuk agen yang sudah ada.',
+      'Jangan menyetujui pengeluaran, investasi, transfer, kontrak, publikasi, atau tindakan eksternal. Tindakan berisiko harus menjadi rekomendasi untuk persetujuan pemilik.',
+      'Jawab dalam Bahasa Indonesia dengan format: KONDISI, KEPUTUSAN CEO, TUGAS AGEN, MENUNGGU PEMILIK. Sebutkan bila data belum cukup.',
+    ].join(' '),
+    prompt: [
+      `Waktu analisis: ${new Date().toISOString()}`,
+      `Pemicu putaran: ${trigger}`,
+      'Fakta operasional terkini:',
+      facts,
+      'Kendala dasar yang terdeteksi:',
+      blockers.length ? blockers.join('; ') : 'Tidak ada kendala dasar yang terdeteksi.',
+      'Buat keputusan operasional yang bisa dilaksanakan oleh agen AI Market Research, AI Sales, AI Product Creator, AI Marketing, AI Finance, dan AI Business Intelligence. Tulis siapa melakukan apa, urutan, dan hasil yang harus dicatat. Jangan mengklaim tugas tersebut sudah selesai.',
+    ].join('\n'),
+    maxTokens: 1100,
+  })
 
-  await finishRun(run.id, 'ok', summary, `${detail} Prioritas: ${priority.join(' ')}`, 0)
-  await noteAgent('AI CEO', 'Strategi harian disusun', summary)
+  if (!outcome.ok) {
+    const summary = `Data bisnis terbaca, tetapi AI CEO gagal menganalisis: ${outcome.reason}`
+    await finishRun(run.id, 'failed', summary, facts, 0)
+    await noteAgent('AI CEO', 'Analisis CEO gagal', summary)
+    return { summary }
+  }
+
+  const firstLine = outcome.text.split('\n').find((line) => line.trim().length > 0) ?? 'Strategi CEO diperbarui.'
+  const summary = `${factualSummary} Keputusan AI CEO: ${firstLine.replace(/^#+\s*/, '').slice(0, 420)}`
+  await finishRun(run.id, 'ok', summary, `${facts}\n\nAnalisis model ${outcome.model}:\n${outcome.text}`, 0)
+  await noteAgent('AI CEO', 'Analisis dan arahan kerja CEO diperbarui', summary)
   return { summary }
 }
 
