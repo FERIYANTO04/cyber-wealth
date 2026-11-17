@@ -20,6 +20,7 @@ import { SETTINGS_ID, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
 import { generatePosts } from './social'
+import { enqueueAgentTasks } from './agent-queue'
 
 /**
  * The autopilot runs as request-driven work, never as a background timer: a
@@ -126,7 +127,9 @@ async function runCeo(trigger: string) {
       'Analisis hanya fakta database yang diberikan. Jangan mengarang omzet, saldo, pelanggan, ukuran pasar, atau pekerjaan yang sudah dilakukan.',
       'Tugas Anda: diagnosis kondisi, pilih maksimal 3 prioritas paling berdampak, dan pecah tiap prioritas menjadi langkah kerja konkret untuk agen yang sudah ada.',
       'Jangan menyetujui pengeluaran, investasi, transfer, kontrak, publikasi, atau tindakan eksternal. Tindakan berisiko harus menjadi rekomendasi untuk persetujuan pemilik.',
-      'Jawab dalam Bahasa Indonesia dengan format: KONDISI, KEPUTUSAN CEO, TUGAS AGEN, MENUNGGU PEMILIK. Sebutkan bila data belum cukup.',
+      'Jawab HANYA JSON valid tanpa markdown dengan bentuk: {"condition":"...","decision":"...","tasks":[{"task":"research|sales|product|marketing|finance|intelligence","directive":"instruksi kerja spesifik berbasis fakta","priority":1}],"owner_approval":["..."]}.',
+      'Buat maksimal satu tugas untuk tiap agen spesialis dan maksimal enam tugas. Gunakan hanya nama task yang diizinkan. Jika tidak ada pekerjaan yang layak, tasks harus array kosong.',
+      'Jangan memasukkan transfer, pembelian, investasi, kontrak, pengiriman pesan, atau publikasi ke tugas otomatis. Hal-hal tersebut hanya boleh menjadi rekomendasi yang menunggu persetujuan pemilik.',
     ].join(' '),
     prompt: [
       `Waktu analisis: ${new Date().toISOString()}`,
@@ -135,7 +138,7 @@ async function runCeo(trigger: string) {
       facts,
       'Kendala dasar yang terdeteksi:',
       blockers.length ? blockers.join('; ') : 'Tidak ada kendala dasar yang terdeteksi.',
-      'Buat keputusan operasional yang bisa dilaksanakan oleh agen AI Market Research, AI Sales, AI Product Creator, AI Marketing, AI Finance, dan AI Business Intelligence. Tulis siapa melakukan apa, urutan, dan hasil yang harus dicatat. Jangan mengklaim tugas tersebut sudah selesai.',
+      'Pilih hanya tugas internal yang aman dan dapat dilakukan agen spesialis. Instruksi harus konkret, sesuai peran, dan berdasarkan data di atas. Keluarkan JSON sesuai skema system; jangan menulis teks lain.',
     ].join('\n'),
     maxTokens: 1100,
   })
@@ -147,9 +150,26 @@ async function runCeo(trigger: string) {
     return { summary }
   }
 
-  const firstLine = outcome.text.split('\n').find((line) => line.trim().length > 0) ?? 'Strategi CEO diperbarui.'
-  const summary = `${factualSummary} Keputusan AI CEO: ${firstLine.replace(/^#+\s*/, '').slice(0, 420)}`
-  await finishRun(run.id, 'ok', summary, `${facts}\n\nAnalisis model ${outcome.model}:\n${outcome.text}`, 0)
+  let plan: { condition?: string; decision?: string; tasks?: { task: AutopilotTask; directive: string; priority?: number }[]; owner_approval?: string[] } | null = null
+  try {
+    const json = outcome.text.match(/\\{[\\s\\S]*\\}/)?.[0]
+    if (json) plan = JSON.parse(json)
+  } catch {
+    plan = null
+  }
+  if (!plan || !Array.isArray(plan.tasks)) {
+    const summary = 'AI CEO memberi jawaban yang tidak sesuai format rencana. Tidak ada tugas yang dimasukkan ke antrean.'
+    await finishRun(run.id, 'failed', summary, `${facts}\\n\\nJawaban model ${outcome.model}:\\n${outcome.text}`, 0)
+    await noteAgent('AI CEO', 'Rencana CEO perlu diperbaiki', summary)
+    return { summary }
+  }
+
+  const workflowId = crypto.randomUUID()
+  const queued = await enqueueAgentTasks(workflowId, plan.tasks)
+  const decision = (plan.decision || plan.condition || 'Rencana CEO disusun.').slice(0, 320)
+  const summary = `${factualSummary} CEO memasukkan ${queued} tugas spesialis ke antrean. ${decision}`
+  const approvals = Array.isArray(plan.owner_approval) ? plan.owner_approval.join('; ') : ''
+  await finishRun(run.id, 'ok', summary, `${facts}\\n\\nRencana model ${outcome.model}:\\n${JSON.stringify(plan, null, 2)}\\n\\nMenunggu persetujuan pemilik: ${approvals || 'Tidak ada tindakan eksternal yang diusulkan.'}`, queued)
   await noteAgent('AI CEO', 'Analisis dan arahan kerja CEO diperbarui', summary)
   return { summary }
 }
