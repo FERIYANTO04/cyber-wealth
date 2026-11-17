@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const result = await processNextQueuedAgentTask()
-    return res.status(result.processed ? 200 : 204).json(result)
+    return res.status(200).json(result)
   } catch (error) {
     console.error('[agent queue worker]', error)
     return res.status(500).json({ error: 'Worker antrean gagal. Periksa log server.' })
