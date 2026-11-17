@@ -99,7 +99,7 @@ async function record(tx, migration) {
 // With no terminal to ask on, drizzle-kit prints an error and exits 0 having done
 // nothing, so its output is the only proof that it worked.
 function drizzleKit(args) {
-  const { stdout, stderr } = spawnSync('npx', ['drizzle-kit', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  const { stdout, stderr } = spawnSync('npx', ['drizzle-kit', ...args, '--config=drizzle.config.ts'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
   return `${stdout}${stderr}`
 }
 
