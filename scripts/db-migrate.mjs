@@ -111,8 +111,10 @@ function pushSchema() {
 }
 
 function refuseUngeneratedSchema() {
-  if (!drizzleKit(['generate', '--name=publish_check']).includes('No schema changes')) {
-    console.error('Refused: src/lib/db/schema.ts has changes with no migration. Run npm run db:generate and commit the file it writes.')
+  const output = drizzleKit(['generate', '--name=publish_check'])
+  if (!/No schema changes/i.test(output)) {
+    console.error('Refused: src/lib/db/schema.ts has changes with no migration. Drizzle Kit output follows:')
+    console.error(output || '(no output)')
     process.exit(1)
   }
 }
