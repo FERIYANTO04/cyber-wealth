@@ -23,6 +23,7 @@ const TASK_LABEL: Record<string, string> = {
   marketing: 'Pemasaran',
   sales: 'Penjualan',
   finance: 'Keuangan',
+  intelligence: 'Intelijen bisnis',
 }
 
 const STATUS_TONE: Record<string, 'signal' | 'hold' | 'danger' | 'neutral'> = {
@@ -72,8 +73,8 @@ export function AutopilotPanel({
         <PanelHead label="Putaran autopilot" aside={<Timer className="size-4 text-ink-quiet" aria-hidden="true" />} />
         <PanelBody>
           <p className="text-[0.8125rem] leading-relaxed text-ink-quiet">
-            Satu putaran menjalankan enam tugas berurutan: riset pasar, penjualan, produk, pemasaran, keuangan, lalu
-            strategi harian. Setiap tugas meninggalkan catatan di log aktivitas, dan tidak ada dana yang bergerak tanpa
+            Satu putaran dimulai dengan analisis dan arahan AI CEO, lalu menjalankan enam alur agen: riset pasar, penjualan,
+            produk, pemasaran, keuangan, dan intelijen bisnis. Setiap tugas meninggalkan catatan di log aktivitas, dan tidak ada dana yang bergerak tanpa
             keputusan Anda.
           </p>
           <div className="flex flex-wrap items-center gap-2">
