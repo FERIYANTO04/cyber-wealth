@@ -1,0 +1,50 @@
+name: Generate safe database migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/generate-safe-migrations.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cyber-wealth-schema-migration
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate migration from the checked-in Drizzle schema
+        run: npm run db:generate
+      - name: Refuse destructive generated SQL
+        shell: bash
+        run: |
+          mapfile -t changed_sql < <(git status --short --untracked-files=all drizzle | awk '{print $2}' | grep -E '^drizzle/.*\.sql$' || true)
+          if [ "${#changed_sql[@]}" -eq 0 ]; then
+            echo "No new SQL migration was generated."
+            exit 0
+          fi
+          for file in "${changed_sql[@]}"; do
+            if grep -Ein '\\b(DROP[[:space:]]+(TABLE|COLUMN|SCHEMA)|TRUNCATE|DELETE[[:space:]]+FROM|ALTER[[:space:]]+COLUMN[[:space:]].*[[:space:]]TYPE)\\b' "$file"; then
+              echo "Refusing to commit destructive migration: $file"
+              exit 1
+            fi
+          done
+      - name: Commit generated migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add drizzle
+          if ! git diff --cached --quiet; then
+            git commit -m "Add missing safe database migration"
+            git push
+          else
+            echo "No migration changes to commit."
+          fi
