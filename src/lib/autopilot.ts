@@ -437,15 +437,15 @@ async function runMarketing(trigger: string, directive = '') {
       `Nama: ${product.name}`,
       `Ringkasan: ${product.summary || 'Belum tersedia'}`,
       `Harga tercatat: Rp ${Number(product.priceIdr || 0).toLocaleString('id-ID')}`,
-      'HIPOTESIS AUDIENS: pemilik usaha kecil atau penjual online yang perlu menghitung harga jual dan margin; hipotesis ini belum tervalidasi.',
-      'PESAN UJI: “Masih menentukan harga jual produk? Lihat apakah kalkulator ini membantu merapikan biaya dan target margin. Detail produk tersedia di katalog.”',
+      'SASARAN PENGGUNA: belum dapat dipastikan dari data produk yang tersedia; perlu konfirmasi pemilik.',
+      `PESAN UJI: “Pelajari ${product.name}. ${product.summary || 'Lihat detail produk dan pastikan kesesuaiannya dengan kebutuhan Anda.'} Detail dan harga tercatat tersedia di katalog.”`,
       'INDIKATOR: jumlah kunjungan produk (jika pelacakan tersedia), prospek yang menyatakan minat, pesanan belum dibayar, dan pesanan lunas.',
       'BATASAN: produk tetap pada status saat ini. Draf ini hanya untuk tinjauan internal; jangan publikasikan, kirim pesan, atau belanjakan iklan tanpa persetujuan pemilik.',
     ].join('\\n')
     await db.insert(campaignDrafts).values({
       title,
       channel: 'rencana internal',
-      audience: 'hipotesis: pemilik usaha kecil dan penjual online',
+      audience: 'belum terverifikasi dari data produk; perlu konfirmasi pemilik',
       body,
       status: 'draft',
       source: 'ceo-directive',
@@ -741,7 +741,18 @@ async function runIntelligence(trigger: string, directive = '') {
   if ((subs?.n ?? 0) > 0) reading.push('Langganan aktif memberi pemasukan berulang; jaga pengingat perpanjangan tetap berjalan.')
 
   const summary = facts.join(' · ')
-  const detail = reading.length > 0 ? reading.join(' ') : 'Semua alur punya data; pertahankan dan uji satu perubahan kecil pada satu waktu.'
+  const detail = [
+    'BASELINE FUNNEL INTERNAL:',
+    `Kunjungan produk: belum tersedia (sumber pelacakan kunjungan belum ditemukan).`,
+    `Prospek baru: ${leads?.n ?? 0} (database revenue_leads).`,
+    `Pesanan belum dibayar: perlu ditarik dari tabel orders pada pemeriksaan berikutnya; tidak disamakan dengan nol.`,
+    `Pesanan lunas: ${paid?.n ?? 0} (database orders dengan status paid).`,
+    `Pendapatan terkonfirmasi: Rp ${Number(paid?.total ?? 0).toLocaleString('id-ID')} (database orders berstatus paid).`,
+    `Konten terbit terkonfirmasi: ${posts?.n ?? 0} (database social_posts).`,
+    `Langganan aktif: ${subs?.n ?? 0} (database subscriptions).`,
+    'Rasio konversi tidak dihitung karena data kunjungan belum tersedia.',
+    `Catatan analisis: ${reading.length > 0 ? reading.join(' ') : 'Belum ada temuan tambahan dari indikator yang tersedia.'}`,
+  ].join('\\n')
 
   let created = 0
   if (aiConfigured()) {
@@ -752,7 +763,7 @@ async function runIntelligence(trigger: string, directive = '') {
       maxTokens: 260,
     })
     if (outcome.ok) {
-      await finishRun(run.id, 'ok', summary, `${outcome.text.trim()} (disusun ${outcome.model} dari angka di atas.)`, 0)
+      await finishRun(run.id, 'ok', summary, `${detail}\\n\\nAnalisis AI: ${outcome.text.trim()} (disusun ${outcome.model} dari angka di atas.)`, 0)
       await noteAgent('AI Business Intelligence', 'Intelijen bisnis disusun', `${summary}. ${outcome.text.trim().slice(0, 240)}`)
       return { summary }
     }
