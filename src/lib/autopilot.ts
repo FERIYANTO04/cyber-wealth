@@ -294,7 +294,7 @@ async function runResearch(trigger: string, directive = '') {
 async function runProduct(trigger: string, directive = '') {
   const run = await startRun('AI Product Creator', 'product', trigger)
 
-  if (directive.toLowerCase().includes('pemeriksaan internal')) {
+  if (/audit|pemeriksaan|periksa/i.test(directive) && /produk/i.test(directive) && /terbit/i.test(directive)) {
     const published = await db
       .select()
       .from(products)
@@ -415,7 +415,7 @@ async function runMarketing(trigger: string, directive = '') {
     .where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
     .limit(3)
 
-  if (directive.toLowerCase().includes('rencana uji akuisisi')) {
+  if (/akuisisi|materi promosi|promosi internal/i.test(directive) && /produk/i.test(directive) && /(draf|susun|siapkan)/i.test(directive)) {
     const product = publishedProducts[0]
     if (!product) {
       const summary = 'Belum ada produk terbit untuk menyusun uji akuisisi.'
