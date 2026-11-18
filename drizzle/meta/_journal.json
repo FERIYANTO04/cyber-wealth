@@ -169,6 +169,13 @@
       "when": 1795027724936,
       "tag": "0023_ai_money_management",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795100000000,
+      "tag": "0024_owner_company_split",
+      "breakpoints": true
     }
   ]
 }
