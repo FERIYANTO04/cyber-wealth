@@ -36,6 +36,7 @@ export function metaConfig() {
     appId,
     appSecret,
     version: process.env.META_GRAPH_VERSION || 'v21.0',
+    loginConfigId: process.env.META_LOGIN_CONFIG_ID || '',
     configured: !isPlaceholder(appId) && !isPlaceholder(appSecret),
   }
 }
@@ -120,7 +121,14 @@ export function authorizeUrl(origin: string, state: string): string | null {
   url.searchParams.set('redirect_uri', redirectUriFor(origin))
   url.searchParams.set('state', state)
   url.searchParams.set('response_type', 'code')
-  url.searchParams.set('scope', REQUIRED_SCOPES.join(','))
+  const { loginConfigId } = metaConfig()
+  if (loginConfigId) {
+    // Facebook Login for Business takes its permissions from the saved Meta configuration.
+    url.searchParams.set('config_id', loginConfigId)
+  } else {
+    // Backward-compatible standard Facebook Login flow.
+    url.searchParams.set('scope', REQUIRED_SCOPES.join(','))
+  }
   return url.toString()
 }
 
@@ -176,9 +184,9 @@ export async function listPages(userToken: string): Promise<{ ok: true; pages: P
 
 /** A page token that does not expire, so scheduled publishing keeps working. */
 export async function longLivedPageToken(pageToken: string): Promise<string | null> {
-  const { appId, appSecret, version } = metaConfig()
+  const { appId, appSecret } = metaConfig()
   if (!appId || !appSecret) return null
-  const url = new URL(`${GRAPH}/${version}/oauth/access_token`)
+  const url = new URL(`${GRAPH}/oauth/access_token`)
   url.searchParams.set('grant_type', 'fb_exchange_token')
   url.searchParams.set('client_id', appId)
   url.searchParams.set('client_secret', appSecret)
