@@ -294,6 +294,32 @@ async function runResearch(trigger: string, directive = '') {
 async function runProduct(trigger: string, directive = '') {
   const run = await startRun('AI Product Creator', 'product', trigger)
 
+  if (directive.toLowerCase().includes('pemeriksaan internal')) {
+    const published = await db
+      .select()
+      .from(products)
+      .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+      .limit(5)
+    const detail = published.length
+      ? published.map((item, index) => [
+          `Produk ${index + 1}: ${item.name}`,
+          `Status: ${item.status}`,
+          `Ringkasan/manfaat tercatat: ${item.summary || 'belum tersedia'}`,
+          `Deskripsi/isi: ${item.description || 'belum tersedia'}`,
+          `Harga: Rp ${Number(item.priceIdr || 0).toLocaleString('id-ID')}`,
+          `File produk: ${item.fileName || 'belum dilampirkan'}`,
+          `Catatan deliverable: ${item.deliverableNote || 'belum tersedia'}`,
+          `Alur pemesanan: tautan katalog/checkout perlu diverifikasi dari tampilan pembeli`,
+        ].join('\\n')).join('\\n\\n')
+      : 'Belum ada produk terbit yang dapat diperiksa.'
+    const summary = published.length
+      ? `Pemeriksaan kesiapan selesai untuk ${published.length} produk terbit. Tidak ada produk yang diubah atau diterbitkan.`
+      : 'Belum ada produk terbit untuk diperiksa; tidak ada perubahan yang dilakukan.'
+    await finishRun(run.id, published.length ? 'ok' : 'skipped', summary, detail, 0)
+    await noteAgent('AI Product Creator', 'Pemeriksaan kesiapan penawaran selesai', summary)
+    return { summary, created: 0 }
+  }
+
   if (!aiConfigured()) {
     const summary = 'Model AI belum terhubung, jadi draf produk tidak dibuat.'
     await finishRun(run.id, 'skipped', summary, 'Tambahkan kunci API model AI di halaman Integrasi untuk mengaktifkan tugas ini.', 0)
@@ -388,6 +414,47 @@ async function runMarketing(trigger: string, directive = '') {
     .from(services)
     .where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
     .limit(3)
+
+  if (directive.toLowerCase().includes('rencana uji akuisisi')) {
+    const product = publishedProducts[0]
+    if (!product) {
+      const summary = 'Belum ada produk terbit untuk menyusun uji akuisisi.'
+      await finishRun(run.id, 'skipped', summary, 'Tidak ada publikasi atau belanja iklan yang dilakukan.', 0)
+      await noteAgent('AI Marketing', 'Rencana akuisisi menunggu produk terbit', summary)
+      return { summary, created: 0, skipped: true }
+    }
+    const title = `Rencana uji akuisisi awal — ${product.name}`
+    const [already] = await db.select({ id: campaignDrafts.id }).from(campaignDrafts).where(eq(campaignDrafts.title, title)).limit(1)
+    if (already) {
+      const summary = 'Rencana uji akuisisi untuk produk terbit ini sudah tersedia sebagai draf.'
+      await finishRun(run.id, 'ok', summary, 'Draf lama dipertahankan; tidak dibuat duplikat dan tidak ada publikasi.', 0)
+      await noteAgent('AI Marketing', 'Rencana akuisisi diperiksa', summary)
+      return { summary, created: 0 }
+    }
+    const body = [
+      'TUJUAN: memperoleh prospek pertama yang berminat pada produk ini.',
+      'FAKTA PRODUK:',
+      `Nama: ${product.name}`,
+      `Ringkasan: ${product.summary || 'Belum tersedia'}`,
+      `Harga tercatat: Rp ${Number(product.priceIdr || 0).toLocaleString('id-ID')}`,
+      'HIPOTESIS AUDIENS: pemilik usaha kecil atau penjual online yang perlu menghitung harga jual dan margin; hipotesis ini belum tervalidasi.',
+      'PESAN UJI: “Masih menentukan harga jual produk? Lihat apakah kalkulator ini membantu merapikan biaya dan target margin. Detail produk tersedia di katalog.”',
+      'INDIKATOR: jumlah kunjungan produk (jika pelacakan tersedia), prospek yang menyatakan minat, pesanan belum dibayar, dan pesanan lunas.',
+      'BATASAN: produk tetap pada status saat ini. Draf ini hanya untuk tinjauan internal; jangan publikasikan, kirim pesan, atau belanjakan iklan tanpa persetujuan pemilik.',
+    ].join('\\n')
+    await db.insert(campaignDrafts).values({
+      title,
+      channel: 'rencana internal',
+      audience: 'hipotesis: pemilik usaha kecil dan penjual online',
+      body,
+      status: 'draft',
+      source: 'ceo-directive',
+    })
+    const summary = `Rencana uji akuisisi internal dibuat untuk ${product.name}; menunggu tinjauan pemilik.`
+    await finishRun(run.id, 'ok', summary, 'Rencana disimpan sebagai draf internal. Tidak ada publikasi, pengiriman pesan, atau belanja iklan.', 1)
+    await noteAgent('AI Marketing', 'Rencana uji akuisisi disiapkan', summary)
+    return { summary, created: 1 }
+  }
 
   if (publishedProducts.length === 0 && publishedServices.length === 0) {
     const summary = 'Belum ada produk atau layanan terbit, jadi belum ada yang bisa dipromosikan.'
@@ -660,6 +727,7 @@ async function runIntelligence(trigger: string, directive = '') {
     .where(and(eq(subscriptions.status, 'active'), eq(subscriptions.dataSource, 'live')))
 
   const facts = [
+    'Kunjungan produk: belum tersedia pada sumber data saat ini',
     `${paid?.n ?? 0} pesanan lunas senilai Rp ${Number(paid?.total ?? 0).toLocaleString('id-ID')}`,
     `${leads?.n ?? 0} prospek baru, ${wonLeads?.n ?? 0} berhasil menjadi pelanggan`,
     `${posts?.n ?? 0} konten terbit dikonfirmasi kanal`,
