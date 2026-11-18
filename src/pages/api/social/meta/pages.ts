@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getSession, cookieSameSite } from '@/lib/auth'
+import { requireOwnerSession, cookieSameSite } from '@/lib/auth'
 import { listPages, openToken, saveFacebookAccount } from '@/lib/meta'
 
 /**
@@ -8,7 +8,7 @@ import { listPages, openToken, saveFacebookAccount } from '@/lib/meta'
  * response carries page names only — never a token.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession(req)
+  const session = await requireOwnerSession(req)
   if (!session) return res.status(401).json({ error: 'Sesi tidak ditemukan. Silakan masuk.' })
 
   const sealed = req.cookies.cwa_meta_pending
