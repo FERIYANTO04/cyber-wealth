@@ -157,13 +157,7 @@ function ServiceCardBody({
 }
 
 /** Everything the owner must connect, each with a live status and a real test. */
-export function IntegrationGuide({
-  cards,
-  readyCount,
-}: {
-  cards: ServiceCard[]
-  readyCount: number
-}) {
+export function IntegrationGuide({ cards }: { cards: ServiceCard[] }) {
   const [results, setResults] = useState<Record<string, { state: CheckState; message: string }>>({})
   const [channelResults, setChannelResults] = useState<Record<string, { state: CheckState; message: string }>>({})
   const [testingKey, setTestingKey] = useState<string | null>(null)
