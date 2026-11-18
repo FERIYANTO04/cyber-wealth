@@ -5,11 +5,11 @@
  */
 import { isPlaceholder } from './env'
 
-const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\\/+$/, '')
+const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
 const PRIMARY_BASE_URL = (
   process.env.AI_BASE_URL ||
   (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
-).replace(/\\/+$/, '')
+).replace(/\/+$/, '')
 const PRIMARY_MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
 const PRIMARY_KEY = process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''
 const FALLBACK_KEY = process.env.GROQ_API_KEY || ''
@@ -92,7 +92,7 @@ async function requestProvider(provider: Provider, args: {
 }
 
 function canFailOver(reason: string): boolean {
-  return /kuota|429|menolak permintaan \(5\\d\\d\)|tidak bisa menghubungi|tidak menjawab dalam 25 detik/i.test(reason)
+  return /kuota|429|menolak permintaan \(5\d\d\)|tidak bisa menghubungi|tidak menjawab dalam 25 detik/i.test(reason)
 }
 
 export async function chatWithAi(args: {
