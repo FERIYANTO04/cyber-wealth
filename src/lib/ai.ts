@@ -60,7 +60,7 @@ export async function chatWithAi(args: {
     if (!response.ok) {
       const detail = body?.error?.message
       if (response.status === 401 || response.status === 403) {
-        return { ok: false, reason: 'Kredensial atau akses model AI Gateway ditolak. Periksa izin dan kredit akun.' }
+        return { ok: false, reason: `AI Gateway menolak permintaan (${response.status})${detail ? `: ${detail.slice(0, 300)}` : '. Detail penyedia tidak tersedia.'}` }
       }
       if (response.status === 429) {
         return { ok: false, reason: 'Batas pemakaian model AI tercapai. Periksa kredit atau kuota, lalu coba lagi.' }
