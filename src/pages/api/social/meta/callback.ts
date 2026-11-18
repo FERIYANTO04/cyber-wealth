@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { jwtVerify } from 'jose'
 import { cookieSameSite } from '@/lib/auth'
 import { exchangeCode, listPages, sealToken, saveFacebookAccount } from '@/lib/meta'
+import { connectInstagram } from '@/lib/instagram'
 
 /**
  * Meta sends the owner back here with an authorization code. The code is exchanged on
@@ -58,10 +59,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (pages.pages.length === 1) {
     const saved = await saveFacebookAccount({
       page: pages.pages[0],
-      scopes: ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management'],
+      scopes: ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management', 'instagram_basic', 'instagram_content_publish'],
       connectedBy: ownerId,
     })
     if (!saved.ok) return res.redirect(`/facebook?error=${encodeURIComponent(saved.error.slice(0, 160))}`)
+
+    // Reuse the same Meta authorization to link Instagram automatically when the
+    // selected Page already has an eligible Instagram Business account attached.
+    // A missing Instagram link must never undo a successful Facebook connection.
+    try {
+      await connectInstagram({ connectedBy: ownerId })
+    } catch (instagramError) {
+      console.error('Instagram auto-link after Meta OAuth failed:', instagramError)
+    }
     return res.redirect('/facebook?connected=1')
   }
 
