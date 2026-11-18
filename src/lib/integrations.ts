@@ -96,15 +96,29 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
 }
 
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
-  if (!process.env.STORAGE_URL || !process.env.STORAGE_KEY) {
-    return { state: 'missing', message: 'Penyimpanan berkas belum dikonfigurasi. Isi STORAGE_URL dan STORAGE_KEY dari layanan penyimpanan yang kompatibel.' }
+  // Keep this check aligned with the S3-compatible variables consumed by storage.ts.
+  // The previous STORAGE_URL/STORAGE_KEY names were stale and caused false "missing"
+  // results even when the active credentials were configured.
+  if (
+    !process.env.STORAGE_ENDPOINT ||
+    !process.env.STORAGE_BUCKET ||
+    !process.env.STORAGE_ACCESS_KEY_ID ||
+    !process.env.STORAGE_SECRET_ACCESS_KEY
+  ) {
+    return {
+      state: 'missing',
+      message: 'Konfigurasi penyimpanan S3 belum lengkap. Periksa STORAGE_ENDPOINT, STORAGE_BUCKET, STORAGE_ACCESS_KEY_ID, dan STORAGE_SECRET_ACCESS_KEY di lingkungan server.',
+    }
   }
   try {
-    // Signing an upload URL is the cheapest honest proof the bucket answers and the
-    // key is accepted — nothing about the file itself is stored by this check.
-    const url = await uploadUrl('pemeriksaan/koneksi.txt', { upsert: true })
+    // This validates local configuration and S3 URL signing only. It does not
+    // upload or retrieve an object; end-to-end file delivery must be tested separately.
+    const url = await uploadUrl('pemeriksaan/koneksi.txt', { expiresIn: 60 })
     return url
-      ? { state: 'ready', message: 'Penyimpanan berkas menjawab. Berkas produk bisa diunggah dan diunduh pembeli.' }
+      ? {
+          state: 'ready',
+          message: 'Konfigurasi penyimpanan tersedia dan URL unggah sementara berhasil dibuat. Uji unggah dan unduh berkas tetap diperlukan untuk memastikan akses bucket.',
+        }
       : { state: 'error', message: 'Penyimpanan tidak memberi tautan unggah.' }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'tidak diketahui'
