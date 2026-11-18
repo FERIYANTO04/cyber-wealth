@@ -38,7 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.redirect('/facebook?error=Sesi%20penghubungan%20kedaluwarsa.%20Coba%20lagi.')
   }
 
-  const origin = (req.headers.origin as string | undefined) ?? `https://${req.headers.host}`
+  // Use the public proxy host consistently; Origin is normally absent on top-level GETs.
+  const forwardedProto = String(req.headers['x-forwarded-proto'] ?? 'https').split(',')[0].trim()
+  const forwardedHost = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '').split(',')[0].trim()
+  const origin = `${forwardedProto}://${forwardedHost}`
   const exchanged = await exchangeCode(origin, code)
   if (!exchanged.ok) {
     return res.redirect(`/facebook?error=${encodeURIComponent(exchanged.message.slice(0, 160))}`)
