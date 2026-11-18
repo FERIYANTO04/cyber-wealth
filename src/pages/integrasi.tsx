@@ -10,6 +10,7 @@ import { PageStack } from '@/components/ui'
 import { SchedulerGuide } from '@/components/SchedulerGuide'
 import { requireOwnerPage } from '@/lib/auth'
 import { aiConfig, bankTransferStatus, storageStatus } from '@/lib/integrations'
+import { aiConfig as runtimeAiConfig } from '@/lib/ai'
 import { isPlaceholder } from '@/lib/env'
 import { emailConfig } from '@/lib/email'
 import { getActiveFacebookAccount, metaConfig } from '@/lib/meta'
@@ -24,7 +25,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const host = String(ctx.req.headers['x-forwarded-host'] ?? ctx.req.headers.host ?? '')
   const proto = (ctx.req.headers['x-forwarded-proto'] as string | undefined) ?? 'https'
 
-  const ai = aiConfig()
+  const ai = runtimeAiConfig()
   const email = emailConfig()
   const meta = metaConfig()
   const facebook = await getActiveFacebookAccount()
@@ -53,12 +54,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         aiState === 'ready'
           ? `Kunci terpasang untuk alamat ${ai.baseUrl} dengan model ${ai.model}. Tekan uji koneksi untuk memastikan kuncinya berlaku.`
           : 'Kunci API model AI belum diisi. Selama kosong, tugas yang menulis teks akan dilewati dan mencatat alasannya — tidak ada hasil yang dibuat-buat.',
-      required: ['GROQ_API_KEY (wajib)', 'AI_MODEL (opsional)', 'AI_BASE_URL (opsional)'],
+      required: [ai.key ? 'Kunci AI sudah tersimpan di server' : 'Kunci AI belum diisi', 'Model dan alamat API mengikuti konfigurasi agen yang aktif'],
       steps: [
-        'Buka console.groq.com, masuk, lalu buat kunci API baru.',
-        'Buka layar publikasi aplikasi ini, lalu isi kunci itu pada kolom kunci model AI.',
-        'Biarkan nama model dan alamat API apa adanya — keduanya sudah menunjuk ke Groq dengan model openai/gpt-oss-120b.',
-        'Publikasikan ulang, lalu tekan Uji koneksi di kartu ini.',
+        'Gunakan penyedia AI yang dikonfigurasi untuk agen pada server ini.',
+        'Pastikan kunci API dan alamat penyedia sesuai dengan akun serta model yang dipilih.',
+        'Jangan menaruh kunci API di browser atau membagikannya kepada siapa pun.',
+        'Simpan konfigurasi server, lalu tekan Uji koneksi di kartu ini.',
       ],
       where:
         'Kunci hanya disimpan di server dan tidak pernah dikirim ke browser. Nilai yang tampil di aplikasi tidak pernah menampilkan isi kunci.',
