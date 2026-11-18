@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const key = `produk/${product.id}/${randomUUID()}.${ext}`
 
   try {
-    const url = await uploadUrl(key)
+    const url = await uploadUrl(key, { contentType: parsed.data.contentType })
     await db
       .update(products)
       .set({ fileKey: key, fileName: parsed.data.fileName, fileSize: parsed.data.size })
