@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!order) return res.status(404).json({ error: 'Pesanan Midtrans tidak ditemukan.' })
 
   const paidAmount = Number(notice.gross_amount)
-  if (!Number.isFinite(paidAmount) || Math.round(paidAmount) !== Number(order.amountIdr)) {
+  if (!Number.isFinite(paidAmount) || paidAmount !== Number(order.amountIdr)) {
     return res.status(400).json({ error: 'Nominal notifikasi tidak cocok dengan pesanan.' })
   }
 
@@ -56,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await settlePaidOrder({
       orderId: order.id,
       provider: 'Midtrans',
-      paidAmountIdr: Math.round(paidAmount),
+      paidAmountIdr: Number(order.amountIdr),
       invoiceId: notice.transaction_id,
     })
     return res.status(200).json({ ok: true })
