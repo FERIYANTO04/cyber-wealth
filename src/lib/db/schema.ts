@@ -522,3 +522,44 @@ export const aiChatMessages = pgTable('ai_chat_message', {
   ownerEmail: text('owner_email').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
+
+
+// ── AI cost ledger and owner money allocation ─────────────────────────────
+export const aiUsageEvents = pgTable('ai_usage_event', {
+  id: text('id').primaryKey(),
+  provider: text('provider').notNull(),
+  model: text('model').notNull(),
+  agentName: text('agent_name'),
+  task: text('task'),
+  inputTokens: bigint('input_tokens', { mode: 'number' }).notNull().default(0),
+  outputTokens: bigint('output_tokens', { mode: 'number' }).notNull().default(0),
+  totalTokens: bigint('total_tokens', { mode: 'number' }).notNull().default(0),
+  estimatedCostIdr: bigint('estimated_cost_idr', { mode: 'number' }),
+  costCurrency: text('cost_currency').notNull().default('IDR'),
+  costSource: text('cost_source').notNull().default('unpriced'),
+  requestStatus: text('request_status').notNull(),
+  occurredAt: timestamp('occurred_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const aiProviderPayments = pgTable('ai_provider_payment', {
+  id: text('id').primaryKey(),
+  provider: text('provider').notNull(),
+  paymentMethod: text('payment_method').notNull(),
+  amountIdr: bigint('amount_idr', { mode: 'number' }).notNull(),
+  status: text('status').notNull().default('pending'),
+  externalInvoiceId: text('external_invoice_id'),
+  externalPaymentId: text('external_payment_id'),
+  receiptUrl: text('receipt_url'),
+  paidAt: timestamp('paid_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const moneyAllocationPolicy = pgTable('money_allocation_policy', {
+  id: text('id').primaryKey(),
+  ownerPercent: integer('owner_percent').notNull().default(70),
+  operationsPercent: integer('operations_percent').notNull().default(20),
+  reservePercent: integer('reserve_percent').notNull().default(10),
+  autoPayEnabled: boolean('auto_pay_enabled').notNull().default(false),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
