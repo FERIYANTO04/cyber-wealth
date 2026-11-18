@@ -127,49 +127,24 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
     setNote(null)
     setUploadingFor(product.id)
     try {
-      const signResponse = await fetch('/api/products/upload', {
+      const response = await fetch('/api/products/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: product.id,
-          fileName: file.name,
-          contentType: file.type || 'application/octet-stream',
-          size: file.size,
-        }),
-      })
-      const signed = await signResponse.json().catch(() => ({}))
-      if (!signResponse.ok) {
-        setError(signed.error ?? 'Berkas tidak bisa diunggah.')
-        return
-      }
-      const put = await fetch(signed.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+          'X-Product-Id': product.id,
+          'X-File-Name': encodeURIComponent(file.name),
+        },
         body: file,
       })
-      if (!put.ok) {
-        setError('Berkas gagal diunggah ke penyimpanan. Coba lagi.')
-        return
-      }
-      const completeResponse = await fetch('/api/products/upload-complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: product.id,
-          key: signed.key,
-          fileName: file.name,
-          size: file.size,
-        }),
-      })
-      const completed = await completeResponse.json().catch(() => ({}))
-      if (!completeResponse.ok) {
-        setError(completed.error ?? 'Berkas sudah terunggah, tetapi belum berhasil ditautkan ke produk. Coba unggah ulang.')
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(result.error ?? 'Berkas tidak berhasil diunggah.')
         return
       }
       setRows((old) =>
-        old.map((row) => (row.id === product.id ? { ...row, fileName: file.name, fileKey: signed.key } : row))
+        old.map((row) => (row.id === product.id ? { ...row, fileName: result.fileName, fileKey: result.key } : row))
       )
-      setNote(`Berkas ${file.name} terlampir pada ${product.name}.`)
+      setNote(`Berkas ${result.fileName} terunggah dan terlampir pada ${product.name}.`)
     } catch {
       setError('Koneksi terputus saat mengunggah berkas.')
     } finally {
