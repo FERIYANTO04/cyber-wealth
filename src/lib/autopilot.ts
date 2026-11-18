@@ -791,6 +791,26 @@ export type AutopilotResult = {
 }
 
 /**
+ * CEO dispatch fallback: build a work queue from live operating facts.
+ * This is deterministic orchestration, not a claim that a model made a decision.
+ */
+async function buildCeoDispatchPlan(): Promise<AutopilotTask[]> {
+  const [publishedProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+  const [publishedServices] = await db.select({ n: sql<number>`count(*)::int` }).from(services).where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
+  const [draftProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'draft'), eq(products.dataSource, 'live')))
+  const [openLeads] = await db.select({ n: sql<number>`count(*)::int` }).from(revenueLeads).where(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']))
+  const [newServiceRequests] = await db.select({ n: sql<number>`count(*)::int` }).from(serviceRequests).where(eq(serviceRequests.status, 'new'))
+  const [pendingOrders] = await db.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.status, 'pending'), eq(orders.dataSource, 'live')))
+  const plan: AutopilotTask[] = []
+  if ((openLeads?.n ?? 0) + (newServiceRequests?.n ?? 0) + (pendingOrders?.n ?? 0) > 0) plan.push('sales')
+  if ((publishedProducts?.n ?? 0) === 0 && (draftProducts?.n ?? 0) === 0) plan.push('product')
+  plan.push('research')
+  if ((publishedProducts?.n ?? 0) + (publishedServices?.n ?? 0) > 0) plan.push('marketing')
+  plan.push('finance', 'intelligence')
+  return plan
+}
+
+/**
  * Runs the whole loop once. Called by the owner from the autopilot page or by the
  * daily check when the console is opened after a day without a run.
  */
@@ -801,15 +821,23 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
   }
 
   const outcomes: AutopilotResult['results'] = []
-  const sequence: [AutopilotTask, string, () => Promise<{ summary: string }>][] = [
-    ['ceo', 'Arahan AI CEO', () => runCeo(trigger)],
-    ['research', 'Riset pasar', () => runResearch(trigger)],
-    ['sales', 'Penjualan', () => runSales(trigger)],
-    ['product', 'Produk digital', () => runProduct(trigger)],
-    ['marketing', 'Pemasaran', () => runMarketing(trigger)],
-    ['finance', 'Keuangan', () => runFinance(trigger)],
-    ['intelligence', 'Intelijen bisnis', () => runIntelligence(trigger)],
-  ]
+  try {
+    const ceo = await runCeo(trigger)
+    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: ceo.summary })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui'
+    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: `Tugas gagal: ${message}. Agen lain tidak dijalankan agar keputusan tanpa arahan CEO tidak diteruskan.` })
+    return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
+  }
+  const plan = await buildCeoDispatchPlan()
+  const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis' }
+  await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Mode delegasi deterministik; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
+  const runners: Record<AutopilotTask, () => Promise<{ summary: string }>> = {
+    research: () => runResearch(trigger), sales: () => runSales(trigger), product: () => runProduct(trigger),
+    marketing: () => runMarketing(trigger), finance: () => runFinance(trigger), ceo: () => runCeo(trigger),
+    intelligence: () => runIntelligence(trigger),
+  }
+  const sequence = plan.map((task) => [task, labels[task], runners[task]] as const)
 
   for (const [task, label, fn] of sequence) {
     const [row] = await db.select().from(agents).where(eq(agents.role, roleForTask(task))).limit(1)
