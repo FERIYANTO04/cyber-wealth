@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'PATCH') {
     const Patch = z.object({
-      id: z.string().uuid(),
+      id: z.string().regex(/^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/),
       status: z.enum(['draft', 'published', 'archived']),
     })
     const parsed = Patch.safeParse(req.body)
