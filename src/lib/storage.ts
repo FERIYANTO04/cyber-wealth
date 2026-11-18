@@ -93,8 +93,8 @@ function presign(method: 'PUT' | 'GET', key: string, expiresIn: number, contentT
     .map(([name, value]) => `${encode(name)}=${encode(value)}`)
     .join('&')
   const canonicalHeaders = contentType
-    ? `content-type:${contentType.trim()}\\nhost:${url.host.toLowerCase()}\\n`
-    : `host:${url.host.toLowerCase()}\\n`
+    ? `content-type:${contentType.trim()}\nhost:${url.host.toLowerCase()}\n`
+    : `host:${url.host.toLowerCase()}\n`
   const canonicalRequest = [
     method,
     url.pathname,
@@ -102,13 +102,13 @@ function presign(method: 'PUT' | 'GET', key: string, expiresIn: number, contentT
     canonicalHeaders,
     signedHeaders,
     'UNSIGNED-PAYLOAD',
-  ].join('\\n')
+  ].join('\n')
   const stringToSign = [
     'AWS4-HMAC-SHA256',
     now.full,
     scope,
     sha256(canonicalRequest),
-  ].join('\\n')
+  ].join('\n')
   const signature = createHmac('sha256', signingKey(cfg.secretKey, now.day, cfg.region))
     .update(stringToSign)
     .digest('hex')
