@@ -24,6 +24,14 @@ Sebelum promosi, pastikan file PDF benar-benar bisa dibaca, sesuai deskripsi, da
 
 **Batas saat ini:** implementasi checkout memakai transfer bank manual. Belum ada integrasi payment gateway otomatis pada kode aplikasi. Untuk operasi tanpa verifikasi manual per pesanan, perusahaan harus memiliki akun merchant payment gateway, kredensial API, dan webhook yang sudah diuji. Jangan mengarang pembayaran atau menandai pesanan lunas hanya dari screenshot/klik.
 
+## Pembayaran otomatis Midtrans (opsional, belum aktif)
+
+Aplikasi kini mendukung Midtrans Snap sebagai pilihan pembayaran otomatis bila `MIDTRANS_SERVER_KEY` dikonfigurasi. Mode aman default adalah sandbox (`MIDTRANS_IS_PRODUCTION=false`). Untuk mengaktifkan pembayaran nyata, owner harus memiliki akun merchant Midtrans yang disetujui, memasukkan Server Key produksi ke secret hosting, mengatur `MIDTRANS_IS_PRODUCTION=true`, dan mengatur Payment Notification URL di dashboard Midtrans ke:
+
+`https://<domain-aplikasi>/api/payments/midtrans`
+
+Webhook memverifikasi signature SHA-512, kode pesanan, mata uang, dan nominal sebelum pesanan dilunasi. Status `pending` tidak dihitung sebagai pendapatan. Gunakan sandbox dan uji alur checkout/webhook terlebih dahulu; jangan mengaktifkan mode produksi sebelum verifikasi selesai. Biaya transaksi mengikuti perjanjian merchant Midtrans.
+
 ## Kesiapan konfigurasi
 Nama variabel rekening bank terpisah (`BANK_NAME`, `BANK_ACCOUNT_NAME`, `BANK_ACCOUNT_NUMBER`) belum tampak pada daftar variabel layanan Railway saat diperiksa. Variabel `BANK_TRANSFER_INSTRUCTIONS` tersedia, tetapi isi rahasianya tidak dibaca. Aplikasi telah diperbaiki agar blok instruksi khusus yang benar-benar memuat nama bank/rekening dan nomor rekening dapat dipakai sebagai instruksi lengkap.
 
