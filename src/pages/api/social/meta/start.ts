@@ -29,7 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     `cwa_meta_state=${state}; Path=/; HttpOnly; Secure; SameSite=${cookieSameSite}; Max-Age=600`
   )
 
-  const origin = (req.headers.origin as string | undefined) ?? `https://${req.headers.host}`
+  // Use the public proxy host consistently; Origin is normally absent on top-level GETs.
+  const forwardedProto = String(req.headers['x-forwarded-proto'] ?? 'https').split(',')[0].trim()
+  const forwardedHost = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '').split(',')[0].trim()
+  const origin = `${forwardedProto}://${forwardedHost}`
   const url = authorizeUrl(origin, state)
   if (!url) return res.redirect('/facebook?error=config')
   return res.redirect(url)
