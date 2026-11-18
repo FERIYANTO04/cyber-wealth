@@ -80,63 +80,93 @@ export async function settlePaidOrder(args: {
   paidAmountIdr?: number
   invoiceId?: string
 }): Promise<{ settled: boolean; order: typeof orders.$inferSelect | null }> {
-  const [current] = await db.select().from(orders).where(eq(orders.id, args.orderId)).limit(1)
-  if (!current) return { settled: false, order: null }
+  // The order transition and its ledger/audit rows must commit together. Otherwise a
+  // database error after setting status=paid could leave a paid order with no revenue.
+  const settlement = await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(orders).where(eq(orders.id, args.orderId)).limit(1)
+    if (!current) return { settled: false as const, order: null, amount: 0 }
+    if (current.status !== 'pending') return { settled: false as const, order: current, amount: 0 }
 
-  if (current.status === 'paid') return { settled: false, order: current }
+    const amount = args.paidAmountIdr && args.paidAmountIdr > 0
+      ? args.paidAmountIdr
+      : Number(current.amountIdr)
 
-  const amount = args.paidAmountIdr && args.paidAmountIdr > 0 ? args.paidAmountIdr : Number(current.amountIdr)
+    const [updated] = await tx
+      .update(orders)
+      .set({
+        status: 'paid',
+        paidAt: new Date(),
+        invoiceId: args.invoiceId ?? current.invoiceId,
+        deliveryCount: current.deliveryCount + 1,
+      })
+      .where(and(eq(orders.id, current.id), eq(orders.status, 'pending')))
+      .returning()
 
-  const [updated] = await db
-    .update(orders)
-    .set({
-      status: 'paid',
-      paidAt: new Date(),
-      invoiceId: args.invoiceId ?? current.invoiceId,
-      deliveryCount: sql`${orders.deliveryCount} + 1`,
+    // Another callback may have settled the order while this transaction was waiting.
+    if (!updated) {
+      const [fresh] = await tx.select().from(orders).where(eq(orders.id, current.id)).limit(1)
+      return { settled: false as const, order: fresh ?? current, amount: 0 }
+    }
+
+    await tx
+      .insert(customers)
+      .values({ email: updated.buyerEmail.toLowerCase(), name: updated.buyerName })
+      .onConflictDoNothing()
+
+    const [buyer] = await tx
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.email, updated.buyerEmail.toLowerCase()))
+      .limit(1)
+
+    let settledOrder = updated
+    if (buyer && !updated.customerId) {
+      const [withCustomer] = await tx
+        .update(orders)
+        .set({ customerId: buyer.id })
+        .where(eq(orders.id, updated.id))
+        .returning()
+      if (withCustomer) settledOrder = withCustomer
+    }
+
+    await tx.insert(transactions).values({
+      kind: 'revenue',
+      category: 'Produk digital',
+      description: updated.productName + ' — pesanan ' + updated.code,
+      amountIdr: amount,
+      dataSource: 'live',
     })
-    .where(and(eq(orders.id, current.id), eq(orders.status, 'pending')))
-    .returning()
 
-  // Lost the race with another callback for the same payment — that one booked it.
-  if (!updated) {
-    const [fresh] = await db.select().from(orders).where(eq(orders.id, current.id)).limit(1)
-    return { settled: false, order: fresh ?? current }
-  }
+    await tx.insert(activity).values({
+      actor: 'system',
+      action: 'Pembayaran terverifikasi',
+      detail: updated.productName + ' — ' + updated.code + ', ' + updated.buyerEmail + '. Dikonfirmasi oleh ' + args.provider + '.',
+      dataSource: 'live',
+    })
 
-  await db
-    .insert(customers)
-    .values({ email: updated.buyerEmail.toLowerCase(), name: updated.buyerName })
-    .onConflictDoNothing()
-
-  const [buyer] = await db
-    .select({ id: customers.id })
-    .from(customers)
-    .where(eq(customers.email, updated.buyerEmail.toLowerCase()))
-    .limit(1)
-
-  if (buyer && !updated.customerId) {
-    await db.update(orders).set({ customerId: buyer.id }).where(eq(orders.id, updated.id))
-  }
-
-  await db.insert(transactions).values({
-    kind: 'revenue',
-    category: 'Produk digital',
-    description: `${updated.productName} — pesanan ${updated.code}`,
-    amountIdr: amount,
-    dataSource: 'live',
+    return { settled: true as const, order: settledOrder, amount }
   })
 
-  await db.insert(activity).values({
-    actor: 'system',
-    action: 'Pembayaran terverifikasi',
-    detail: `${updated.productName} — ${updated.code}, ${updated.buyerEmail}. Dikonfirmasi oleh ${args.provider}.`,
-    dataSource: 'live',
-  })
+  if (!settlement.settled || !settlement.order) {
+    return { settled: false, order: settlement.order }
+  }
 
-  await deliverOrder(updated, amount, args.provider)
+  // Delivery is outside the ledger transaction: email failure must not roll back a
+  // real payment. The paid order remains accessible from its private order URL.
+  try {
+    await deliverOrder(settlement.order, settlement.amount, args.provider)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Kesalahan pengiriman tidak diketahui'
+    console.error('[order delivery]', settlement.order.code, message)
+    await db.insert(activity).values({
+      actor: 'system',
+      action: 'Pengiriman produk perlu diperiksa',
+      detail: settlement.order.code + ' — pembayaran sudah tercatat, tetapi email pengiriman gagal: ' + message.slice(0, 500),
+      dataSource: 'live',
+    }).catch(() => undefined)
+  }
 
-  return { settled: true, order: updated }
+  return { settled: true, order: settlement.order }
 }
 
 /**
