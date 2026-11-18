@@ -76,7 +76,7 @@ function objectUrl(key: string): { url: URL; cfg: ReturnType<typeof config> } {
   return { url, cfg }
 }
 
-function presign(method: 'PUT' | 'GET', key: string, expiresIn: number, contentType?: string): string {
+function presign(method: 'PUT' | 'GET', key: string, expiresIn: number, contentType?: string, extraQuery: Record<string, string> = {}): string {
   const { url, cfg } = objectUrl(key)
   const now = amzDate(new Date())
   const scope = `${now.day}/${cfg.region}/s3/aws4_request`
@@ -87,6 +87,7 @@ function presign(method: 'PUT' | 'GET', key: string, expiresIn: number, contentT
     'X-Amz-Date': now.full,
     'X-Amz-Expires': String(Math.max(1, Math.min(604800, Math.floor(expiresIn)))),
     'X-Amz-SignedHeaders': signedHeaders,
+    ...extraQuery,
   }
   const canonicalQuery = Object.entries(query)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -129,10 +130,9 @@ export async function fileUrl(
   key: string,
   { expiresIn = 3600, download }: { expiresIn?: number; download?: boolean | string } = {},
 ): Promise<string | null> {
-  const url = new URL(presign('GET', key, expiresIn))
-  if (download) {
-    const name = typeof download === 'string' ? download : 'download'
-    url.searchParams.set('response-content-disposition', `attachment; filename="${name.replace(/["\\\\\r\n]/g, '_')}"`)
-  }
-  return url.toString()
+  const name = typeof download === 'string' ? download : 'download'
+  const extraQuery = download
+    ? { 'response-content-disposition': `attachment; filename="${name.replace(/["\\\\\\r\\n]/g, '_')}"` }
+    : {}
+  return presign('GET', key, expiresIn, undefined, extraQuery)
 }
