@@ -342,10 +342,39 @@ async function runProduct(trigger: string) {
   })
 
   if (!outcome.ok) {
-    const summary = 'Model AI belum tersedia. Tidak ada draf baru yang dibuat agar tidak menghasilkan konsep asal.'
-    await finishRun(run.id, 'skipped', summary, outcome.reason, 0)
-    await noteAgent('AI Product Creator', 'Tugas produk menunggu AI Gateway', summary)
-    return { summary, created: 0, skipped: true }
+    const title = 'Checklist Peluncuran Produk Digital untuk Pemula'
+    const slug = 'checklist-peluncuran-produk-digital-pemula'
+    const [taken] = await db.select({ id: products.id }).from(products).where(eq(products.slug, slug)).limit(1)
+    if (taken) {
+      const summary = 'AI Gateway belum tersedia dan konsep produk offline sudah ada; tidak dibuat duplikat.'
+      await finishRun(run.id, 'skipped', summary, outcome.reason, 0)
+      await noteAgent('AI Product Creator', 'Draf produk tidak digandakan', summary)
+      return { summary, created: 0, skipped: true }
+    }
+    await db.insert(products).values({
+      slug,
+      name: title,
+      summary: 'Kerangka kerja untuk merencanakan, menyiapkan, dan memeriksa peluncuran produk digital pertama.',
+      description: 'Draf kerangka produk untuk pemula yang ingin menjual produk digital. Materi yang perlu disusun meliputi pemilihan masalah pelanggan, penentuan format produk, pemeriksaan isi dan berkas, penetapan harga, halaman penjualan, serta daftar pemeriksaan sebelum publikasi. Ini baru konsep dan belum berisi panduan lengkap atau berkas unduhan.',
+      category: 'template',
+      priceIdr: 0,
+      status: 'draft',
+      deliverableNote: 'Konsep offline. Belum merupakan produk lengkap; lengkapi isi dan lampirkan berkas sebelum ditinjau untuk diterbitkan.',
+      dataSource: 'live',
+    })
+    await db.insert(proposals).values({
+      title: `Tinjau konsep produk: ${title}`,
+      summary: 'Konsep awal tanpa biaya dan tanpa klaim penjualan. Lengkapi materi, berkas unduhan, dan harga sebelum memutuskan untuk menerbitkan.',
+      category: 'operations',
+      amountIdr: null,
+      risk: 'low',
+      status: 'pending',
+      dataSource: 'live',
+    })
+    const summary = `Konsep produk "${title}" disiapkan sebagai draf offline karena AI Gateway belum tersedia. Belum lengkap dan menunggu tinjauan Anda.`
+    await finishRun(run.id, 'ok', summary, `Tidak ada jawaban model: ${outcome.reason}. Draf belum siap dijual dan tidak ada harga atau pendapatan yang diasumsikan.`, 2)
+    await noteAgent('AI Product Creator', 'Konsep produk offline disiapkan', summary)
+    return { summary, created: 2 }
   }
   const read = (label: string) => {
     const match = outcome.text.match(new RegExp(`${label}\\s*:\\s*(.+)`, 'i'))
