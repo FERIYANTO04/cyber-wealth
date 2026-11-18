@@ -1,5 +1,6 @@
 import { isPlaceholder } from './env'
 import { uploadUrl } from './storage'
+import { hasConfiguredBankTransferDetails } from './bank-transfer'
 
 /**
  * Live checks for every outside service the app depends on. Each one actually calls
@@ -31,16 +32,17 @@ export function aiConfig() {
 export function bankTransferStatus(): { state: CheckState; message: string } {
   const bank = process.env.BANK_NAME?.trim()
   const accountName = process.env.BANK_ACCOUNT_NAME?.trim()
-  const accountNumber = process.env.BANK_ACCOUNT_NUMBER?.trim()
-  if (!bank || !accountName || !accountNumber) {
+  if (!hasConfiguredBankTransferDetails()) {
     return {
       state: 'missing',
-      message: 'Detail rekening penerima belum diatur. Isi BANK_NAME, BANK_ACCOUNT_NAME, dan BANK_ACCOUNT_NUMBER di pengaturan rahasia hosting.',
+      message: 'Instruksi rekening penerima belum lengkap. Atur BANK_NAME, BANK_ACCOUNT_NAME, BANK_ACCOUNT_NUMBER, atau isi BANK_TRANSFER_INSTRUCTIONS dengan nama bank dan nomor rekening.',
     }
   }
   return {
     state: 'ready',
-    message: `Instruksi transfer tersedia untuk rekening ${bank} atas nama ${accountName}. Pembayaran tetap diverifikasi dari mutasi rekening sebelum pesanan aktif.`,
+    message: bank && accountName
+      ? `Instruksi transfer tersedia untuk rekening ${bank} atas nama ${accountName}. Pembayaran tetap diverifikasi dari mutasi rekening sebelum pesanan aktif.`
+      : 'Instruksi rekening khusus tersedia. Pastikan nomor rekening dan nama penerima benar; pembayaran tetap diverifikasi sebelum pesanan aktif.',
   }
 }
 
@@ -96,7 +98,7 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
 }
 
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
-  if (!process.env.STORAGE_URL || !process.env.STORAGE_KEY) {
+  if (!(process.env.AWS_ENDPOINT_URL_S3 || process.env.STORAGE_ENDPOINT) || !(process.env.AWS_ACCESS_KEY_ID || process.env.STORAGE_ACCESS_KEY_ID) || !(process.env.AWS_SECRET_ACCESS_KEY || process.env.STORAGE_SECRET_ACCESS_KEY)) {
     return { state: 'missing', message: 'Penyimpanan berkas belum dikonfigurasi. Isi STORAGE_URL dan STORAGE_KEY dari layanan penyimpanan yang kompatibel.' }
   }
   try {
