@@ -117,7 +117,7 @@ async function runCeo(trigger: string) {
     'KONDISI: ' + factualSummary,
     'KEPUTUSAN CEO: Fokus pertama adalah menghasilkan bukti permintaan. Pastikan produk yang sudah terbit benar-benar memiliki berkas unduhan yang dapat diakses; setelah itu uji satu kanal promosi dengan biaya Rp0.',
     'TUGAS AGEN: AI Product Creator memeriksa kelengkapan berkas produk; AI Marketing menyiapkan dan merapikan draf promosi; AI Sales menindaklanjuti prospek yang benar-benar masuk; AI Finance terus mencatat hanya pembayaran terkonfirmasi.',
-    'MENUNGGU PEMILIK: Tinjau dan setujui konten sebelum dipublikasikan. Jangan keluarkan dana untuk iklan atau layanan berbayar tanpa persetujuan.',
+    'DELEGASI: AI Marketing menyusun, menyetujui, dan menjadwalkan konten faktual dari katalog terbit. Publikasi hanya melalui kanal yang sudah terhubung dan terkonfirmasi. Jangan keluarkan dana untuk iklan atau layanan berbayar tanpa persetujuan pemilik.',
     blockers.length ? 'HAMBATAN: ' + blockers.join('; ') : 'HAMBATAN: Tidak ada hambatan dasar yang terdeteksi.',
     'CATATAN: Ini analisis aturan berbasis database, bukan jawaban model AI.'
   ].join('\\n')
