@@ -131,7 +131,7 @@ export async function fileUrl(
   { expiresIn = 3600, download }: { expiresIn?: number; download?: boolean | string } = {},
 ): Promise<string | null> {
   const name = typeof download === 'string' ? download : 'download'
-  const extraQuery = download
+  const extraQuery: Record<string, string> = download
     ? { 'response-content-disposition': `attachment; filename="${name.replace(/["\\\\\\r\\n]/g, '_')}"` }
     : {}
   return presign('GET', key, expiresIn, undefined, extraQuery)
