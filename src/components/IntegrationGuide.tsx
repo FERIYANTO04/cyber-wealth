@@ -46,9 +46,10 @@ function ServiceCardBody({
   onExtraTest: (key: string) => void
 }) {
   const [open, setOpen] = useState(card.state !== 'ready')
-  const tone = TONE[card.state]
-  const Icon = tone.icon
   const live = testNote ?? { state: card.state, message: card.message }
+  const effectiveState = live.state
+  const tone = TONE[effectiveState]
+  const Icon = tone.icon
   const liveTone = TONE[live.state]
   const LiveIcon = liveTone.icon
 
@@ -60,7 +61,7 @@ function ServiceCardBody({
       />
       <PanelBody>
         <div className="flex items-start gap-2">
-          <Icon className={cn('mt-0.5 size-4 shrink-0', card.state === 'ready' ? 'text-signal' : 'text-hold')} aria-hidden="true" />
+          <Icon className={cn('mt-0.5 size-4 shrink-0', effectiveState === 'ready' ? 'text-signal' : 'text-hold')} aria-hidden="true" />
           <div className="min-w-0">
             <p className="text-[0.8125rem] leading-relaxed text-ink">{card.summary}</p>
             <p className="mt-1 text-xs leading-relaxed text-ink-quiet">{live.message}</p>
@@ -84,7 +85,7 @@ function ServiceCardBody({
           </ul>
         )}
 
-        {testNote && testNote.state !== card.state && (
+        {testNote && (
           <InlineNote tone={liveTone.tone === 'danger' ? 'danger' : liveTone.tone === 'signal' ? 'signal' : 'quiet'}>
             <span className="flex items-start gap-1.5">
               <LiveIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -200,6 +201,7 @@ export function IntegrationGuide({
   }
 
   const total = cards.length
+  const currentReadyCount = cards.filter((card) => (results[card.key]?.state ?? card.state) === 'ready').length
 
   return (
     <div className="flex flex-col gap-stack">
@@ -208,9 +210,9 @@ export function IntegrationGuide({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <Stat
               label="Layanan terhubung"
-              value={`${readyCount} / ${total}`}
-              tone={readyCount === total ? 'signal' : undefined}
-              context={readyCount === total ? 'semua siap dipakai' : 'sisanya masih perlu diisi'}
+              value={`${currentReadyCount} / ${total}`}
+              tone={currentReadyCount === total ? 'signal' : undefined}
+              context={currentReadyCount === total ? 'semua siap dipakai' : 'sisanya masih perlu diisi'}
             />
             <ul className="flex flex-col gap-1">
               {cards.map((card) => (
@@ -218,7 +220,7 @@ export function IntegrationGuide({
                   <span
                     className={cn(
                       'size-1.5 rounded-full',
-                      card.state === 'ready' ? 'bg-signal' : card.state === 'missing' ? 'bg-hold' : 'bg-danger'
+                      (results[card.key]?.state ?? card.state) === 'ready' ? 'bg-signal' : (results[card.key]?.state ?? card.state) === 'missing' ? 'bg-hold' : 'bg-danger'
                     )}
                     aria-hidden="true"
                   />
