@@ -649,11 +649,19 @@ async function createPostTrack(post: typeof socialPosts.$inferSelect): Promise<s
 
   let destination = '/'
   if (post.sourceType === 'product') {
-    const [product] = await db.select({ slug: products.slug }).from(products).where(eq(products.id, post.sourceId)).limit(1)
-    destination = product ? '/toko/' + product.slug : '/toko'
+    if (post.sourceId) {
+      const [product] = await db.select({ slug: products.slug }).from(products).where(eq(products.id, post.sourceId)).limit(1)
+      destination = product ? '/toko/' + product.slug : '/toko'
+    } else {
+      destination = '/toko'
+    }
   } else if (post.sourceType === 'service') {
-    const [service] = await db.select({ slug: services.slug }).from(services).where(eq(services.id, post.sourceId)).limit(1)
-    destination = service ? '/jasa/' + service.slug : '/jasa'
+    if (post.sourceId) {
+      const [service] = await db.select({ slug: services.slug }).from(services).where(eq(services.id, post.sourceId)).limit(1)
+      destination = service ? '/jasa/' + service.slug : '/jasa'
+    } else {
+      destination = '/jasa'
+    }
   }
 
   const code = trackCode()
