@@ -1,10 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { products } from '@/lib/db/schema'
 import { getSession } from '@/lib/auth'
-import { logActivity } from '@/lib/data'
 import { uploadUrl } from '@/lib/storage'
 import { randomUUID } from 'node:crypto'
 
@@ -42,26 +38,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  const [product] = await db.select().from(products).where(eq(products.id, parsed.data.productId)).limit(1)
-  if (!product) return res.status(404).json({ error: 'Produk tidak ditemukan.' })
-
   const ext = parsed.data.fileName.includes('.')
     ? parsed.data.fileName.split('.').pop()!.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8)
     : 'bin'
 
-  const key = `produk/${product.id}/${randomUUID()}.${ext}`
+  const key = `produk/${parsed.data.productId}/${randomUUID()}.${ext}`
 
   try {
     const url = await uploadUrl(key, { contentType: parsed.data.contentType })
-    await db
-      .update(products)
-      .set({ fileKey: key, fileName: parsed.data.fileName, fileSize: parsed.data.size })
-      .where(eq(products.id, product.id))
-    await logActivity({
-      actor: 'owner',
-      action: 'Berkas produk dilampirkan',
-      detail: `${parsed.data.fileName} pada produk ${product.name}.`,
-    })
     return res.status(200).json({ ok: true, uploadUrl: url, key })
   } catch (error) {
     console.error('[product upload] sign failed:', error instanceof Error ? error.message : error)
