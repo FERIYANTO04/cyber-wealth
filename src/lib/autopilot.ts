@@ -113,10 +113,19 @@ async function runCeo(trigger: string) {
     `${activeSubs?.n ?? 0} langganan aktif, ${liveProducts?.n ?? 0} produk terbit. ` +
     (blockers.length > 0 ? `Perlu perhatian: ${blockers.join(', ')}.` : 'Tidak ada penghambat dasar yang terdeteksi.')
 
+  const offlineCeoAnalysis = [
+    'KONDISI: ' + factualSummary,
+    'KEPUTUSAN CEO: Fokus pertama adalah menghasilkan bukti permintaan. Pastikan produk yang sudah terbit benar-benar memiliki berkas unduhan yang dapat diakses; setelah itu uji satu kanal promosi dengan biaya Rp0.',
+    'TUGAS AGEN: AI Product Creator memeriksa kelengkapan berkas produk; AI Marketing menyiapkan dan merapikan draf promosi; AI Sales menindaklanjuti prospek yang benar-benar masuk; AI Finance terus mencatat hanya pembayaran terkonfirmasi.',
+    'MENUNGGU PEMILIK: Tinjau dan setujui konten sebelum dipublikasikan. Jangan keluarkan dana untuk iklan atau layanan berbayar tanpa persetujuan.',
+    blockers.length ? 'HAMBATAN: ' + blockers.join('; ') : 'HAMBATAN: Tidak ada hambatan dasar yang terdeteksi.',
+    'CATATAN: Ini analisis aturan berbasis database, bukan jawaban model AI.'
+  ].join('\\n')
+
   if (!aiConfigured()) {
-    const summary = 'AI CEO belum dapat membuat keputusan strategis karena GROQ_API_KEY belum dipasang. ' + factualSummary
-    await finishRun(run.id, 'skipped', summary, 'Data operasional dibaca dari database, tetapi analisis model AI tidak dijalankan. Hubungkan kunci Groq pada variabel server untuk mengaktifkan analisis CEO.', 0)
-    await noteAgent('AI CEO', 'Analisis CEO menunggu koneksi model AI', summary)
+    const summary = factualSummary + ' Arahan operasional disusun dari data database tanpa model AI.'
+    await finishRun(run.id, 'ok', summary, offlineCeoAnalysis, 0)
+    await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
     return { summary }
   }
 
@@ -141,9 +150,9 @@ async function runCeo(trigger: string) {
   })
 
   if (!outcome.ok) {
-    const summary = `Data bisnis terbaca, tetapi AI CEO gagal menganalisis: ${outcome.reason}`
-    await finishRun(run.id, 'failed', summary, facts, 0)
-    await noteAgent('AI CEO', 'Analisis CEO gagal', summary)
+    const summary = factualSummary + ' Arahan operasional disusun dari data database; model AI belum tersedia.'
+    await finishRun(run.id, 'ok', summary, offlineCeoAnalysis + `\\n\\nAlasan mode offline: ${outcome.reason}`, 0)
+    await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
     return { summary }
   }
 
@@ -272,14 +281,52 @@ async function runResearch(trigger: string) {
 async function runProduct(trigger: string) {
   const run = await startRun('AI Product Creator', 'product', trigger)
 
-  if (!aiConfigured()) {
-    const summary = 'Model AI belum terhubung, jadi draf produk tidak dibuat.'
-    await finishRun(run.id, 'skipped', summary, 'Tambahkan kunci API model AI di halaman Integrasi untuk mengaktifkan tugas ini.', 0)
-    await noteAgent('AI Product Creator', 'Tugas produk dilewati', summary)
-    return { summary, created: 0, skipped: true }
+  const existing = await db.select({ name: products.name }).from(products).limit(20)
+  const offlineTitle = 'Checklist Peluncuran Produk Digital untuk Pemula'
+  const duplicateOffline = existing.some((p) => p.name.toLowerCase() === offlineTitle.toLowerCase())
+  if (!aiConfigured() || duplicateOffline) {
+    if (duplicateOffline) {
+      const summary = `Draf "${offlineTitle}" sudah ada. Tidak dibuat ulang agar tidak menggandakan produk.`
+      await finishRun(run.id, 'skipped', summary, 'Tinjau draf yang sudah ada di katalog. Draf produk tidak diterbitkan otomatis.', 0)
+      await noteAgent('AI Product Creator', 'Draf produk tidak digandakan', summary)
+      return { summary, created: 0, skipped: true }
+    }
+    const offlineDraft = [
+      `JUDUL: ${offlineTitle}`,
+      'RINGKASAN: Kerangka kerja untuk merencanakan, menyiapkan, dan memeriksa peluncuran produk digital pertama.',
+      'DESKRIPSI: Draf kerangka produk untuk pemula yang ingin menjual produk digital. Materi yang perlu disusun meliputi pemilihan masalah pelanggan, penentuan format produk, pemeriksaan isi dan berkas, penetapan harga, halaman penjualan, serta daftar pemeriksaan sebelum publikasi. Ini baru konsep dan belum berisi panduan lengkap atau berkas unduhan.',
+      'HARGA: 0'
+    ].join('\\n')
+    const title = offlineTitle
+    const summaryLine = 'Kerangka produk digital untuk menyiapkan peluncuran pertama; perlu dilengkapi dan ditinjau.'
+    const description = offlineDraft.split('\\n').find((line) => line.startsWith('DESKRIPSI:'))?.replace('DESKRIPSI: ', '') ?? ''
+    const base = 'checklist-peluncuran-produk-digital-pemula'
+    await db.insert(products).values({
+      slug: base,
+      name: title,
+      summary: summaryLine,
+      description,
+      category: 'template',
+      priceIdr: 0,
+      status: 'draft',
+      deliverableNote: 'Konsep offline. Belum merupakan produk lengkap; lengkapi isi dan lampirkan berkas sebelum ditinjau untuk diterbitkan.',
+      dataSource: 'live',
+    })
+    await db.insert(proposals).values({
+      title: `Tinjau konsep produk: ${title}`,
+      summary: 'Konsep awal tanpa biaya dan tanpa klaim penjualan. Lengkapi materi, berkas unduhan, dan harga sebelum memutuskan untuk menerbitkan.',
+      category: 'operations',
+      amountIdr: null,
+      risk: 'low',
+      status: 'pending',
+      dataSource: 'live',
+    })
+    const summary = `Konsep produk "${title}" disiapkan tanpa layanan AI berbayar. Belum lengkap dan menunggu tinjauan Anda.`
+    await finishRun(run.id, 'ok', summary, 'Konsep disimpan sebagai draf, bukan produk siap jual. Tidak ada harga atau pendapatan yang diasumsikan.', 2)
+    await noteAgent('AI Product Creator', 'Konsep produk offline disiapkan', summary)
+    return { summary, created: 2 }
   }
 
-  const existing = await db.select({ name: products.name }).from(products).limit(20)
   const outcome = await askAi({
     system:
       'Anda perancang produk digital untuk pasar Indonesia dan internasional. Usulkan SATU produk digital yang realistis dan bisa dibuat hari ini oleh satu orang. Jangan mengarang angka penjualan atau klaim hasil.',
@@ -290,16 +337,16 @@ async function runProduct(trigger: string) {
       'RINGKASAN: <satu kalimat>',
       'DESKRIPSI: <3-5 kalimat berisi isi produk dan untuk siapa>',
       'HARGA: <angka rupiah tanpa titik>',
-    ].join('\n'),
+    ].join('\\n'),
     maxTokens: 700,
   })
 
   if (!outcome.ok) {
-    await finishRun(run.id, 'failed', 'Model AI tidak menjawab.', outcome.reason, 0)
-    await noteAgent('AI Product Creator', 'Draf produk gagal dibuat', outcome.reason)
-    return { summary: outcome.reason, created: 0, failed: true }
+    const summary = 'Model AI belum tersedia. Tidak ada draf baru yang dibuat agar tidak menghasilkan konsep asal.'
+    await finishRun(run.id, 'skipped', summary, outcome.reason, 0)
+    await noteAgent('AI Product Creator', 'Tugas produk menunggu AI Gateway', summary)
+    return { summary, created: 0, skipped: true }
   }
-
   const read = (label: string) => {
     const match = outcome.text.match(new RegExp(`${label}\\s*:\\s*(.+)`, 'i'))
     return match ? match[1].trim() : ''
