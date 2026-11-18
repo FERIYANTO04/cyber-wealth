@@ -504,9 +504,11 @@ export async function publishDuePosts(): Promise<{
     }
 
     if (post.channel === 'facebook') {
-      const result = await publishToFacebook(post.body)
+      const trackCodeForPost = await createPostTrack(post)
+      const publishBody = trackCodeForPost ? bodyWithTrackedLink(post.body, trackCodeForPost, post.channel) : post.body
+      const result = await publishToFacebook(publishBody)
       if (result.ok) {
-        const track = await createPostTrack(post)
+        const track = Boolean(trackCodeForPost)
         await db
           .update(socialPosts)
           .set({
@@ -564,14 +566,16 @@ export async function publishDuePosts(): Promise<{
         continue
       }
 
+      const trackCodeForPost = await createPostTrack(post)
+      const publishBody = trackCodeForPost ? bodyWithTrackedLink(post.body, trackCodeForPost, post.channel) : post.body
       const result = await publishToInstagram({
-        caption: post.body,
+        caption: publishBody,
         mediaUrl,
         mediaType: post.mediaType === 'video' ? 'video' : post.mediaType === 'image' ? 'image' : null,
       })
 
       if (result.ok) {
-        const track = await createPostTrack(post)
+        const track = Boolean(trackCodeForPost)
         await db
           .update(socialPosts)
           .set({
@@ -639,19 +643,37 @@ export async function publishDuePosts(): Promise<{
  * A short tracked link for a published post, pointing at what it promotes. A click is
  * only ever counted when the redirect actually happens.
  */
-async function createPostTrack(post: typeof socialPosts.$inferSelect): Promise<boolean> {
-  const destination =
-    post.sourceType === 'product' ? `/toko` : post.sourceType === 'service' ? `/jasa` : '/'
-  try {
-    await db.insert(postTracks).values({
-      postId: post.id,
-      code: trackCode(),
-      destination,
-    })
-    return true
-  } catch {
-    return false
+async function createPostTrack(post: typeof socialPosts.$inferSelect): Promise<string | null> {
+  const [existing] = await db.select().from(postTracks).where(eq(postTracks.postId, post.id)).limit(1)
+  if (existing) return existing.code
+
+  let destination = '/'
+  if (post.sourceType === 'product') {
+    const [product] = await db.select({ slug: products.slug }).from(products).where(eq(products.id, post.sourceId)).limit(1)
+    destination = product ? '/toko/' + product.slug : '/toko'
+  } else if (post.sourceType === 'service') {
+    const [service] = await db.select({ slug: services.slug }).from(services).where(eq(services.id, post.sourceId)).limit(1)
+    destination = service ? '/jasa/' + service.slug : '/jasa'
   }
+
+  const code = trackCode()
+  try {
+    await db.insert(postTracks).values({ postId: post.id, code, destination })
+    return code
+  } catch {
+    const [raced] = await db.select().from(postTracks).where(eq(postTracks.postId, post.id)).limit(1)
+    return raced?.code ?? null
+  }
+}
+
+function bodyWithTrackedLink(body: string, code: string, channel: string): string {
+  const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL
+  if (!configuredOrigin) return body
+  const origin = configuredOrigin.startsWith('http') ? configuredOrigin : 'https://' + configuredOrigin
+  const url = new URL('/api/go/' + encodeURIComponent(code), origin).toString()
+  const suffix = '\n\nBuka: ' + url
+  const limit = channelLimit(channel)
+  return body.slice(0, Math.max(0, limit - suffix.length)).trimEnd() + suffix
 }
 
 export function trackCode(): string {
