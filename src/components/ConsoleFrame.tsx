@@ -38,6 +38,7 @@ const NAV = [
   { href: '/billing', label: 'Tagihan berulang', short: 'Tagihan', icon: Repeat },
   { href: '/email', label: 'Kotak keluar email', short: 'Email', icon: Mail },
   { href: '/finance', label: 'Keuangan', short: 'Keuangan', icon: Wallet },
+  { href: '/discovery', label: 'Business Discovery', short: 'Discovery', icon: Store },
   { href: '/revenue', label: 'Mesin pendapatan', short: 'Pendapatan', icon: Store },
   { href: '/social', label: 'Studio konten sosial', short: 'Konten', icon: Megaphone },
   { href: '/facebook', label: 'Facebook Page', short: 'Facebook', icon: Share2 },
