@@ -10,6 +10,22 @@ import { testStorageRoundTrip } from './storage'
 
 export type CheckState = 'ready' | 'missing' | 'invalid' | 'error'
 
+export function bankTransferStatus(): { state: CheckState; message: string } {
+  const bank = process.env.BANK_NAME?.trim()
+  const accountName = process.env.BANK_ACCOUNT_NAME?.trim()
+  const accountNumber = process.env.BANK_ACCOUNT_NUMBER?.trim()
+  if (!bank || !accountName || !accountNumber) {
+    return {
+      state: 'missing',
+      message: 'Detail rekening penerima belum diatur. Isi BANK_NAME, BANK_ACCOUNT_NAME, dan BANK_ACCOUNT_NUMBER di pengaturan rahasia hosting.',
+    }
+  }
+  return {
+    state: 'ready',
+    message: `Instruksi transfer tersedia untuk rekening ${bank} atas nama ${accountName}. Pembayaran tetap diverifikasi dari mutasi rekening sebelum pesanan aktif.`,
+  }
+}
+
 export type IntegrationCheck = {
   key: 'ai' | 'bank' | 'email' | 'storage'
   label: string
