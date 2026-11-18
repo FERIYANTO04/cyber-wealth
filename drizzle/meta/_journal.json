@@ -162,6 +162,13 @@
       "when": 1794919511830,
       "tag": "0022_unknown_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795027724936,
+      "tag": "0023_ai_money_management",
+      "breakpoints": true
     }
   ]
 }
