@@ -44,16 +44,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return { error: 'Pembersihan gagal; periksa log server.' }
     })
 
-    const due = await autopilotDue()
-    if (!due) return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, housekeeping })
-
-    const result = await runAutopilot('schedule')
-    if (result.paused) return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, housekeeping })
-
+    // Publishing has its own schedule and must not depend on whether the AI
+    // autopilot's slower strategy cadence is due on this particular cron tick.
     const social = await publishDuePosts().catch((error) => {
       console.error('[cron social]', error)
       return { error: 'Publikasi sosial gagal; periksa log server.' }
     })
+
+    const due = await autopilotDue()
+    if (!due) {
+      return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, social, housekeeping })
+    }
+
+    const result = await runAutopilot('schedule')
+    if (result.paused) {
+      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, social, housekeeping })
+    }
+
     await logActivity({
       actor: 'system',
       action: 'Putaran terjadwal autopilot berjalan',
