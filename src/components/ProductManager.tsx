@@ -151,6 +151,21 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
         setError('Berkas gagal diunggah ke penyimpanan. Coba lagi.')
         return
       }
+      const completeResponse = await fetch('/api/products/upload-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product.id,
+          key: signed.key,
+          fileName: file.name,
+          size: file.size,
+        }),
+      })
+      const completed = await completeResponse.json().catch(() => ({}))
+      if (!completeResponse.ok) {
+        setError(completed.error ?? 'Berkas sudah terunggah, tetapi belum berhasil ditautkan ke produk. Coba unggah ulang.')
+        return
+      }
       setRows((old) =>
         old.map((row) => (row.id === product.id ? { ...row, fileName: file.name, fileKey: signed.key } : row))
       )
