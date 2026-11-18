@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { serviceRequests } from '@/lib/db/schema'
-import { getSession } from '@/lib/auth'
+import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 
 const Body = z.object({
@@ -18,7 +18,7 @@ const Body = z.object({
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
 
-  const session = await getSession(req)
+  const session = await requireOwnerSession(req)
   if (!session) return res.status(401).json({ error: 'Sesi tidak ditemukan. Silakan masuk.' })
 
   const parsed = Body.safeParse(req.body)
