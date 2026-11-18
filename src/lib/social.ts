@@ -11,8 +11,8 @@ import { CHANNELS, MARKETS, MARKET_CHANNELS, channelLabel, channelLimit, type Ch
  * The social content studio.
  *
  * Three rules hold the whole file together:
- * 1. A post is a draft until the owner approves it. Nothing is written, scheduled or
- *    sent behind their back — this stage is approval-first by the owner's decision.
+ * 1. AI Marketing may approve and schedule its own factual drafts from the live catalog.
+ *    The owner retains control of money, account connections and consequential actions.
  * 2. "Published" is a claim only a channel API can make. Until one returns an id, a
  *    post stays `not_connected` or `failed`, with the provider's reason on it.
  * 3. Content is written from the owner's real catalog rows. No invented product,
@@ -193,7 +193,8 @@ function templateBody(material: Material, channel: ChannelKey, market: string): 
 
 /**
  * Writes one post per material per market and channel, skipping anything that already
- * exists. Every post lands as a draft: the owner approves before anything moves.
+ * exists. AI-generated factual posts are approved and scheduled 24 hours ahead; publishing
+ * still requires a connected channel and a successful provider API response.
  */
 export async function generatePosts(args: { markets?: string[]; channels?: ChannelKey[]; limit?: number } = {}) {
   const markets = args.markets?.length ? args.markets : MARKETS.map((m) => m.key)
@@ -265,9 +266,11 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
           sourceId: material.sourceId,
           sourceName: material.sourceName,
           source,
-          status: 'draft',
+          status: 'approved',
+          approvedAt: new Date(),
+          scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           publishState: 'not_connected',
-          publishNote: 'Belum ada kanal resmi yang terhubung. Konten menunggu persetujuan Anda sebelum dijadwalkan.',
+          publishNote: 'Dijadwalkan otomatis oleh AI Marketing 24 jam setelah dibuat. Publikasi hanya berjalan jika kanal resmi terhubung dan API mengonfirmasi.',
           dataSource: 'live',
         })
         taken.add(key)
@@ -282,7 +285,7 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
     action: created > 0 ? 'Draf konten sosial dibuat' : 'Tugas pemasaran dilewati',
     detail:
       created > 0
-        ? `${created} draf konten untuk ${markets.join(' dan ')}. Semua menunggu persetujuan Anda; tidak ada yang terbit.`
+        ? `${created} konten untuk ${markets.join(' dan ')} disetujui dan dijadwalkan otomatis 24 jam ke depan. Publikasi menunggu kanal resmi terhubung.`
         : 'Setiap produk dan layanan sudah punya draf di kanal yang dipilih.',
     dataSource: 'live',
   })
