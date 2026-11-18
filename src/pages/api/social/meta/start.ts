@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   res.setHeader(
     'Set-Cookie',
-    `cwa_meta_state=${state}; Path=/; HttpOnly; Secure; SameSite=${cookieSameSite}; Max-Age=600`
+    `cwa_meta_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
   )
 
   // Use the public proxy host consistently; Origin is normally absent on top-level GETs.
