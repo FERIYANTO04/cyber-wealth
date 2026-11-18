@@ -66,9 +66,9 @@ function presign(method: 'GET' | 'PUT' | 'DELETE', key: string, expiresIn: numbe
   }
   if (responseName) params['response-content-disposition'] = 'attachment; filename="' + responseName.replace(/["\\\r\n]/g, '_') + '"'
   const canonicalQuery = Object.keys(params).sort().map((k) => encodeQuery(k) + '=' + encodeQuery(params[k])).join('&')
-  const canonicalHeaders = 'host:' + endpoint.host + '\\n'
-  const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, 'host', 'UNSIGNED-PAYLOAD'].join('\\n')
-  const stringToSign = [ALGORITHM, amzDate, scope, sha256(canonicalRequest)].join('\\n')
+  const canonicalHeaders = 'host:' + endpoint.host + '\n'
+  const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, 'host', 'UNSIGNED-PAYLOAD'].join('\n')
+  const stringToSign = [ALGORITHM, amzDate, scope, sha256(canonicalRequest)].join('\n')
   const signature = createHmac('sha256', signingKey(date)).update(stringToSign).digest('hex')
   endpoint.pathname = canonicalUri
   endpoint.search = canonicalQuery + '&X-Amz-Signature=' + signature
