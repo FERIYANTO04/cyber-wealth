@@ -1,23 +1,28 @@
 /**
  * Shared OpenAI-compatible chat-completions client.
- * Supports Neon AI Gateway first, with Groq kept as a backward-compatible fallback.
+ * Neon AI Gateway is primary; Groq can be enabled as a secondary provider.
+ * Secondary routing is opt-in so it cannot create unapproved provider charges.
  */
 import { isPlaceholder } from './env'
 
-const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
-const BASE_URL = (
+const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\\/+$/, '')
+const PRIMARY_BASE_URL = (
   process.env.AI_BASE_URL ||
   (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
-).replace(/\/+$/, '')
-const MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
-const API_KEY = process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''
+).replace(/\\/+$/, '')
+const PRIMARY_MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
+const PRIMARY_KEY = process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''
+const FALLBACK_KEY = process.env.GROQ_API_KEY || ''
+const FALLBACK_BASE_URL = 'https://api.groq.com/openai/v1'
+const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || 'openai/gpt-oss-120b'
+const FALLBACK_ENABLED = process.env.AI_FALLBACK_ENABLED === 'true'
 
 export function aiConfig() {
-  return { baseUrl: BASE_URL, model: MODEL, key: API_KEY }
+  return { baseUrl: PRIMARY_BASE_URL, model: PRIMARY_MODEL, key: PRIMARY_KEY }
 }
 
 export function aiConfigured(): boolean {
-  return !isPlaceholder(API_KEY)
+  return !isPlaceholder(PRIMARY_KEY)
 }
 
 export type AiMessage = { role: 'system' | 'user' | 'assistant'; content: string }
@@ -25,26 +30,24 @@ export type AiOutcome =
   | { ok: true; text: string; model: string }
   | { ok: false; reason: string }
 
-export async function chatWithAi(args: {
+type Provider = { baseUrl: string; model: string; key: string; label: string }
+
+async function requestProvider(provider: Provider, args: {
   messages: AiMessage[]
   maxTokens?: number
   temperature?: number
 }): Promise<AiOutcome> {
-  if (isPlaceholder(API_KEY) || !API_KEY) {
-    return { ok: false, reason: 'Model AI belum terhubung. Kredensial AI Gateway belum tersedia di server.' }
-  }
-
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 25_000)
   try {
-    const response = await fetch(`${BASE_URL}/chat/completions`, {
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${provider.key}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: provider.model,
         temperature: args.temperature ?? 0.4,
         max_tokens: args.maxTokens ?? 1200,
         messages: args.messages,
@@ -59,13 +62,12 @@ export async function chatWithAi(args: {
 
     if (!response.ok) {
       const detail = body?.error?.message
-      if (response.status === 401 || response.status === 403) {
-        return { ok: false, reason: `AI Gateway menolak permintaan (${response.status})${detail ? `: ${detail.slice(0, 300)}` : '. Detail penyedia tidak tersedia.'}` }
-      }
-      if (response.status === 429) {
-        return { ok: false, reason: 'Batas pemakaian model AI tercapai. Periksa kredit atau kuota, lalu coba lagi.' }
-      }
-      return { ok: false, reason: `Penyedia model AI menolak permintaan (${response.status})${detail ? `: ${detail}` : ''}.` }
+      const reason = response.status === 401 || response.status === 403
+        ? `${provider.label} menolak autentikasi (${response.status})${detail ? `: ${detail.slice(0, 300)}` : '.'}`
+        : response.status === 429
+          ? `Kuota ${provider.label} tercapai (429).`
+          : `${provider.label} menolak permintaan (${response.status})${detail ? `: ${detail.slice(0, 300)}` : '.'}`
+      return { ok: false, reason }
     }
 
     const choice = body?.choices?.[0]
@@ -75,18 +77,57 @@ export async function chatWithAi(args: {
         ok: false,
         reason: choice?.finish_reason === 'length'
           ? 'Jawaban model AI terpotong sebelum selesai. Coba pertanyaan yang lebih singkat.'
-          : 'Model AI tidak mengembalikan jawaban. Coba lagi.',
+          : `${provider.label} tidak mengembalikan jawaban.`,
       }
     }
-    return { ok: true, text, model: MODEL }
+    return { ok: true, text, model: `${provider.label} / ${provider.model}` }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return { ok: false, reason: 'Model AI tidak menjawab dalam 25 detik. Coba lagi.' }
+      return { ok: false, reason: `${provider.label} tidak menjawab dalam 25 detik.` }
     }
-    return { ok: false, reason: 'Tidak bisa menghubungi penyedia model AI. Periksa koneksi lalu coba lagi.' }
+    return { ok: false, reason: `Tidak bisa menghubungi ${provider.label}.` }
   } finally {
     clearTimeout(timer)
   }
+}
+
+function canFailOver(reason: string): boolean {
+  return /kuota|429|menolak permintaan \(5\\d\\d\)|tidak bisa menghubungi|tidak menjawab dalam 25 detik/i.test(reason)
+}
+
+export async function chatWithAi(args: {
+  messages: AiMessage[]
+  maxTokens?: number
+  temperature?: number
+}): Promise<AiOutcome> {
+  if (isPlaceholder(PRIMARY_KEY) || !PRIMARY_KEY) {
+    return { ok: false, reason: 'Model AI belum terhubung. Kredensial AI Gateway belum tersedia di server.' }
+  }
+
+  const primary: Provider = {
+    baseUrl: PRIMARY_BASE_URL,
+    model: PRIMARY_MODEL,
+    key: PRIMARY_KEY,
+    label: NEON_BASE_URL || process.env.AI_BASE_URL ? 'AI Gateway' : 'Groq',
+  }
+  const result = await requestProvider(primary, args)
+  if (result.ok) return result
+
+  const primaryIsGroq = primary.baseUrl.includes('api.groq.com')
+  const fallbackAvailable = FALLBACK_ENABLED && !primaryIsGroq &&
+    !isPlaceholder(FALLBACK_KEY) && Boolean(FALLBACK_KEY)
+
+  if (!fallbackAvailable || !canFailOver(result.reason)) return result
+
+  const fallback = await requestProvider({
+    baseUrl: FALLBACK_BASE_URL,
+    model: FALLBACK_MODEL,
+    key: FALLBACK_KEY,
+    label: 'Groq cadangan',
+  }, args)
+
+  if (fallback.ok) return fallback
+  return { ok: false, reason: `${result.reason} Jalur cadangan juga gagal: ${fallback.reason}` }
 }
 
 export async function askAi(args: { system: string; prompt: string; maxTokens?: number }): Promise<AiOutcome> {
