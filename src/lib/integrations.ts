@@ -1,5 +1,5 @@
 import { isPlaceholder } from './env'
-import { uploadUrl } from './storage'
+import { testStorageRoundTrip } from './storage'
 
 /**
  * Live checks for every outside service the app depends on. Each one actually calls
@@ -96,9 +96,6 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
 }
 
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
-  // Keep this check aligned with the S3-compatible variables consumed by storage.ts.
-  // The previous STORAGE_URL/STORAGE_KEY names were stale and caused false "missing"
-  // results even when the active credentials were configured.
   if (
     !process.env.STORAGE_ENDPOINT ||
     !process.env.STORAGE_BUCKET ||
@@ -107,22 +104,18 @@ export async function storageStatus(): Promise<{ state: CheckState; message: str
   ) {
     return {
       state: 'missing',
-      message: 'Konfigurasi penyimpanan S3 belum lengkap. Periksa STORAGE_ENDPOINT, STORAGE_BUCKET, STORAGE_ACCESS_KEY_ID, dan STORAGE_SECRET_ACCESS_KEY di lingkungan server.',
+      message: 'Konfigurasi penyimpanan S3 belum lengkap. Periksa variabel penyimpanan di lingkungan server.',
     }
   }
+
   try {
-    // This validates local configuration and S3 URL signing only. It does not
-    // upload or retrieve an object; end-to-end file delivery must be tested separately.
-    const url = await uploadUrl('pemeriksaan/koneksi.txt', { expiresIn: 60 })
-    return url
-      ? {
-          state: 'ready',
-          message: 'Konfigurasi penyimpanan tersedia dan URL unggah sementara berhasil dibuat. Uji unggah dan unduh berkas tetap diperlukan untuk memastikan akses bucket.',
-        }
-      : { state: 'error', message: 'Penyimpanan tidak memberi tautan unggah.' }
+    await testStorageRoundTrip()
+    return {
+      state: 'ready',
+      message: 'Berhasil mengunggah dan mengunduh berkas percobaan dari bucket. Berkas percobaan sudah dibersihkan.',
+    }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'tidak diketahui'
-    return { state: 'error', message: `Penyimpanan berkas belum siap: ${message}.` }
+    const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui.'
+    return { state: 'error', message: `Uji unggah/unduh penyimpanan gagal: ${message}` }
   }
 }
-
