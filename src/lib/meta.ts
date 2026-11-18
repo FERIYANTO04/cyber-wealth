@@ -141,7 +141,7 @@ export async function exchangeCode(origin: string, code: string): Promise<Exchan
   const { appId, appSecret, version } = metaConfig()
   if (!appId || !appSecret) return { ok: false, message: 'Meta App ID atau App Secret belum diisi.' }
 
-  const url = new URL(`${GRAPH}/${version}/oauth/access_token`)
+  const url = new URL(`${GRAPH}/oauth/access_token`)
   url.searchParams.set('client_id', appId)
   url.searchParams.set('client_secret', appSecret)
   url.searchParams.set('redirect_uri', redirectUriFor(origin))
