@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { agents, proposals, transactions } from '@/lib/db/schema'
+import { agents, proposals } from '@/lib/db/schema'
 import { getSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 
@@ -40,23 +40,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .set({ status: decision, decisionNote: note ?? null, decidedAt: new Date() })
     .where(eq(proposals.id, id))
 
-  // An approved live financial proposal is booked into the ledger so the money
-  // picture moves with the decision. Demo proposals never touch real figures, and
-  // no external payment is executed here.
-  if (
-    decision === 'approved' &&
-    found.proposal.dataSource === 'live' &&
-    found.proposal.amountIdr &&
-    found.proposal.category === 'finance'
-  ) {
-    await db.insert(transactions).values({
-      kind: 'expense',
-      category: 'Disetujui pemilik',
-      description: found.proposal.title,
-      amountIdr: Number(found.proposal.amountIdr),
-      dataSource: 'live',
-    })
-  }
+  // Approval records the owner's decision only. It does not prove that money
+  // has left the bank account, so it must never create an expense transaction.
+  // Record the expense separately only after the owner verifies the real payment.
 
   await logActivity({
     actor: 'owner',
