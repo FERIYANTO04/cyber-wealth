@@ -1,4 +1,4 @@
-import { createHash, createHmac } from 'node:crypto'
+import { createHash, createHmac, randomUUID } from 'node:crypto'
 
 const endpoint = process.env.STORAGE_ENDPOINT
 const bucket = process.env.STORAGE_BUCKET
@@ -76,7 +76,7 @@ function objectUrl(key: string): { url: URL; cfg: ReturnType<typeof config> } {
   return { url, cfg }
 }
 
-function presign(method: 'PUT' | 'GET', key: string, expiresIn: number, contentType?: string, extraQuery: Record<string, string> = {}): string {
+function presign(method: 'PUT' | 'GET' | 'DELETE', key: string, expiresIn: number, contentType?: string, extraQuery: Record<string, string> = {}): string {
   const { url, cfg } = objectUrl(key)
   const now = amzDate(new Date())
   const scope = `${now.day}/${cfg.region}/s3/aws4_request`
@@ -138,6 +138,56 @@ export async function uploadObject(key: string, body: Uint8Array, contentType: s
     const detail = (await response.text().catch(() => '')).slice(0, 500)
     throw new StorageError(response.status, `Penyimpanan menolak unggahan (HTTP ${response.status}). ${detail}`)
   }
+}
+
+// Performs a real, isolated bucket round-trip and removes its temporary object.
+export async function testStorageRoundTrip(): Promise<void> {
+  const key = `_system-check/${randomUUID()}.txt`
+  const expected = `cyber-wealth-storage-check:${randomUUID()}`
+  const body = new TextEncoder().encode(expected)
+  let uploaded = false
+  let primaryError: unknown
+
+  try {
+    await uploadObject(key, body, 'text/plain')
+    uploaded = true
+
+    const download = await fileUrl(key, { expiresIn: 60 })
+    if (!download) throw new StorageError(502, 'URL unduh percobaan tidak berhasil dibuat.')
+
+    const response = await fetch(download, { method: 'GET', cache: 'no-store' })
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => '')).slice(0, 300)
+      throw new StorageError(response.status, `Bucket gagal membaca berkas percobaan (HTTP ${response.status}). ${detail}`)
+    }
+
+    const received = new Uint8Array(await response.arrayBuffer())
+    if (received.length !== body.length || Buffer.compare(Buffer.from(received), Buffer.from(body)) !== 0) {
+      throw new StorageError(502, 'Isi berkas hasil unduhan tidak sama dengan berkas yang diunggah.')
+    }
+  } catch (error) {
+    primaryError = error
+  } finally {
+    if (uploaded) {
+      try {
+        const deleteUrl = presign('DELETE', key, 60)
+        const deleted = await fetch(deleteUrl, { method: 'DELETE', cache: 'no-store' })
+        if (!deleted.ok) {
+          const detail = (await deleted.text().catch(() => '')).slice(0, 300)
+          throw new StorageError(deleted.status, `Berkas percobaan berhasil dibuat tetapi gagal dibersihkan (HTTP ${deleted.status}). ${detail}`)
+        }
+      } catch (cleanupError) {
+        if (primaryError) {
+          const original = primaryError instanceof Error ? primaryError.message : 'Pengujian gagal.'
+          const cleanup = cleanupError instanceof Error ? cleanupError.message : 'Pembersihan gagal.'
+          throw new StorageError(502, `${original} Pembersihan berkas percobaan juga gagal: ${cleanup}`)
+        }
+        throw cleanupError
+      }
+    }
+  }
+
+  if (primaryError) throw primaryError
 }
 
 // A short-lived private download URL, or null if the caller has no file key.
