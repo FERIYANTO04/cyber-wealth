@@ -9,7 +9,7 @@ import {
 import { PageStack } from '@/components/ui'
 import { SchedulerGuide } from '@/components/SchedulerGuide'
 import { requireOwnerPage } from '@/lib/auth'
-import { aiConfig, bankTransferStatus, storageStatus } from '@/lib/integrations'
+import { bankTransferStatus, storageStatus } from '@/lib/integrations'
 import { aiConfig as runtimeAiConfig } from '@/lib/ai'
 import { isPlaceholder } from '@/lib/env'
 import { emailConfig } from '@/lib/email'
