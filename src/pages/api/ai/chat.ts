@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { products } from '@/lib/db/schema'
-import { getSession } from '@/lib/auth'
+import { requireOwnerSession } from '@/lib/auth'
 import { getFinance, getCounts, getSettings } from '@/lib/data'
 import { getOrderCounts } from '@/lib/revenue'
 import { getSaasTotals } from '@/lib/saas'
@@ -32,7 +32,7 @@ function overBudget(): boolean {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Cache-Control', 'no-store')
 
-  const session = await getSession(req)
+  const session = await requireOwnerSession(req)
   if (!session) return res.status(401).json({ error: 'Sesi pemilik tidak ditemukan. Silakan masuk.' })
 
   if (req.method === 'GET') {
