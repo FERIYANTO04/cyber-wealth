@@ -1,4 +1,5 @@
 import { isPlaceholder } from './env'
+import { aiConfig, chatWithAi } from './ai'
 import { testStorageRoundTrip } from './storage'
 
 /**
@@ -20,30 +21,6 @@ export type IntegrationCheck = {
   steps: string[]
 }
 
-export function aiConfig() {
-  return {
-    key: process.env['GROQ_API_KEY'] ?? '',
-    model: process.env.AI_MODEL || 'openai/gpt-oss-120b',
-    baseUrl: (process.env.AI_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/+$/, ''),
-  }
-}
-
-export function bankTransferStatus(): { state: CheckState; message: string } {
-  const bank = process.env.BANK_NAME?.trim()
-  const accountName = process.env.BANK_ACCOUNT_NAME?.trim()
-  const accountNumber = process.env.BANK_ACCOUNT_NUMBER?.trim()
-  if (!bank || !accountName || !accountNumber) {
-    return {
-      state: 'missing',
-      message: 'Detail rekening penerima belum diatur. Isi BANK_NAME, BANK_ACCOUNT_NAME, dan BANK_ACCOUNT_NUMBER di pengaturan rahasia hosting.',
-    }
-  }
-  return {
-    state: 'ready',
-    message: `Instruksi transfer tersedia untuk rekening ${bank} atas nama ${accountName}. Pembayaran tetap diverifikasi dari mutasi rekening sebelum pesanan aktif.`,
-  }
-}
-
 /** Calls the model with a one-token prompt. The answer is not used as content. */
 export async function testAi(): Promise<{ state: CheckState; message: string }> {
   const { key, model, baseUrl } = aiConfig()
@@ -54,45 +31,17 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
     }
   }
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 20_000)
-  try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model,
-        max_tokens: 200,
-        reasoning_effort: 'low',
-        messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
-      }),
-      signal: controller.signal,
-      cache: 'no-store',
-    })
-    const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null
-
-    if (response.ok) return { state: 'ready', message: `Model ${model} menjawab. Agen siap menulis.` }
-    if (response.status === 401 || response.status === 403) {
-      return { state: 'invalid', message: 'Penyedia menolak kunci ini. Periksa apakah kuncinya benar dan masih aktif.' }
-    }
-    if (response.status === 404) {
-      return {
-        state: 'invalid',
-        message: `Model "${model}" tidak dikenal di alamat ini. Periksa nama model dan alamat API-nya.`,
-      }
-    }
-    return {
-      state: 'error',
-      message: `Penyedia menjawab ${response.status}${body?.error?.message ? `: ${body.error.message}` : ''}.`,
-    }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { state: 'error', message: 'Penyedia tidak menjawab dalam 20 detik.' }
-    }
-    return { state: 'error', message: 'Tidak bisa menghubungi penyedia. Periksa alamat API dan koneksi keluar.' }
-  } finally {
-    clearTimeout(timer)
+  const outcome = await chatWithAi({
+    messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
+    maxTokens: 20,
+    temperature: 0,
+  })
+  if (outcome.ok) {
+    return { state: 'ready', message: `Model ${outcome.model || model} berhasil menjawab melalui ${baseUrl}.` }
   }
+  const message = outcome.reason
+  const state: CheckState = /ditolak|kredensial|akses model/i.test(message) ? 'invalid' : 'error'
+  return { state, message }
 }
 
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
