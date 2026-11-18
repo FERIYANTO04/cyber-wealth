@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, boolean, bigint, integer } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, boolean, bigint, integer, index, check } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 export const users = pgTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -540,7 +541,10 @@ export const aiUsageEvents = pgTable('ai_usage_event', {
   requestStatus: text('request_status').notNull(),
   occurredAt: timestamp('occurred_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-})
+}, (table) => [
+  index('ai_usage_event_occurred_at_idx').on(table.occurredAt),
+  index('ai_usage_event_provider_idx').on(table.provider, table.occurredAt),
+])
 
 export const aiProviderPayments = pgTable('ai_provider_payment', {
   id: text('id').primaryKey(),
@@ -562,4 +566,7 @@ export const moneyAllocationPolicy = pgTable('money_allocation_policy', {
   reservePercent: integer('reserve_percent').notNull().default(10),
   autoPayEnabled: boolean('auto_pay_enabled').notNull().default(false),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+}, (table) => [
+  check('money_allocation_policy_total_100', sql`${table.ownerPercent} + ${table.operationsPercent} + ${table.reservePercent} = 100`),
+  check('money_allocation_policy_nonnegative', sql`${table.ownerPercent} >= 0 AND ${table.operationsPercent} >= 0 AND ${table.reservePercent} >= 0`),
+])
