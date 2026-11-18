@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto'
 const MAX_BYTES = 20 * 1024 * 1024
 
 const Body = z.object({
-  productId: z.string().uuid(),
+  productId: z.string().regex(/^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/),
   fileName: z.string().trim().min(1).max(160),
   contentType: z.string().trim().min(1).max(120),
   size: z.coerce.number().int().positive(),
