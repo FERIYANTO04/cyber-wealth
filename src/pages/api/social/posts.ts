@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
-import { getSession } from '@/lib/auth'
+import { requireOwnerSession } from '@/lib/auth'
 import { decidePost, getPosts, setPostSchedule, updatePost } from '@/lib/social'
 
 const Post = z.discriminatedUnion('action', [
@@ -26,7 +26,7 @@ const Post = z.discriminatedUnion('action', [
 
 /** Everything the owner does to a post before it could ever be published. */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession(req)
+  const session = await requireOwnerSession(req)
   if (!session) return res.status(401).json({ error: 'Sesi tidak ditemukan. Silakan masuk.' })
 
   if (req.method === 'GET') {
