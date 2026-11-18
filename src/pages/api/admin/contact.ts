@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { contactMessages } from '@/lib/db/schema'
-import { getSession } from '@/lib/auth'
+import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 
 const Patch = z.object({
@@ -12,7 +12,7 @@ const Patch = z.object({
 })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!(await getSession(req))) return res.status(401).json({ error: 'Sesi pemilik tidak ditemukan.' })
+  if (!(await requireOwnerSession(req))) return res.status(401).json({ error: 'Sesi pemilik tidak ditemukan.' })
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Metode tidak diizinkan.' })
 
   const parsed = Patch.safeParse(req.body)
