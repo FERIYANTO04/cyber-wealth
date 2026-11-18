@@ -125,6 +125,21 @@ export async function uploadUrl(
   return presign('PUT', key, expiresIn, contentType)
 }
 
+// Upload bytes from the application server to the private S3-compatible bucket.
+// Keeping this hop server-side avoids browser-to-bucket CORS failures.
+export async function uploadObject(key: string, body: Uint8Array, contentType: string): Promise<void> {
+  const url = await uploadUrl(key, { contentType, expiresIn: 300 })
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: new Uint8Array(body),
+  })
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => '')).slice(0, 500)
+    throw new StorageError(response.status, `Penyimpanan menolak unggahan (HTTP ${response.status}). ${detail}`)
+  }
+}
+
 // A short-lived private download URL, or null if the caller has no file key.
 export async function fileUrl(
   key: string,
