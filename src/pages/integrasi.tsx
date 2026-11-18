@@ -199,7 +199,7 @@ function IntegrasiPage({ cards, readyCount, blockers, endpoint, schedulerConfigu
   return (
     <PageStack>
       <ActivationSummary blockers={blockers} />
-      <IntegrationGuide cards={cards} readyCount={readyCount} />
+      <IntegrationGuide cards={cards} />
       <SchedulerGuide endpoint={endpoint} configured={schedulerConfigured} />
     </PageStack>
   )
