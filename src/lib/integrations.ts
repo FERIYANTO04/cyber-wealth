@@ -99,7 +99,7 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
 
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
   if (!(process.env.AWS_ENDPOINT_URL_S3 || process.env.STORAGE_ENDPOINT) || !(process.env.AWS_ACCESS_KEY_ID || process.env.STORAGE_ACCESS_KEY_ID) || !(process.env.AWS_SECRET_ACCESS_KEY || process.env.STORAGE_SECRET_ACCESS_KEY)) {
-    return { state: 'missing', message: 'Penyimpanan berkas belum dikonfigurasi. Isi STORAGE_URL dan STORAGE_KEY dari layanan penyimpanan yang kompatibel.' }
+    return { state: 'missing', message: 'Konfigurasi penyimpanan belum lengkap. Periksa endpoint, access key, dan secret key object storage.' }
   }
   try {
     // Signing an upload URL is the cheapest honest proof the bucket answers and the
