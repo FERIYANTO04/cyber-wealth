@@ -36,7 +36,7 @@ export function CheckoutForm({ slug, priceIdr }: { slug: string; priceIdr: numbe
         router.push(`/pesanan/${data.token}`)
         return
       }
-      setNote('Pesanan dibuat. Buka halaman pesanan untuk melihat instruksi transfer manual.')
+      setNote('Pesanan dibuat. Buka halaman pesanan untuk melanjutkan pembayaran.')
       router.push(`/pesanan/${data.token}`)
     } catch {
       setError('Koneksi terputus. Coba lagi.')
