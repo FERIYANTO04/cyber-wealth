@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireOwnerSession, cookieSameSite } from '@/lib/auth'
 import { listPages, openToken, saveFacebookAccount } from '@/lib/meta'
+import { connectInstagram } from '@/lib/instagram'
 
 /**
  * The page picker. The user token stays sealed in its HttpOnly cookie: this route
@@ -41,10 +42,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const saved = await saveFacebookAccount({
       page,
-      scopes: ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management'],
+      scopes: ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management', 'instagram_basic', 'instagram_content_publish'],
       connectedBy: session.ownerId,
     })
     if (!saved.ok) return res.status(409).json({ error: saved.error })
+
+    // The Page token is already authorized by Meta. Link its Instagram Business
+    // account automatically when one is attached and eligible; keep Facebook live
+    // even when the Page has no Instagram account.
+    try {
+      await connectInstagram({ connectedBy: session.ownerId })
+    } catch (instagramError) {
+      console.error('Instagram auto-link after Page selection failed:', instagramError)
+    }
 
     res.setHeader('Set-Cookie', [
       `cwa_meta_pending=; Path=/; HttpOnly; Secure; SameSite=${cookieSameSite}; Max-Age=0`,
