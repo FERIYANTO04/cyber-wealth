@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { subscriptions } from '@/lib/db/schema'
-import { getSession } from '@/lib/auth'
+import { requireOwnerSession } from '@/lib/auth'
 import { settlePaidSubscription } from '@/lib/saas'
 
 const Body = z.object({ token: z.string().min(1) })
@@ -11,7 +11,7 @@ const Body = z.object({ token: z.string().min(1) })
 /** Owner-only: call only after independently confirming the bank deposit in the bank account. */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
-  if (!(await getSession(req))) return res.status(401).json({ error: 'Sesi pemilik tidak ditemukan.' })
+  if (!(await requireOwnerSession(req))) return res.status(401).json({ error: 'Sesi pemilik tidak ditemukan.' })
   const parsed = Body.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ error: 'ID langganan tidak valid.' })
   const [row] = await db.select().from(subscriptions).where(eq(subscriptions.accessToken, parsed.data.token)).limit(1)
