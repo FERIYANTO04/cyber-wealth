@@ -1,5 +1,8 @@
 import type { GetServerSidePropsContext, NextApiRequest } from 'next'
 import { SignJWT, jwtVerify } from 'jose'
+import { and, eq } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { ownerAccount } from '@/lib/db/schema'
 
 export const COOKIE_NAME = 'cwa_session'
 const SESSION_SECONDS = 60 * 60 * 24 * 7
@@ -88,11 +91,25 @@ export async function getSession(
 
 export type Session = { ownerId: string; email: string }
 
+/** A valid signature is not enough: the session must still belong to the current owner row. */
+export async function requireOwnerSession(
+  req: NextApiRequest | GetServerSidePropsContext['req']
+): Promise<Session | null> {
+  const session = await getSession(req)
+  if (!session) return null
+  const [owner] = await db
+    .select({ id: ownerAccount.id, email: ownerAccount.email })
+    .from(ownerAccount)
+    .where(and(eq(ownerAccount.id, session.ownerId), eq(ownerAccount.email, session.email)))
+    .limit(1)
+  return owner ? session : null
+}
+
 /** For getServerSideProps: `{ redirectTo }` when there is no owner session. */
 export async function requireOwnerPage(
   ctx: GetServerSidePropsContext
 ): Promise<{ redirectTo: string } | { session: Session }> {
-  const session = await getSession(ctx.req)
+  const session = await requireOwnerSession(ctx.req)
   if (!session) return { redirectTo: `/login?next=${encodeURIComponent(ctx.resolvedUrl)}` }
   return { session }
 }
