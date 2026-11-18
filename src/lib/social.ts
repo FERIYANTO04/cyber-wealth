@@ -209,9 +209,17 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
   }
 
   const existing = await db
-    .select({ channel: socialPosts.channel, market: socialPosts.market, sourceId: socialPosts.sourceId })
+    .select({
+      id: socialPosts.id,
+      channel: socialPosts.channel,
+      market: socialPosts.market,
+      sourceId: socialPosts.sourceId,
+      status: socialPosts.status,
+      publishState: socialPosts.publishState,
+    })
     .from(socialPosts)
-  const taken = new Set(existing.map((row) => `${row.channel}|${row.market}|${row.sourceId}`))
+  const existingByKey = new Map(existing.map((row) => [`${row.channel}|${row.market}|${row.sourceId}`, row]))
+  const taken = new Set(existingByKey.keys())
 
   const targets = args.channels?.length
     ? args.channels
@@ -229,7 +237,23 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
       for (const channel of marketChannels) {
         if (created >= cap) break
         const key = `${channel}|${market}|${material.sourceId}`
-        if (taken.has(key)) continue
+        const prior = existingByKey.get(key)
+        if (prior) {
+          // Reconcile legacy drafts created before agent self-approval was enabled.
+          // Only unsent drafts from the current live catalog are promoted; published,
+          // rejected, failed-review, or already-approved posts are left untouched.
+          if (prior.status === 'draft' && prior.publishState === 'not_connected') {
+            const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+            await db.update(socialPosts).set({
+              status: 'approved',
+              approvedAt: new Date(),
+              scheduledAt,
+              publishNote: 'Draf lama dari katalog aktif dijadwalkan otomatis oleh AI Marketing 24 jam setelah pemulihan. Publikasi hanya berjalan jika kanal resmi terhubung dan API mengonfirmasi.',
+            }).where(eq(socialPosts.id, prior.id))
+            created += 1
+          }
+          continue
+        }
 
         const limit = channelLimit(channel)
         let body = templateBody(material, channel, market)
