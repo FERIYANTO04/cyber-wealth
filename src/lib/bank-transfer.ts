@@ -1,6 +1,7 @@
 /** Bank-transfer instructions are rendered from private server-side environment variables. */
 function customInstructionsContainAccountDetails(value: string): boolean {
-  return /(?:bank|rekening|no\.?\s*rek|nomor rekening|atas nama)/i.test(value) && /\d{8,20}/.test(value)
+  const digits = value.replace(/\D/g, '')
+  return /(?:bank|rekening|no\.?\s*rek|nomor rekening|atas nama)/i.test(value) && digits.length >= 8 && digits.length <= 20
 }
 
 export function hasConfiguredBankTransferDetails(): boolean {
