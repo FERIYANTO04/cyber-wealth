@@ -16,7 +16,7 @@ import {
   settings,
   subscriptions,
 } from './db/schema'
-import { SETTINGS_ID, getSettings } from './data'
+import { SETTINGS_ID, getFinance, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
 import { generatePosts } from './social'
@@ -92,6 +92,10 @@ async function runCeo(trigger: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(revenueLeads)
     .where(inArray(revenueLeads.status, ['new', 'qualified', 'proposal']))
+  const [agentCounts] = await db
+    .select({ total: sql<number>`count(*)::int`, active: sql<number>`count(*) filter (where ${agents.status} = 'active')::int` })
+    .from(agents)
+  const finance = await getFinance()
 
   const blockers: string[] = []
   if ((pendingOrders?.n ?? 0) > 0) blockers.push(`${pendingOrders.n} pesanan belum dibayar`)
@@ -106,6 +110,9 @@ async function runCeo(trigger: string) {
     `Produk terbit: ${liveProducts?.n ?? 0}`,
     `Langganan aktif: ${activeSubs?.n ?? 0}`,
     `Prospek yang perlu ditindaklanjuti: ${newLeads?.n ?? 0}`,
+    `Kas bersih tercatat: Rp ${Number(finance.live.netCash).toLocaleString('id-ID')} (bukan saldo bank terverifikasi)`,
+    `Aset tercatat: Rp ${Number(finance.live.assets).toLocaleString('id-ID')} (perlu verifikasi kepemilikan/nilai)`,
+    `Agen aktif: ${agentCounts?.active ?? 0} dari ${agentCounts?.total ?? 0}`,
   ].join('\n')
 
   const factualSummary =
@@ -116,6 +123,7 @@ async function runCeo(trigger: string) {
   const offlineCeoAnalysis = [
     'KONDISI: ' + factualSummary,
     'KEPUTUSAN CEO: Fokus pertama adalah menghasilkan bukti permintaan. Pastikan produk yang sudah terbit benar-benar memiliki berkas unduhan yang dapat diakses; setelah itu uji satu kanal promosi dengan biaya Rp0.',
+    'PENGEMBANGAN AI: Evaluasi apakah agen perlu ditingkatkan, diganti modelnya, atau ditambah spesialis baru. Prioritaskan opsi gratis/termurah. Gunakan hanya anggaran operasional yang benar-benar tersedia dan sudah dialokasikan; jangan memakai dana Owner atau cadangan, jangan menghitung omzet belum diterima sebagai kas, dan jangan membuat komitmen berbayar tanpa persetujuan Owner. Catat biaya, manfaat, dan alasan.'
     'TUGAS AGEN: AI Product Creator memeriksa kelengkapan berkas produk; AI Marketing menyiapkan dan merapikan draf promosi; AI Sales menindaklanjuti prospek yang benar-benar masuk; AI Finance terus mencatat hanya pembayaran terkonfirmasi.',
     'DELEGASI: AI Marketing menyusun, menyetujui, dan menjadwalkan konten faktual dari katalog terbit. Publikasi hanya melalui kanal yang sudah terhubung dan terkonfirmasi. Jangan keluarkan dana untuk iklan atau layanan berbayar tanpa persetujuan pemilik.',
     blockers.length ? 'HAMBATAN: ' + blockers.join('; ') : 'HAMBATAN: Tidak ada hambatan dasar yang terdeteksi.',
@@ -135,6 +143,7 @@ async function runCeo(trigger: string) {
       'Analisis hanya fakta database yang diberikan. Jangan mengarang omzet, saldo, pelanggan, ukuran pasar, atau pekerjaan yang sudah dilakukan.',
       'Tugas Anda: diagnosis kondisi, pilih maksimal 3 prioritas paling berdampak, dan pecah tiap prioritas menjadi langkah kerja konkret untuk agen yang sudah ada.',
       'Jangan menyetujui pengeluaran, investasi, transfer, kontrak, publikasi, atau tindakan eksternal. Tindakan berisiko harus menjadi rekomendasi untuk persetujuan pemilik.',
+      'Anda boleh mengusulkan peningkatan model/provider atau penambahan agen AI spesialis jika manfaat-biayanya jelas. Gunakan hanya anggaran operasional yang telah dialokasikan dan benar-benar tersedia; lindungi dana Owner dan cadangan. Jangan membeli layanan, membuat langganan, atau membuat komitmen berbayar tanpa persetujuan Owner. Bandingkan opsi gratis, biaya, kemampuan, privasi, keandalan, dan hasil terukur.'
       'Jawab dalam Bahasa Indonesia dengan format: KONDISI, KEPUTUSAN CEO, TUGAS AGEN, MENUNGGU PEMILIK. Sebutkan bila data belum cukup.',
     ].join(' '),
     prompt: [
@@ -142,6 +151,7 @@ async function runCeo(trigger: string) {
       `Pemicu putaran: ${trigger}`,
       'Fakta operasional terkini:',
       facts,
+      'Kebijakan pengembangan: jangan mengubah pembagian dana Owner/operasional/cadangan atau memindahkan dana. Ajukan proposal peningkatan AI dengan biaya maksimum, manfaat, alternatif gratis, dan kriteria penghentian jika tidak efektif.',
       'Kendala dasar yang terdeteksi:',
       blockers.length ? blockers.join('; ') : 'Tidak ada kendala dasar yang terdeteksi.',
       'Buat keputusan operasional yang bisa dilaksanakan oleh agen AI Market Research, AI Sales, AI Product Creator, AI Marketing, AI Finance, dan AI Business Intelligence. Tulis siapa melakukan apa, urutan, dan hasil yang harus dicatat. Jangan mengklaim tugas tersebut sudah selesai.',
