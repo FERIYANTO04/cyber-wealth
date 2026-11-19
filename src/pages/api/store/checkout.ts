@@ -112,6 +112,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const paddleApiKey = process.env.PADDLE_API_KEY ?? ''
+  if (!paddleApiKey) {
+    return res.status(503).json({ error: 'Pembayaran Paddle belum diaktifkan. Pesanan belum dibayar.' })
+  }
   const priceMapRaw = process.env.PADDLE_PRICE_IDS ?? '{}'
   let paddlePriceId: string | undefined
   try {
