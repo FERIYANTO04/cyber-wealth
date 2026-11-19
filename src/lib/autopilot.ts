@@ -11,6 +11,8 @@ import {
   proposals,
   revenueLeads,
   socialPosts,
+  transactions,
+  moneyAllocationPolicy,
   serviceRequests,
   services,
   settings,
@@ -608,74 +610,54 @@ async function runFinance(trigger: string) {
   const run = await startRun('AI Finance', 'finance', trigger)
 
   const since = new Date(Date.now() - 30 * DAY_MS)
-  const [orderRevenue] = await db
-    .select({ total: sql<number>`coalesce(sum(${orders.amountIdr}),0)::bigint` })
-    .from(orders)
-    .where(and(eq(orders.status, 'paid'), eq(orders.dataSource, 'live'), gte(orders.paidAt, since)))
-  const [subRevenue] = await db
-    .select({ total: sql<number>`coalesce(sum(${subscriptions.amountIdr}),0)::bigint` })
-    .from(subscriptions)
-    .where(
-      and(eq(subscriptions.status, 'active'), eq(subscriptions.dataSource, 'live'), gte(subscriptions.paidAt, since))
-    )
+  const [ledger] = await db
+    .select({
+      revenue: sql<number>`coalesce(sum(case when ${transactions.kind} = 'revenue' then ${transactions.amountIdr} else 0 end),0)::bigint`,
+      expenses: sql<number>`coalesce(sum(case when ${transactions.kind} = 'expense' then ${transactions.amountIdr} else 0 end),0)::bigint`,
+    })
+    .from(transactions)
+    .where(and(
+      eq(transactions.dataSource, 'live'),
+      eq(transactions.ledger, 'company'),
+      gte(transactions.occurredAt, since)
+    ))
+
   const [pendingProposal] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(proposals)
-    .where(
-      and(
-        eq(proposals.status, 'pending'),
-        eq(proposals.category, 'finance'),
-        eq(proposals.dataSource, 'live')
-      )
-    )
+    .where(and(
+      eq(proposals.status, 'pending'),
+      eq(proposals.category, 'finance'),
+      eq(proposals.dataSource, 'live')
+    ))
 
-  const total = Number(orderRevenue?.total ?? 0) + Number(subRevenue?.total ?? 0)
+  const [policy] = await db
+    .select()
+    .from(moneyAllocationPolicy)
+    .where(eq(moneyAllocationPolicy.id, SETTINGS_ID))
+    .limit(1)
 
-  // The one place the autopilot touches money: it may *propose* a spend, and the row
-  // waits at the owner's desk. No transaction exists until that decision is approved.
-  let proposed = 0
-  if (total > 0 && (pendingProposal?.n ?? 0) === 0) {
-    const [openOutreach] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(revenueLeads)
-      .where(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']))
-
-    const idea =
-      (openOutreach?.n ?? 0) > 0
-        ? {
-            title: 'Anggaran promosi untuk menindaklanjuti prospek',
-            summary: `${openOutreach?.n} prospek masih terbuka. Usulan anggaran promosi kecil untuk menjangkau ulang mereka; dana hanya dicatat sebagai pengeluaran setelah Anda setujui.`,
-          }
-        : {
-            title: 'Anggaran uji promosi produk terbit',
-            summary:
-              'Usulan anggaran kecil untuk menguji satu kanal promosi pada produk yang sudah terbit. Tidak ada dana berpindah sebelum Anda menyetujui usulan ini.',
-          }
-
-    await db.insert(proposals).values({
-      title: idea.title,
-      summary: idea.summary,
-      category: 'finance',
-      amountIdr: Math.max(50_000, Math.round((total * 0.1) / 1000) * 1000),
-      risk: 'medium',
-      status: 'pending',
-      dataSource: 'live',
-    })
-    proposed = 1
-  }
+  const revenue = Number(ledger?.revenue ?? 0)
+  const expenses = Number(ledger?.expenses ?? 0)
+  const bookDifference = revenue - expenses
+  const pending = pendingProposal?.n ?? 0
+  const policyNote = policy
+    ? `Kebijakan laba: Owner ${policy.ownerPercent}%, operasional ${policy.operationsPercent}%, cadangan ${policy.reservePercent}%; transfer otomatis ${policy.autoPayEnabled ? 'aktif' : 'nonaktif'}.`
+    : 'Kebijakan alokasi belum tersedia.'
 
   const summary =
-    `Pendapatan terkonfirmasi 30 hari terakhir: Rp ${total.toLocaleString('id-ID')}. ` +
-    `${(pendingProposal?.n ?? 0) + proposed} usulan pengeluaran menunggu keputusan Anda.`
+    `Buku perusahaan 30 hari: pendapatan Rp ${revenue.toLocaleString('id-ID')}; ` +
+    `pengeluaran Rp ${expenses.toLocaleString('id-ID')}; selisih buku Rp ${bookDifference.toLocaleString('id-ID')}. ` +
+    `${pending} usulan pengeluaran menunggu keputusan Owner.`
 
   await finishRun(
     run.id,
     'ok',
     summary,
-    'Hanya pembayaran yang diverifikasi pemilik setelah dana masuk yang dihitung. Usulan pengeluaran hanya menjadi catatan setelah Anda menyetujuinya — tidak ada transfer otomatis.',
-    proposed
+    `${policyNote} Selisih buku bukan otomatis laba yang dapat dibagikan. Pajak, refund, biaya provider, dan kewajiban lain harus diperhitungkan serta dicatat terlebih dahulu. AI Finance tidak membuat anggaran belanja dari omzet dan tidak memindahkan dana; setiap pengeluaran tetap menunggu persetujuan Owner.`,
+    0
   )
-  await noteAgent('AI Finance', 'Rekap keuangan disusun', summary)
+  await noteAgent('AI Finance', 'Rekap buku perusahaan disusun', summary)
   return { summary }
 }
 
