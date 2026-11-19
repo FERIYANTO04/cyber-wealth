@@ -176,6 +176,13 @@
       "when": 1795100000000,
       "tag": "0024_owner_company_split",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795125600000,
+      "tag": "0025_owner_company_ledgers",
+      "breakpoints": true
     }
   ]
 }
