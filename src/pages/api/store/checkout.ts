@@ -124,14 +124,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ error: 'Konfigurasi katalog pembayaran belum valid. Pesanan belum dibayar.' })
   }
 
-  if (paddleApiKey && paddlePriceId && /^pri_[a-z0-9]{26}$/i.test(paddlePriceId)) {
+  if (paddleApiKey) {
     const apiBase = process.env.PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
+    let transactionItem: Record<string, unknown>
+
+    if (paddlePriceId && /^pri_[a-z0-9]{26}$/i.test(paddlePriceId)) {
+      transactionItem = { price_id: paddlePriceId, quantity: 1 }
+    } else {
+      // Paddle does not list IDR as a supported payment currency. Convert the
+      // catalog's IDR price using a live FX quote, then send a one-off non-catalog
+      // USD price. No hard-coded exchange rate and no silent fallback.
+      const fxResponse = await fetch('https://open.er-api.com/v6/latest/IDR', { cache: 'no-store' }).catch(() => null)
+      const fxPayload = await fxResponse?.json().catch(() => null) as {
+        result?: string
+        rates?: { USD?: number }
+      } | null
+      const usdPerIdr = fxPayload?.result === 'success' ? Number(fxPayload.rates?.USD) : 0
+      if (!Number.isFinite(usdPerIdr) || usdPerIdr <= 0) {
+        await db.insert(activity).values({
+          actor: 'system', action: 'Konversi harga Paddle gagal',
+          detail: code + ': kurs IDR/USD tidak tersedia. Tidak ada pembayaran yang dibuat.',
+          dataSource: 'live',
+        })
+        return res.status(503).json({ error: 'Kurs pembayaran sedang tidak tersedia. Pesanan belum dibayar; coba lagi.' })
+      }
+
+      const usdCents = Math.round(amount * usdPerIdr * 100)
+      if (usdCents < 70) {
+        return res.status(409).json({ error: 'Harga produk berada di bawah minimum pembayaran Paddle (USD 0,70). Pesanan belum dibayar.' })
+      }
+
+      transactionItem = {
+        quantity: 1,
+        price: {
+          description: 'One-time digital product purchase ' + code,
+          name: product.name.slice(0, 150),
+          billing_cycle: null,
+          tax_mode: 'account_setting',
+          unit_price: { amount: String(usdCents), currency_code: 'USD' },
+          product: {
+            name: product.name.slice(0, 200),
+            description: product.summary.slice(0, 2048),
+            tax_category: 'digital-goods',
+          },
+        },
+      }
+    }
+
     const response = await fetch(apiBase + '/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + paddleApiKey },
       body: JSON.stringify({
-        items: [{ price_id: paddlePriceId, quantity: 1 }],
-        custom_data: { order_code: code, access_token: accessToken, product_slug: product.slug },
+        items: [transactionItem],
+        custom_data: { order_code: code, access_token: accessToken, product_slug: product.slug, amount_idr: amount },
       }),
       cache: 'no-store',
     })
@@ -156,15 +201,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       dataSource: 'live',
     })
     return res.status(201).json({ ok: true, token: accessToken, paymentUrl: payload.data.checkout.url, provider: 'paddle' })
-  }
-
-  if (paddleApiKey && !paddlePriceId) {
-    await db.insert(activity).values({
-      actor: 'system', action: 'Harga Paddle belum dipetakan',
-      detail: product.name + ' — ' + code + '. Tambahkan price ID Paddle untuk slug ' + product.slug + ' di PADDLE_PRICE_IDS.',
-      dataSource: 'live',
-    })
-    return res.status(503).json({ error: 'Harga produk ini belum terhubung ke katalog Paddle. Pesanan belum dibayar.' })
   }
 
   await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
