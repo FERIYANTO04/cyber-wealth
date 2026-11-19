@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, Layers3, MessageCircle, Sparkles } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Layers3, MessageCircle, Sparkles, UserRound } from 'lucide-react'
 import { Button, Panel, SignalLink } from '@/components/ui'
 
 /** Public company homepage. Owner controls stay behind the private sign-in route. */
