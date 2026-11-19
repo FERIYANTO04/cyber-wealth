@@ -82,6 +82,7 @@ export async function settlePaidSubscription(args: {
     description: `${updated.planName} — ${updated.accountEmail}`,
     amountIdr: amount,
     dataSource: 'live',
+    ledger: 'company',
   })
 
   await db.insert(activity).values({
