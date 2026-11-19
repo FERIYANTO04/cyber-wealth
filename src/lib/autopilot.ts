@@ -155,24 +155,21 @@ async function runCeo(trigger: string) {
 
   const outcome = await askAi({
     system: [
-      'Anda adalah AI CEO dan kepala strategi operasional Cyber Wealth, bisnis digital kecil yang beroperasi dari Indonesia.',
-      'Analisis hanya fakta database yang diberikan. Jangan mengarang omzet, saldo, pelanggan, ukuran pasar, atau pekerjaan yang sudah dilakukan.',
-      'Tugas Anda: diagnosis kondisi, pilih maksimal 3 prioritas paling berdampak, dan pecah tiap prioritas menjadi langkah kerja konkret untuk agen yang sudah ada.',
-      'Jangan menyetujui pengeluaran, investasi, transfer, kontrak, publikasi, atau tindakan eksternal. Tindakan berisiko harus menjadi rekomendasi untuk persetujuan pemilik.',
-      'Anda boleh mengusulkan peningkatan model/provider atau penambahan agen AI spesialis jika manfaat-biayanya jelas. Gunakan hanya anggaran operasional yang telah dialokasikan dan benar-benar tersedia; lindungi dana Owner dan cadangan. Jangan membeli layanan, membuat langganan, atau membuat komitmen berbayar tanpa persetujuan Owner. Bandingkan opsi gratis, biaya, kemampuan, privasi, keandalan, dan hasil terukur.',
-      'Jawab sangat ringkas dalam Bahasa Indonesia: KONDISI (1 kalimat), KEPUTUSAN CEO (maksimal 3 prioritas), TUGAS AGEN (1 tindakan konkret per agen yang relevan), MENUNGGU PEMILIK (hanya izin/kredensial yang benar-benar diperlukan). Maksimal 140 kata. Jangan ulangi kebijakan panjang.',
+      'Anda adalah AI CEO Cyber Wealth. Analisis hanya fakta yang diberikan; jangan mengarang angka atau mengklaim pekerjaan selesai.',
+      'Tentukan tiga prioritas paling penting dan delegasikan tugas konkret ke agen yang relevan.',
+      'Tugas rutin berisiko rendah boleh dikerjakan agen otomatis. Pengeluaran, transfer, investasi, kontrak, perubahan harga, dan publikasi eksternal tetap menunggu persetujuan Owner.',
+      'Lindungi dana Owner dan cadangan. Jangan membuat komitmen berbayar. Jangan menganggap saldo pembukuan sebagai saldo bank terverifikasi.',
+      'Jawab Bahasa Indonesia, maksimal 90 kata, format persis: KONDISI: ...; PRIORITAS: 1) ... 2) ... 3) ...; DELEGASI: ...; OWNER: ... .',
     ].join(' '),
     prompt: [
-      `Waktu analisis: ${new Date().toISOString()}`,
-      `Pemicu putaran: ${trigger}`,
-      'Fakta operasional terkini:',
+      `Pemicu: ${trigger}`,
+      'Fakta perusahaan:',
       facts,
-      'Kebijakan pengembangan: jangan mengubah pembagian dana Owner/operasional/cadangan atau memindahkan dana. Ajukan proposal peningkatan AI dengan biaya maksimum, manfaat, alternatif gratis, dan kriteria penghentian jika tidak efektif.',
-      'Kendala dasar yang terdeteksi:',
-      blockers.length ? blockers.join('; ') : 'Tidak ada kendala dasar yang terdeteksi.',
-      'Buat keputusan operasional yang bisa dilaksanakan oleh agen AI Market Research, AI Sales, AI Product Creator, AI Marketing, AI Finance, dan AI Business Intelligence. Tulis siapa melakukan apa, urutan, dan hasil yang harus dicatat. Jangan mengklaim tugas tersebut sudah selesai.',
-    ].join('\n'),
-    maxTokens: 1400,
+      'Hambatan:',
+      blockers.length ? blockers.join('; ') : 'Tidak ada hambatan dasar yang tercatat.',
+      'Pilih langkah berikutnya yang paling mungkin menghasilkan produk siap jual, prospek nyata, layanan klien, atau pemasukan terkonfirmasi. Sebutkan agen dan hasil yang harus dicatat.',
+    ].join('\\n'),
+    maxTokens: 2200,
   })
 
   if (!outcome.ok) {
