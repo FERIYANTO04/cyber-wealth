@@ -35,7 +35,7 @@ export function metaConfig() {
   return {
     appId,
     appSecret,
-    version: process.env.META_GRAPH_VERSION || 'v26.0',
+    version: process.env.META_GRAPH_VERSION || 'v27.0',
     loginConfigId: process.env.META_LOGIN_CONFIG_ID || '',
     configured: !isPlaceholder(appId) && !isPlaceholder(appSecret),
   }
