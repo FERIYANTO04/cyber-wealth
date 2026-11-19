@@ -3063,8 +3063,7 @@
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
-          "with": {},
-          "where": null
+          "with": {}
         },
         "ai_usage_event_provider_idx": {
           "name": "ai_usage_event_provider_idx",
@@ -3085,8 +3084,7 @@
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
-          "with": {},
-          "where": null
+          "with": {}
         }
       },
       "foreignKeys": {},
