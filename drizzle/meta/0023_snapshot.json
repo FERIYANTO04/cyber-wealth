@@ -3057,8 +3057,7 @@
               "expression": "occurred_at",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": null
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3073,15 +3072,13 @@
               "expression": "provider",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": null
+              "nulls": "last"
             },
             {
               "expression": "occurred_at",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": null
+              "nulls": "last"
             }
           ],
           "isUnique": false,
