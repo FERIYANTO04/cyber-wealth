@@ -52,8 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     const due = await autopilotDue()
-    const forceRun = req.headers['x-force-run'] === '1'
-    if (!due && !forceRun) {
+    if (!due) {
       return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, social, housekeeping })
     }
 
