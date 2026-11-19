@@ -1,4 +1,5 @@
 import { isPlaceholder } from './env'
+import { aiConfig as runtimeAiConfig, aiConfigured, chatWithAi } from './ai'
 import { uploadUrl } from './storage'
 import { hasConfiguredBankTransferDetails } from './bank-transfer'
 
@@ -22,11 +23,31 @@ export type IntegrationCheck = {
 }
 
 export function aiConfig() {
-  return {
-    key: process.env['GROQ_API_KEY'] ?? '',
-    model: process.env.AI_MODEL || 'openai/gpt-oss-120b',
-    baseUrl: (process.env.AI_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/+$/, ''),
+  return runtimeAiConfig()
+}
+
+/** Tests the same provider routing and credentials used by real agents. */
+export async function testAi(): Promise<{ state: CheckState; message: string }> {
+  const config = runtimeAiConfig()
+  if (!aiConfigured()) {
+    return {
+      state: 'missing',
+      message: 'Kredensial AI Gateway atau penyedia model belum diisi. Agen yang membutuhkan model akan melewati tugas dan mencatat alasannya.',
+    }
   }
+
+  const outcome = await chatWithAi({
+    messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
+    maxTokens: 50,
+    temperature: 0,
+  })
+  if (outcome.ok) {
+    return { state: 'ready', message: `Model ${outcome.model} menjawab melalui jalur AI yang dipakai agen.` }
+  }
+  const state: CheckState = /401|403|autentikasi/i.test(outcome.reason)
+    ? 'invalid'
+    : 'error'
+  return { state, message: `Uji koneksi AI gagal: ${outcome.reason}` }
 }
 
 export function bankTransferStatus(): { state: CheckState; message: string } {
