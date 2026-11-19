@@ -1,5 +1,5 @@
 import { isPlaceholder } from './env'
-import { uploadUrl } from './storage'
+import { putFile, deleteFile } from './storage'
 
 /**
  * Live checks for every outside service the app depends on. Each one actually calls
@@ -21,10 +21,14 @@ export type IntegrationCheck = {
 }
 
 export function aiConfig() {
+  const neonBaseUrl = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
   return {
-    key: process.env['GROQ_API_KEY'] ?? '',
+    key: process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '',
     model: process.env.AI_MODEL || 'openai/gpt-oss-120b',
-    baseUrl: (process.env.AI_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/+$/, ''),
+    baseUrl: (
+      process.env.AI_BASE_URL ||
+      (neonBaseUrl ? `${neonBaseUrl}/v1` : 'https://api.groq.com/openai/v1')
+    ).replace(/\/+$/, ''),
   }
 }
 
@@ -96,16 +100,19 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
 }
 
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
-  if (!process.env.STORAGE_URL || !process.env.STORAGE_KEY) {
-    return { state: 'missing', message: 'Penyimpanan berkas belum dikonfigurasi. Isi STORAGE_URL dan STORAGE_KEY dari layanan penyimpanan yang kompatibel.' }
+  if (
+    !process.env.AWS_ENDPOINT_URL_S3 ||
+    !process.env.AWS_ACCESS_KEY_ID ||
+    !process.env.AWS_SECRET_ACCESS_KEY ||
+    !process.env.STORAGE_BUCKET
+  ) {
+    return { state: 'missing', message: 'Konfigurasi Neon Object Storage belum lengkap. Periksa endpoint, access key, secret key, dan nama bucket.' }
   }
+  const probeKey = `pemeriksaan/koneksi-${Date.now()}.txt`
   try {
-    // Signing an upload URL is the cheapest honest proof the bucket answers and the
-    // key is accepted — nothing about the file itself is stored by this check.
-    const url = await uploadUrl('pemeriksaan/koneksi.txt', { upsert: true })
-    return url
-      ? { state: 'ready', message: 'Penyimpanan berkas menjawab. Berkas produk bisa diunggah dan diunduh pembeli.' }
-      : { state: 'error', message: 'Penyimpanan tidak memberi tautan unggah.' }
+    await putFile(probeKey, 'Cyber Wealth storage connection check', 'text/plain')
+    await deleteFile(probeKey)
+    return { state: 'ready', message: 'Object Storage berhasil menerima dan menghapus berkas uji.' }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'tidak diketahui'
     return { state: 'error', message: `Penyimpanan berkas belum siap: ${message}.` }
