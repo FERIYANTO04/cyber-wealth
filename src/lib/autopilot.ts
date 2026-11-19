@@ -936,7 +936,7 @@ export async function autopilotDue(): Promise<boolean> {
   if (!last) return true
   // The Railway cron runs every six hours; allow one full operational pass per tick.
   // A five-hour guard prevents overlap while keeping the scheduled CEO cycle active.
-  return Date.now() - last.startedAt.getTime() > 60 * 1000
+  return Date.now() - last.startedAt.getTime() > 5 * 60 * 60 * 1000
 }
 
 export async function getAgentRuns(limit = 40) {
