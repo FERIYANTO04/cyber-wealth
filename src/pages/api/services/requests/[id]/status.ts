@@ -7,7 +7,7 @@ import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 
 const Body = z.object({
-  status: z.enum(['new', 'proposed', 'won', 'in_progress', 'delivered', 'lost']),
+  status: z.enum(['new', 'proposed', 'proposal_sent', 'won', 'in_progress', 'delivered', 'lost']),
 })
 
 /**
