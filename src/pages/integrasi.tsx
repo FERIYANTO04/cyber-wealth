@@ -9,7 +9,7 @@ import {
 import { PageStack } from '@/components/ui'
 import { SchedulerGuide } from '@/components/SchedulerGuide'
 import { requireOwnerPage } from '@/lib/auth'
-import { aiConfig, aiConfigured, bankTransferStatus, storageStatus } from '@/lib/integrations'
+import { aiConfig, bankTransferStatus, storageStatus } from '@/lib/integrations'
 import { isPlaceholder } from '@/lib/env'
 import { emailConfig } from '@/lib/email'
 import { getActiveFacebookAccount, metaConfig } from '@/lib/meta'
@@ -33,7 +33,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const storage = await storageStatus()
   const engines = await getEngineCounts()
 
-  const aiState: CheckState = aiConfigured() ? 'ready' : 'missing'
+  const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'ready'
   const emailState: CheckState = isPlaceholder(email.key) || isPlaceholder(email.from) ? 'missing' : 'ready'
   const metaState: CheckState = !meta.configured
     ? 'missing'
