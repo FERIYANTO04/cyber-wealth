@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       '',
       'Salam,',
       'Cyber Wealth',
-    ].join('\\n'),
+    ].join('\n'),
     kind: 'service-proposal',
     relatedType: 'service-request',
     relatedId: request.id,
