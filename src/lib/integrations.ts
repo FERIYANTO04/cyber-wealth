@@ -62,7 +62,6 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
   if (outcome.ok) {
     return { state: 'ready', message: `Model ${outcome.model} menjawab. Jalur AI siap digunakan.` }
   }
-
   if (/belum ada kredensial/i.test(outcome.reason)) {
     return { state: 'missing', message: outcome.reason }
   }
@@ -71,3 +70,24 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
   }
   return { state: 'error', message: outcome.reason }
 }
+
+export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
+  if (
+    !process.env.AWS_ENDPOINT_URL_S3 ||
+    !process.env.AWS_ACCESS_KEY_ID ||
+    !process.env.AWS_SECRET_ACCESS_KEY ||
+    !process.env.STORAGE_BUCKET
+  ) {
+    return { state: 'missing', message: 'Konfigurasi Neon Object Storage belum lengkap. Periksa endpoint, access key, secret key, dan nama bucket.' }
+  }
+  const probeKey = `pemeriksaan/koneksi-${Date.now()}.txt`
+  try {
+    await putFile(probeKey, 'Cyber Wealth storage connection check', 'text/plain')
+    await deleteFile(probeKey)
+    return { state: 'ready', message: 'Object Storage berhasil menerima dan menghapus berkas uji.' }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'tidak diketahui'
+    return { state: 'error', message: `Penyimpanan berkas belum siap: ${message}.` }
+  }
+}
+
