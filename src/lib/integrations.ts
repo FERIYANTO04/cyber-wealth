@@ -1,4 +1,3 @@
-import { isPlaceholder } from './env'
 import { aiConfig as runtimeAiConfig, aiConfigured, chatWithAi } from './ai'
 import { uploadUrl } from './storage'
 import { hasConfiguredBankTransferDetails } from './bank-transfer'
@@ -28,7 +27,6 @@ export function aiConfig() {
 
 /** Tests the same provider routing and credentials used by real agents. */
 export async function testAi(): Promise<{ state: CheckState; message: string }> {
-  const config = runtimeAiConfig()
   if (!aiConfigured()) {
     return {
       state: 'missing',
