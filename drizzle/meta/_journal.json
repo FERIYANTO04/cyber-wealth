@@ -183,6 +183,13 @@
       "when": 1795125600000,
       "tag": "0025_owner_company_ledgers",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795126200000,
+      "tag": "0026_subscription_company_ledger",
+      "breakpoints": true
     }
   ]
 }
