@@ -33,8 +33,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const storage = await storageStatus()
   const engines = await getEngineCounts()
 
-  const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'ready'
-  const emailState: CheckState = isPlaceholder(email.key) || isPlaceholder(email.from) ? 'missing' : 'ready'
+  const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'unverified'
+  const emailState: CheckState = isPlaceholder(email.key) || isPlaceholder(email.from) ? 'missing' : 'unverified'
   const metaState: CheckState = !meta.configured
     ? 'missing'
     : facebook
@@ -50,8 +50,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       summary: `Agen menulis penawaran, draf produk, materi promosi, dan pesan pendekatan lewat ${ai.model}.`,
       state: aiState,
       message:
-        aiState === 'ready'
-          ? `Kunci terpasang untuk alamat ${ai.baseUrl} dengan model ${ai.model}. Tekan uji koneksi untuk memastikan kuncinya berlaku.`
+        aiState === 'unverified'
+          ? `Kunci terpasang untuk alamat ${ai.baseUrl} dengan model ${ai.model}, tetapi belum terbukti menjawab. Tekan Uji koneksi.`
           : 'Kunci API model AI belum diisi. Selama kosong, tugas yang menulis teks akan dilewati dan mencatat alasannya — tidak ada hasil yang dibuat-buat.',
       required: ['NEON_AI_GATEWAY_TOKEN (wajib)', 'AI_BASE_URL (alamat gateway)', 'AI_MODEL (nama model)'],
       steps: [
@@ -86,8 +86,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       summary: 'Mengirim konfirmasi pesanan, pengiriman produk setelah pembayaran, pengingat perpanjangan, dan pemberitahuan ke Anda.',
       state: emailState,
       message:
-        emailState === 'ready'
-          ? `Kunci email terpasang. Pengirim: ${email.from}. Tekan uji koneksi untuk memastikan kuncinya berlaku.`
+        emailState === 'unverified'
+          ? `Kunci email dan alamat pengirim terpasang (${email.from}), tetapi belum terbukti dapat mengirim. Tekan Uji koneksi.`
           : 'Penyedia email belum terhubung. Setiap email tetap tercatat di kotak keluar aplikasi beserta alasannya, tetapi belum benar-benar terkirim.',
       required: ['EMAIL_API_KEY (wajib)', 'EMAIL_FROM (wajib)', 'EMAIL_API_BASE_URL (opsional)'],
       steps: [
@@ -170,9 +170,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   const readyCount = cards.filter((card) => card.state === 'ready').length
   const blockers: string[] = []
-  if (aiState !== 'ready') blockers.push('Kunci API model AI belum diisi, sehingga agen penulis belum bisa bekerja.')
+  if (aiState !== 'ready') blockers.push(aiState === 'unverified' ? 'Kredensial AI terpasang, tetapi koneksinya belum lulus uji langsung.' : 'Kunci API model AI belum diisi, sehingga agen penulis belum bisa bekerja.')
   if (bank.state !== 'ready') blockers.push('Detail rekening penerima belum diisi, sehingga pembeli belum mendapat instruksi transfer yang benar.')
-  if (emailState !== 'ready') blockers.push('Penyedia email belum dihubungkan, sehingga konfirmasi dan pengingat belum terkirim ke pelanggan.')
+  if (emailState !== 'ready') blockers.push(emailState === 'unverified' ? 'Kredensial email terpasang, tetapi pengiriman belum lulus uji langsung.' : 'Penyedia email belum dihubungkan, sehingga konfirmasi dan pengingat belum terkirim ke pelanggan.')
   if (engines.products === 0) blockers.push('Belum ada produk digital yang terbit, jadi belum ada yang bisa dibeli.')
   if (engines.services === 0) blockers.push('Belum ada layanan jasa yang terbit, jadi calon klien belum bisa mengirim brief.')
   if (engines.plans === 0) blockers.push('Belum ada paket langganan yang terbit.')
