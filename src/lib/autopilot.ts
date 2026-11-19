@@ -84,6 +84,18 @@ async function runCeo(trigger: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(products)
     .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+  const [draftProducts] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(products)
+    .where(and(eq(products.status, 'draft'), eq(products.dataSource, 'live')))
+  const [publishedNeedsReview] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(products)
+    .where(and(
+      eq(products.status, 'published'),
+      eq(products.dataSource, 'live'),
+      sql`(${products.fileKey} is null or ${products.fileName} ~* '(draft|draf)')`
+    ))
   const [activeSubs] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(subscriptions)
@@ -101,6 +113,8 @@ async function runCeo(trigger: string) {
   if ((pendingOrders?.n ?? 0) > 0) blockers.push(`${pendingOrders.n} pesanan belum dibayar`)
   if ((newJobs?.n ?? 0) > 0) blockers.push(`${newJobs.n} permintaan jasa belum ditinjau`)
   if ((liveProducts?.n ?? 0) === 0) blockers.push('belum ada produk yang terbit di katalog')
+  if ((draftProducts?.n ?? 0) > 0) blockers.push(`${draftProducts.n} produk masih berstatus draf dan belum siap dijual`)
+  if ((publishedNeedsReview?.n ?? 0) > 0) blockers.push(`${publishedNeedsReview.n} produk berstatus terbit tetapi berkasnya belum layak jual (belum ada file atau nama berkas masih DRAF)`)
 
   const facts = [
     `Pesanan lunas: ${paidOrders?.n ?? 0}`,
@@ -108,6 +122,8 @@ async function runCeo(trigger: string) {
     `Pesanan belum dibayar: ${pendingOrders?.n ?? 0}`,
     `Permintaan jasa baru: ${newJobs?.n ?? 0}`,
     `Produk terbit: ${liveProducts?.n ?? 0}`,
+    `Produk draf: ${draftProducts?.n ?? 0}`,
+    `Produk terbit yang berkasnya perlu diperiksa: ${publishedNeedsReview?.n ?? 0}`,
     `Langganan aktif: ${activeSubs?.n ?? 0}`,
     `Prospek yang perlu ditindaklanjuti: ${newLeads?.n ?? 0}`,
     `Kas bersih tercatat: Rp ${Number(finance.live.netCash).toLocaleString('id-ID')} (bukan saldo bank terverifikasi)`,
@@ -122,7 +138,7 @@ async function runCeo(trigger: string) {
 
   const offlineCeoAnalysis = [
     'KONDISI: ' + factualSummary,
-    'KEPUTUSAN CEO: Fokus pertama adalah menghasilkan bukti permintaan. Pastikan produk yang sudah terbit benar-benar memiliki berkas unduhan yang dapat diakses; setelah itu uji satu kanal promosi dengan biaya Rp0.',
+    'KEPUTUSAN CEO: Dahulukan penyelesaian hambatan yang tercatat, bukan membuat laporan baru. Produk berstatus draf atau berkas bertanda DRAF tidak boleh dipasarkan atau dijual. Tugas produk adalah menyiapkan berkas final yang lengkap dan dapat diunduh; setelah lolos pemeriksaan, uji satu kanal promosi dengan biaya Rp0.',
     'PENGEMBANGAN AI: Evaluasi apakah agen perlu ditingkatkan, diganti modelnya, atau ditambah spesialis baru. Prioritaskan opsi gratis/termurah. Gunakan hanya anggaran operasional yang benar-benar tersedia dan sudah dialokasikan; jangan memakai dana Owner atau cadangan, jangan menghitung omzet belum diterima sebagai kas, dan jangan membuat komitmen berbayar tanpa persetujuan Owner. Catat biaya, manfaat, dan alasan.',
     'TUGAS AGEN: AI Product Creator memeriksa kelengkapan berkas produk; AI Marketing menyiapkan dan merapikan draf promosi; AI Sales menindaklanjuti prospek yang benar-benar masuk; AI Finance terus mencatat hanya pembayaran terkonfirmasi.',
     'DELEGASI: AI Marketing menyusun, menyetujui, dan menjadwalkan konten faktual dari katalog terbit. Publikasi hanya melalui kanal yang sudah terhubung dan terkonfirmasi. Jangan keluarkan dana untuk iklan atau layanan berbayar tanpa persetujuan pemilik.',
