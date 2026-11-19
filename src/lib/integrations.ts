@@ -65,57 +65,6 @@ export function bankTransferStatus(): { state: CheckState; message: string } {
   }
 }
 
-/** Calls the model with a one-token prompt. The answer is not used as content. */
-export async function testAi(): Promise<{ state: CheckState; message: string }> {
-  const { key, model, baseUrl } = aiConfig()
-  if (isPlaceholder(key)) {
-    return {
-      state: 'missing',
-      message: 'Kunci API model AI belum diisi. Agen yang menulis teks akan dilewati sampai kunci ini ada.',
-    }
-  }
-
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 20_000)
-  try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model,
-        max_tokens: 200,
-        reasoning_effort: 'low',
-        messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
-      }),
-      signal: controller.signal,
-      cache: 'no-store',
-    })
-    const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null
-
-    if (response.ok) return { state: 'ready', message: `Model ${model} menjawab. Agen siap menulis.` }
-    if (response.status === 401 || response.status === 403) {
-      return { state: 'invalid', message: 'Penyedia menolak kunci ini. Periksa apakah kuncinya benar dan masih aktif.' }
-    }
-    if (response.status === 404) {
-      return {
-        state: 'invalid',
-        message: `Model "${model}" tidak dikenal di alamat ini. Periksa nama model dan alamat API-nya.`,
-      }
-    }
-    return {
-      state: 'error',
-      message: `Penyedia menjawab ${response.status}${body?.error?.message ? `: ${body.error.message}` : ''}.`,
-    }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { state: 'error', message: 'Penyedia tidak menjawab dalam 20 detik.' }
-    }
-    return { state: 'error', message: 'Tidak bisa menghubungi penyedia. Periksa alamat API dan koneksi keluar.' }
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
   if (!(process.env.AWS_ENDPOINT_URL_S3 || process.env.STORAGE_ENDPOINT) || !(process.env.AWS_ACCESS_KEY_ID || process.env.STORAGE_ACCESS_KEY_ID) || !(process.env.AWS_SECRET_ACCESS_KEY || process.env.STORAGE_SECRET_ACCESS_KEY)) {
     return { state: 'missing', message: 'Konfigurasi penyimpanan belum lengkap. Periksa endpoint, access key, dan secret key object storage.' }
