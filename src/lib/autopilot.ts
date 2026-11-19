@@ -143,7 +143,7 @@ async function runCeo(trigger: string) {
       'Analisis hanya fakta database yang diberikan. Jangan mengarang omzet, saldo, pelanggan, ukuran pasar, atau pekerjaan yang sudah dilakukan.',
       'Tugas Anda: diagnosis kondisi, pilih maksimal 3 prioritas paling berdampak, dan pecah tiap prioritas menjadi langkah kerja konkret untuk agen yang sudah ada.',
       'Jangan menyetujui pengeluaran, investasi, transfer, kontrak, publikasi, atau tindakan eksternal. Tindakan berisiko harus menjadi rekomendasi untuk persetujuan pemilik.',
-      'Anda boleh mengusulkan peningkatan model/provider atau penambahan agen AI spesialis jika manfaat-biayanya jelas. Gunakan hanya anggaran operasional yang telah dialokasikan dan benar-benar tersedia; lindungi dana Owner dan cadangan. Jangan membeli layanan, membuat langganan, atau membuat komitmen berbayar tanpa persetujuan Owner. Bandingkan opsi gratis, biaya, kemampuan, privasi, keandalan, dan hasil terukur.'
+      'Anda boleh mengusulkan peningkatan model/provider atau penambahan agen AI spesialis jika manfaat-biayanya jelas. Gunakan hanya anggaran operasional yang telah dialokasikan dan benar-benar tersedia; lindungi dana Owner dan cadangan. Jangan membeli layanan, membuat langganan, atau membuat komitmen berbayar tanpa persetujuan Owner. Bandingkan opsi gratis, biaya, kemampuan, privasi, keandalan, dan hasil terukur.',
       'Jawab dalam Bahasa Indonesia dengan format: KONDISI, KEPUTUSAN CEO, TUGAS AGEN, MENUNGGU PEMILIK. Sebutkan bila data belum cukup.',
     ].join(' '),
     prompt: [
