@@ -67,6 +67,7 @@ export const transactions = pgTable('transaction', {
   amountIdr: bigint('amount_idr', { mode: 'number' }).notNull(),
   occurredAt: timestamp('occurred_at').notNull().defaultNow(),
   dataSource: text('data_source').notNull().default('live'),
+  ledger: text('ledger').notNull().default('owner'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -76,6 +77,7 @@ export const assets = pgTable('asset', {
   kind: text('kind').notNull(),
   valueIdr: bigint('value_idr', { mode: 'number' }).notNull(),
   dataSource: text('data_source').notNull().default('live'),
+  ledger: text('ledger').notNull().default('owner'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
