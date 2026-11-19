@@ -16,8 +16,8 @@ export function LandingIntro({ needsSetup: _needsSetup }: { needsSetup: boolean 
           <SignalLink href="/langganan">Langganan</SignalLink>
           <SignalLink href="/kontak">Kontak</SignalLink>
         </nav>
-        <Link href="/login" className="text-xs font-medium text-ink hover:text-signal">
-          Owner <ArrowUpRight className="ml-1 inline size-3" aria-hidden="true" />
+        <Link href="/member" className="flex items-center gap-1 text-xs font-medium text-ink hover:text-signal">
+          <UserRound className="size-3" aria-hidden="true" /> Portal pelanggan
         </Link>
       </header>
 
