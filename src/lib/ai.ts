@@ -1,7 +1,7 @@
 /**
  * Shared OpenAI-compatible chat-completions client.
- * Neon AI Gateway is primary; Groq can be enabled as a secondary provider.
- * Secondary routing is opt-in so it cannot create unapproved provider charges.
+ * Neon AI Gateway is primary; an already-configured Groq key is the automatic fallback.
+ * The fallback reuses an existing credential and is attempted only when the primary fails.
  */
 import { isPlaceholder } from './env'
 
@@ -15,7 +15,7 @@ const PRIMARY_KEY = process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KE
 const FALLBACK_KEY = process.env.GROQ_API_KEY || ''
 const FALLBACK_BASE_URL = 'https://api.groq.com/openai/v1'
 const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || 'openai/gpt-oss-120b'
-const FALLBACK_ENABLED = process.env.AI_FALLBACK_ENABLED === 'true'
+const FALLBACK_ENABLED = true
 
 export function aiConfig() {
   return { baseUrl: PRIMARY_BASE_URL, model: PRIMARY_MODEL, key: PRIMARY_KEY }
@@ -100,29 +100,33 @@ export async function chatWithAi(args: {
   maxTokens?: number
   temperature?: number
 }): Promise<AiOutcome> {
-  if (isPlaceholder(PRIMARY_KEY) || !PRIMARY_KEY) {
-    return { ok: false, reason: 'Model AI belum terhubung. Kredensial AI Gateway belum tersedia di server.' }
+  const primaryKey = isPlaceholder(PRIMARY_KEY) ? '' : PRIMARY_KEY
+  const primaryIsConfigured = Boolean(primaryKey)
+  const fallbackKey = !isPlaceholder(FALLBACK_KEY) ? FALLBACK_KEY : ''
+
+  if (!primaryIsConfigured && !fallbackKey) {
+    return { ok: false, reason: 'Belum ada kredensial model AI utama maupun cadangan di server.' }
   }
 
   const primary: Provider = {
     baseUrl: PRIMARY_BASE_URL,
     model: PRIMARY_MODEL,
-    key: PRIMARY_KEY,
+    key: primaryKey,
     label: NEON_BASE_URL || process.env.AI_BASE_URL ? 'AI Gateway' : 'Groq',
   }
-  const result = await requestProvider(primary, args)
+  const primaryIsGroq = primary.baseUrl.includes('api.groq.com')
+  const result = primaryIsConfigured
+    ? await requestProvider(primary, args)
+    : { ok: false as const, reason: 'Model utama belum dikonfigurasi; mencoba model cadangan.' }
   if (result.ok) return result
 
-  const primaryIsGroq = primary.baseUrl.includes('api.groq.com')
-  const fallbackAvailable = FALLBACK_ENABLED && !primaryIsGroq &&
-    !isPlaceholder(FALLBACK_KEY) && Boolean(FALLBACK_KEY)
-
-  if (!fallbackAvailable || !canFailOver(result.reason)) return result
+  const fallbackAvailable = FALLBACK_ENABLED && !primaryIsGroq && Boolean(fallbackKey)
+  if (!fallbackAvailable || (primaryIsConfigured && !canFailOver(result.reason))) return result
 
   const fallback = await requestProvider({
     baseUrl: FALLBACK_BASE_URL,
     model: FALLBACK_MODEL,
-    key: FALLBACK_KEY,
+    key: fallbackKey,
     label: 'Groq cadangan',
   }, args)
 
