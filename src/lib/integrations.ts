@@ -7,7 +7,7 @@ import { putFile, deleteFile } from './storage'
  * key working, and the owner needs to see the difference.
  */
 
-export type CheckState = 'ready' | 'missing' | 'invalid' | 'error'
+export type CheckState = 'ready' | 'missing' | 'invalid' | 'error' | 'unverified'
 
 export type IntegrationCheck = {
   key: 'ai' | 'bank' | 'email' | 'storage'
