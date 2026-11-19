@@ -171,7 +171,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const readyCount = cards.filter((card) => card.state === 'ready').length
   const blockers: string[] = []
   if (aiState !== 'ready') blockers.push(aiState === 'unverified' ? 'Kredensial AI terpasang, tetapi koneksinya belum lulus uji langsung.' : 'Kunci API model AI belum diisi, sehingga agen penulis belum bisa bekerja.')
-  if (bank.state !== 'ready') blockers.push('Detail rekening penerima belum diisi, sehingga pembeli belum mendapat instruksi transfer yang benar.')
+  if (bank.state !== 'ready') blockers.push(bank.state === 'unverified' ? 'Detail rekening terisi, tetapi Owner belum memverifikasi kecocokannya langsung di aplikasi bank.' : 'Detail rekening penerima belum diisi, sehingga pembeli belum mendapat instruksi transfer yang benar.')
   if (emailState !== 'ready') blockers.push(emailState === 'unverified' ? 'Kredensial email terpasang, tetapi pengiriman belum lulus uji langsung.' : 'Penyedia email belum dihubungkan, sehingga konfirmasi dan pengingat belum terkirim ke pelanggan.')
   if (engines.products === 0) blockers.push('Belum ada produk digital yang terbit, jadi belum ada yang bisa dibeli.')
   if (engines.services === 0) blockers.push('Belum ada layanan jasa yang terbit, jadi calon klien belum bisa mengirim brief.')
