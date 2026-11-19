@@ -1,10 +1,10 @@
 import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import { requireOwnerPage } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { ownerAccount, products, transactions } from '@/lib/db/schema'
+import { ownerAccount, products, proposals, transactions } from '@/lib/db/schema'
 import type { PageWithFrame } from '@/lib/frame'
 
 const idr = (value: number) => new Intl.NumberFormat('id-ID', {
@@ -16,13 +16,19 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if ('redirectTo' in guard) return { redirect: { destination: guard.redirectTo, permanent: false } }
   ctx.res.setHeader('Cache-Control', 'private, no-store, max-age=0')
 
-  const [ownerRows, txRows, productRows] = await Promise.all([
+  const [ownerRows, txRows, productRows, approvalRows] = await Promise.all([
     db.select({ name: ownerAccount.name, email: ownerAccount.email, createdAt: ownerAccount.createdAt })
       .from(ownerAccount).where(eq(ownerAccount.id, guard.session.ownerId)).limit(1),
     db.select().from(transactions).where(eq(transactions.dataSource, 'live'))
       .orderBy(desc(transactions.occurredAt)).limit(100),
     db.select({ id: products.id, name: products.name, priceIdr: products.priceIdr, status: products.status, updatedAt: products.updatedAt })
       .from(products).where(eq(products.dataSource, 'live')).orderBy(desc(products.updatedAt)).limit(100),
+    db.select({ id: proposals.id, title: proposals.title, summary: proposals.summary, category: proposals.category, amountIdr: proposals.amountIdr, risk: proposals.risk, createdAt: proposals.createdAt })
+      .from(proposals).where(and(
+        eq(proposals.dataSource, 'live'),
+        eq(proposals.status, 'pending'),
+        inArray(proposals.category, ['finance', 'investment', 'contract', 'legal', 'identity', 'kyc', 'security'])
+      )).orderBy(desc(proposals.createdAt)).limit(20),
   ])
 
   const owner = ownerRows[0]
@@ -41,6 +47,11 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       id: row.id, name: row.name, price: Number(row.priceIdr), status: row.status,
       updatedAt: row.updatedAt.toISOString(),
     })),
+    approvals: approvalRows.map((row) => ({
+      id: row.id, title: row.title, summary: row.summary, category: row.category,
+      amount: row.amountIdr === null ? null : Number(row.amountIdr), risk: row.risk,
+      createdAt: row.createdAt.toISOString(),
+    })),
   } }
 }
 
@@ -49,9 +60,10 @@ type Props = {
   revenue: number; expenses: number; net: number
   transactions: { id: string; kind: string; category: string; description: string; amount: number; date: string }[]
   products: { id: string; name: string; price: number; status: string; updatedAt: string }[]
+  approvals: { id: string; title: string; summary: string; category: string; amount: number | null; risk: string; createdAt: string }[]
 }
 
-function OwnerOnlyDashboard({ owner, revenue, expenses, net, transactions, products }: Props) {
+function OwnerOnlyDashboard({ owner, revenue, expenses, net, transactions, products, approvals }: Props) {
   return <div className="min-h-screen bg-[#f5f6f4] text-[#18211d]">
     <Head>
       <title>Dashboard Pribadi Owner</title>
@@ -73,6 +85,11 @@ function OwnerOnlyDashboard({ owner, revenue, expenses, net, transactions, produ
         <Metric label="Total pendapatan tercatat" value={idr(revenue)} />
         <Metric label="Total pengeluaran tercatat" value={idr(expenses)} />
         <Metric label="Selisih bersih tercatat" value={idr(net)} />
+      </section>
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="text-base font-bold">Persetujuan penting</h2><p className="mt-1 text-xs text-gray-500">Hanya keputusan yang membutuhkan Owner. Kendala teknis ditangani AI CEO.</p></div><span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">{approvals.length} menunggu</span></div>
+        {approvals.length ? <div className="divide-y divide-gray-100">{approvals.map((item) => <div key={item.id} className="py-4"><div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-semibold">{item.title}</p><span className="text-xs text-gray-500">{new Date(item.createdAt).toLocaleDateString('id-ID')}</span></div><p className="mt-1 text-sm leading-6 text-gray-600">{item.summary}</p><div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500"><span>Kategori: {item.category}</span><span>Risiko: {item.risk}</span>{item.amount !== null && <span>Nilai: {idr(item.amount)}</span>}</div></div>)}</div> : <Empty text="Tidak ada persetujuan penting yang menunggu. AI CEO tetap menangani pekerjaan operasional dan teknis." />}
+        {approvals.length > 0 && <Link href="/approvals" className="mt-4 inline-flex rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Tinjau dan putuskan</Link>}
       </section>
       <section className="grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
