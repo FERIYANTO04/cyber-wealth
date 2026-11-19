@@ -9,7 +9,7 @@ import {
 import { PageStack } from '@/components/ui'
 import { SchedulerGuide } from '@/components/SchedulerGuide'
 import { requireOwnerPage } from '@/lib/auth'
-import { aiConfig, bankTransferStatus, storageStatus } from '@/lib/integrations'
+import { aiConfig, aiConfigured, bankTransferStatus, storageStatus } from '@/lib/integrations'
 import { isPlaceholder } from '@/lib/env'
 import { emailConfig } from '@/lib/email'
 import { getActiveFacebookAccount, metaConfig } from '@/lib/meta'
@@ -33,7 +33,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const storage = await storageStatus()
   const engines = await getEngineCounts()
 
-  const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'ready'
+  const aiState: CheckState = aiConfigured() ? 'ready' : 'missing'
   const emailState: CheckState = isPlaceholder(email.key) || isPlaceholder(email.from) ? 'missing' : 'ready'
   const metaState: CheckState = !meta.configured
     ? 'missing'
@@ -51,14 +51,14 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       state: aiState,
       message:
         aiState === 'ready'
-          ? `Kunci terpasang untuk alamat ${ai.baseUrl} dengan model ${ai.model}. Tekan uji koneksi untuk memastikan kuncinya berlaku.`
+          ? `Kredensial tersedia untuk alamat ${ai.baseUrl} dengan model ${ai.model}. Tekan uji koneksi untuk memastikan jalur AI yang dipakai agen benar-benar menjawab.`
           : 'Kunci API model AI belum diisi. Selama kosong, tugas yang menulis teks akan dilewati dan mencatat alasannya — tidak ada hasil yang dibuat-buat.',
-      required: ['GROQ_API_KEY (wajib)', 'AI_MODEL (opsional)', 'AI_BASE_URL (opsional)'],
+      required: ['NEON_AI_GATEWAY_TOKEN + NEON_AI_GATEWAY_BASE_URL (utama)', 'atau GROQ_API_KEY (penyedia alternatif)', 'AI_MODEL (opsional)'],
       steps: [
-        'Buka console.groq.com, masuk, lalu buat kunci API baru.',
-        'Buka layar publikasi aplikasi ini, lalu isi kunci itu pada kolom kunci model AI.',
-        'Biarkan nama model dan alamat API apa adanya — keduanya sudah menunjuk ke Groq dengan model openai/gpt-oss-120b.',
-        'Publikasikan ulang, lalu tekan Uji koneksi di kartu ini.',
+        'Gunakan kredensial Neon AI Gateway yang sudah disiapkan, atau pilih Groq sebagai penyedia alternatif.',
+        'Isi NEON_AI_GATEWAY_TOKEN dan NEON_AI_GATEWAY_BASE_URL, atau GROQ_API_KEY, langsung di variabel rahasia Railway TEST.',
+        'Jangan kirim token ke chat. AI_MODEL dan AI_BASE_URL hanya perlu diubah jika Anda memang mengganti model atau penyedia.',
+        'Setelah variabel tersimpan dan aplikasi TEST aktif, tekan Uji koneksi. Tes ini memakai jalur yang sama dengan agen AI.',
       ],
       where:
         'Kunci hanya disimpan di server dan tidak pernah dikirim ke browser. Nilai yang tampil di aplikasi tidak pernah menampilkan isi kunci.',
