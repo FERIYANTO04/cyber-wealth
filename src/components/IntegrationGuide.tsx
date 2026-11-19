@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, ChevronDown, Copy, Loader2, RefreshCw, XCi
 import { Badge, Button, CopyValue, InlineNote, Panel, PanelBody, PanelHead, Stat } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
-export type CheckState = 'ready' | 'missing' | 'invalid' | 'error'
+export type CheckState = 'ready' | 'missing' | 'invalid' | 'error' | 'unverified'
 
 export type ServiceCard = {
   key: 'ai' | 'payment' | 'webhook' | 'email' | 'social' | 'social-other' | 'storage'
@@ -28,6 +28,7 @@ const TONE: Record<CheckState, { label: string; tone: 'signal' | 'hold' | 'dange
   missing: { label: 'Belum terhubung', tone: 'hold', icon: AlertTriangle },
   invalid: { label: 'Ditolak', tone: 'danger', icon: XCircle },
   error: { label: 'Gagal', tone: 'danger', icon: AlertTriangle },
+  unverified: { label: 'Belum diuji', tone: 'hold', icon: AlertTriangle },
 }
 
 function ServiceCardBody({
