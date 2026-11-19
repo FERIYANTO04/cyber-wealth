@@ -84,7 +84,7 @@ function ServiceCardBody({
           </ul>
         )}
 
-        {testNote && testNote.state !== card.state && (
+        {testNote && (
           <InlineNote tone={liveTone.tone === 'danger' ? 'danger' : liveTone.tone === 'signal' ? 'signal' : 'quiet'}>
             <span className="flex items-start gap-1.5">
               <LiveIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
