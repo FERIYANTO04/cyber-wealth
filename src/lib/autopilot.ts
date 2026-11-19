@@ -291,7 +291,40 @@ async function runResearch(trigger: string) {
 async function runProduct(trigger: string) {
   const run = await startRun('AI Product Creator', 'product', trigger)
 
-  const existing = await db.select({ name: products.name }).from(products).limit(20)
+  const existing = await db
+    .select({ id: products.id, name: products.name, status: products.status, fileKey: products.fileKey, fileName: products.fileName })
+    .from(products)
+    .limit(20)
+
+  // The product agent must inspect unfinished catalogue entries and suspiciously
+  // labelled deliverables instead of silently skipping an existing offline draft.
+  const needsReview = existing.filter((product) =>
+    product.status === 'draft' ||
+    (product.status === 'published' && (!product.fileKey || /draft|draf/i.test(product.fileName ?? '')))
+  )
+  if (needsReview.length > 0) {
+    let proposalsCreated = 0
+    for (const product of needsReview) {
+      const title = `Pemeriksaan kesiapan produk: ${product.name}`
+      const [prior] = await db.select({ id: proposals.id }).from(proposals).where(eq(proposals.title, title)).limit(1)
+      if (prior) continue
+      await db.insert(proposals).values({
+        title,
+        summary: `Periksa isi dan berkas unduhan produk "${product.name}". Status katalog: ${product.status}. Nama berkas: ${product.fileName ?? 'belum ada'}. Jangan menganggap produk siap dijual sampai berkas dibuka, isi diperiksa, dan versi final dikonfirmasi.`,
+        category: 'operations',
+        amountIdr: null,
+        risk: 'low',
+        status: 'pending',
+        dataSource: 'live',
+      })
+      proposalsCreated += 1
+    }
+    const summary = `${needsReview.length} produk memerlukan pemeriksaan isi/berkas; ${proposalsCreated} usulan pemeriksaan baru dicatat untuk Owner.`
+    await finishRun(run.id, 'ok', summary, 'AI Product Creator menandai produk yang masih draft atau memakai nama berkas draft. Agen tidak menerbitkan, mengubah harga, atau mengklaim berkas final tanpa pemeriksaan nyata.', proposalsCreated)
+    await noteAgent('AI Product Creator', 'Pemeriksaan kesiapan produk ditandai', summary)
+    return { summary, created: proposalsCreated }
+  }
+
   const offlineTitle = 'Checklist Peluncuran Produk Digital untuk Pemula'
   const duplicateOffline = existing.some((p) => p.name.toLowerCase() === offlineTitle.toLowerCase())
   if (!aiConfigured() || duplicateOffline) {
@@ -808,12 +841,13 @@ async function buildCeoDispatchPlan(): Promise<AutopilotTask[]> {
   const [publishedProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
   const [publishedServices] = await db.select({ n: sql<number>`count(*)::int` }).from(services).where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
   const [draftProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'draft'), eq(products.dataSource, 'live')))
+  const [publishedNeedsReview] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live'), sql`(${products.fileKey} is null or ${products.fileName} ~* '(draft|draf)')`))
   const [openLeads] = await db.select({ n: sql<number>`count(*)::int` }).from(revenueLeads).where(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']))
   const [newServiceRequests] = await db.select({ n: sql<number>`count(*)::int` }).from(serviceRequests).where(eq(serviceRequests.status, 'new'))
   const [pendingOrders] = await db.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.status, 'pending'), eq(orders.dataSource, 'live')))
   const plan: AutopilotTask[] = []
   if ((openLeads?.n ?? 0) + (newServiceRequests?.n ?? 0) + (pendingOrders?.n ?? 0) > 0) plan.push('sales')
-  if ((publishedProducts?.n ?? 0) === 0 && (draftProducts?.n ?? 0) === 0) plan.push('product')
+  if ((publishedProducts?.n ?? 0) === 0 || (draftProducts?.n ?? 0) > 0 || (publishedNeedsReview?.n ?? 0) > 0) plan.push('product')
   plan.push('research')
   if ((publishedProducts?.n ?? 0) + (publishedServices?.n ?? 0) > 0) plan.push('marketing')
   plan.push('finance', 'intelligence')
