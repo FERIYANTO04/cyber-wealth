@@ -52,6 +52,12 @@ async function requestProvider(provider: Provider, args: {
         model: provider.model,
         temperature: args.temperature ?? 0.4,
         max_tokens: args.maxTokens ?? 1200,
+        // Groq's GPT-OSS spends part of its completion budget on internal reasoning.
+        // Keep that effort low for short operational instructions so the visible answer
+        // is not cut off before the requested summary is complete.
+        ...(provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-')
+          ? { reasoning_effort: 'low', reasoning_format: 'hidden' }
+          : {}),
         messages: args.messages,
       }),
       signal: controller.signal,
