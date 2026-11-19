@@ -6,12 +6,14 @@ import { orderPaidEmail } from './messages'
 import { fileUrl } from './storage'
 import { money } from './format'
 
-/** Storefront-visible products: published and authored by the owner, never sample rows. */
+/** Storefront-visible products: published, live, and carrying a reviewed deliverable. */
+const deliverableReady = sql`${products.fileKey} is not null and coalesce(${products.fileName}, '') !~* '(draft|draf)'`
+
 export async function getStoreProducts() {
   return db
     .select()
     .from(products)
-    .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+    .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live'), deliverableReady))
     .orderBy(desc(products.createdAt))
 }
 
@@ -19,7 +21,7 @@ export async function getPublishedProduct(slug: string) {
   const rows = await db
     .select()
     .from(products)
-    .where(and(eq(products.slug, slug), eq(products.status, 'published'), eq(products.dataSource, 'live')))
+    .where(and(eq(products.slug, slug), eq(products.status, 'published'), eq(products.dataSource, 'live'), deliverableReady))
     .limit(1)
   return rows[0] ?? null
 }
