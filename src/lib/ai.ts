@@ -92,7 +92,7 @@ async function requestProvider(provider: Provider, args: {
 }
 
 function canFailOver(reason: string): boolean {
-  return /kuota|429|menolak permintaan \(5\d\d\)|tidak bisa menghubungi|tidak menjawab dalam 25 detik/i.test(reason)
+  return /menolak autentikasi \((401|403)\)|kuota|429|menolak permintaan \(5\d\d\)|tidak bisa menghubungi|tidak menjawab dalam 25 detik/i.test(reason)
 }
 
 export async function chatWithAi(args: {
