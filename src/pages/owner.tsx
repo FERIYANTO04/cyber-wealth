@@ -32,9 +32,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const owner = ownerRows[0]
   if (!owner) return { redirect: { destination: '/login', permanent: false } }
 
-  const revenue = txRows.filter((row) => row.kind === 'revenue').reduce((sum, row) => sum + Number(row.amountIdr), 0)
-  const expenses = txRows.filter((row) => row.kind !== 'revenue').reduce((sum, row) => sum + Number(row.amountIdr), 0)
-  const totalRevenue = revenue + 0
   const allTx = await db.select({ kind: transactions.kind, amount: transactions.amountIdr })
     .from(transactions).where(eq(transactions.dataSource, 'live'))
   const totalIncome = allTx.filter((row) => row.kind === 'revenue').reduce((sum, row) => sum + Number(row.amount), 0)
