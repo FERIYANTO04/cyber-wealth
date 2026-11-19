@@ -160,7 +160,7 @@ async function runCeo(trigger: string) {
       'Tugas Anda: diagnosis kondisi, pilih maksimal 3 prioritas paling berdampak, dan pecah tiap prioritas menjadi langkah kerja konkret untuk agen yang sudah ada.',
       'Jangan menyetujui pengeluaran, investasi, transfer, kontrak, publikasi, atau tindakan eksternal. Tindakan berisiko harus menjadi rekomendasi untuk persetujuan pemilik.',
       'Anda boleh mengusulkan peningkatan model/provider atau penambahan agen AI spesialis jika manfaat-biayanya jelas. Gunakan hanya anggaran operasional yang telah dialokasikan dan benar-benar tersedia; lindungi dana Owner dan cadangan. Jangan membeli layanan, membuat langganan, atau membuat komitmen berbayar tanpa persetujuan Owner. Bandingkan opsi gratis, biaya, kemampuan, privasi, keandalan, dan hasil terukur.',
-      'Jawab sangat ringkas dalam Bahasa Indonesia: KONDISI (1 kalimat), KEPUTUSAN CEO (maksimal 3 prioritas), TUGAS AGEN (1 tindakan konkret per agen yang relevan), MENUNGGU PEMILIK (hanya izin/kredensial yang benar-benar diperlukan). Maksimal 220 kata. Jangan ulangi kebijakan panjang.',
+      'Jawab sangat ringkas dalam Bahasa Indonesia: KONDISI (1 kalimat), KEPUTUSAN CEO (maksimal 3 prioritas), TUGAS AGEN (1 tindakan konkret per agen yang relevan), MENUNGGU PEMILIK (hanya izin/kredensial yang benar-benar diperlukan). Maksimal 140 kata. Jangan ulangi kebijakan panjang.',
     ].join(' '),
     prompt: [
       `Waktu analisis: ${new Date().toISOString()}`,
@@ -172,7 +172,7 @@ async function runCeo(trigger: string) {
       blockers.length ? blockers.join('; ') : 'Tidak ada kendala dasar yang terdeteksi.',
       'Buat keputusan operasional yang bisa dilaksanakan oleh agen AI Market Research, AI Sales, AI Product Creator, AI Marketing, AI Finance, dan AI Business Intelligence. Tulis siapa melakukan apa, urutan, dan hasil yang harus dicatat. Jangan mengklaim tugas tersebut sudah selesai.',
     ].join('\n'),
-    maxTokens: 850,
+    maxTokens: 1400,
   })
 
   if (!outcome.ok) {
@@ -257,7 +257,7 @@ async function runResearch(trigger: string) {
         'ALASAN: <satu kalimat, hanya berdasarkan data di atas>',
         'UJI: <satu langkah kecil yang bisa dikerjakan minggu ini>',
       ].join('\n'),
-      maxTokens: 450,
+      maxTokens: 700,
     })
 
     if (!outcome.ok) {
