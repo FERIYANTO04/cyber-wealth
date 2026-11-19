@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { activity, serviceRequests, services } from '@/lib/db/schema'
 import { serviceRequestCode } from '@/lib/services'
+import { notifyOwner } from '@/lib/email'
 
 const Body = z.object({
   slug: z.string().trim().min(1).max(120),
@@ -71,6 +72,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     detail: `${row.code} — ${row.serviceName} dari ${row.name} (${row.email}). Belum menjadi penjualan.`,
     dataSource: 'live',
   })
+
+  // Notify the owner for every real incoming lead. If email is not configured,
+  // notifyOwner records the message as queued in the app's email log.
+  await notifyOwner({
+    subject: `Permintaan jasa baru: ${row.serviceName} (${row.code})`,
+    lines: [
+      `Nama: ${row.name}`,
+      `Email: ${row.email}`,
+      `Perusahaan: ${row.company || '-'}`,
+      `Pasar: ${row.market}`,
+      `Anggaran indikatif: ${row.budgetIdr == null ? 'Belum disebutkan' : `Rp${Number(row.budgetIdr).toLocaleString('id-ID')}`}`,
+      '',
+      'Brief:',
+      row.brief,
+      '',
+      'Status: prospek baru, belum menjadi penjualan atau pendapatan.',
+    ],
+    kind: 'service-request',
+    relatedId: row.id,
+  }).catch(() => undefined)
 
   return res.status(201).json({ ok: true, code: row.code })
 }
