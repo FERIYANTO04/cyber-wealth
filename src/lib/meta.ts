@@ -17,7 +17,7 @@ import { isPlaceholder } from './env'
  * - Every step is written to the audit log so the owner can see what happened.
  */
 
-const GRAPH = 'https://graph.facebook.com/v21.0'
+const GRAPH = 'https://graph.facebook.com'
 
 export const REQUIRED_SCOPES = [
   'pages_show_list',
@@ -35,7 +35,7 @@ export function metaConfig() {
   return {
     appId,
     appSecret,
-    version: process.env.META_GRAPH_VERSION || 'v21.0',
+    version: process.env.META_GRAPH_VERSION || 'v26.0',
     loginConfigId: process.env.META_LOGIN_CONFIG_ID || '',
     configured: !isPlaceholder(appId) && !isPlaceholder(appSecret),
   }
@@ -85,7 +85,7 @@ export async function graphCall<T>(
   path: string,
   params: Record<string, string>
 ): Promise<{ ok: true; data: T } | { ok: false; message: string; code?: number }> {
-  const url = new URL(`${GRAPH}${path}`)
+  const url = new URL(`${GRAPH}/${metaConfig().version}${path}`)
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 20_000)
@@ -141,7 +141,7 @@ export async function exchangeCode(origin: string, code: string): Promise<Exchan
   const { appId, appSecret, version } = metaConfig()
   if (!appId || !appSecret) return { ok: false, message: 'Meta App ID atau App Secret belum diisi.' }
 
-  const url = new URL(`${GRAPH}/oauth/access_token`)
+  const url = new URL(`${GRAPH}/${version}/oauth/access_token`)
   url.searchParams.set('client_id', appId)
   url.searchParams.set('client_secret', appSecret)
   url.searchParams.set('redirect_uri', redirectUriFor(origin))
@@ -184,9 +184,9 @@ export async function listPages(userToken: string): Promise<{ ok: true; pages: P
 
 /** A page token that does not expire, so scheduled publishing keeps working. */
 export async function longLivedPageToken(pageToken: string): Promise<string | null> {
-  const { appId, appSecret } = metaConfig()
+  const { appId, appSecret, version } = metaConfig()
   if (!appId || !appSecret) return null
-  const url = new URL(`${GRAPH}/oauth/access_token`)
+  const url = new URL(`${GRAPH}/${version}/oauth/access_token`)
   url.searchParams.set('grant_type', 'fb_exchange_token')
   url.searchParams.set('client_id', appId)
   url.searchParams.set('client_secret', appSecret)
