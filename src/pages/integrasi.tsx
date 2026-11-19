@@ -53,12 +53,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         aiState === 'ready'
           ? `Kunci terpasang untuk alamat ${ai.baseUrl} dengan model ${ai.model}. Tekan uji koneksi untuk memastikan kuncinya berlaku.`
           : 'Kunci API model AI belum diisi. Selama kosong, tugas yang menulis teks akan dilewati dan mencatat alasannya — tidak ada hasil yang dibuat-buat.',
-      required: ['GROQ_API_KEY (wajib)', 'AI_MODEL (opsional)', 'AI_BASE_URL (opsional)'],
+      required: ['NEON_AI_GATEWAY_TOKEN (wajib)', 'AI_BASE_URL (alamat gateway)', 'AI_MODEL (nama model)'],
       steps: [
-        'Buka console.groq.com, masuk, lalu buat kunci API baru.',
-        'Buka layar publikasi aplikasi ini, lalu isi kunci itu pada kolom kunci model AI.',
-        'Biarkan nama model dan alamat API apa adanya — keduanya sudah menunjuk ke Groq dengan model openai/gpt-oss-120b.',
-        'Publikasikan ulang, lalu tekan Uji koneksi di kartu ini.',
+        'Gunakan kunci API gateway AI yang sudah dibuat dan aktif.',
+        'Simpan kunci tersebut di Railway Production sebagai NEON_AI_GATEWAY_TOKEN; jangan tempelkan kunci ke chat atau halaman publik.',
+        'Pastikan AI_BASE_URL dan AI_MODEL sama dengan alamat gateway dan model yang disediakan penyedia AI.',
+        'Publikasikan ulang, lalu tekan Uji koneksi. Status aktif baru dianggap terverifikasi setelah penyedia menjawab berhasil.',
       ],
       where:
         'Kunci hanya disimpan di server dan tidak pernah dikirim ke browser. Nilai yang tampil di aplikasi tidak pernah menampilkan isi kunci.',
