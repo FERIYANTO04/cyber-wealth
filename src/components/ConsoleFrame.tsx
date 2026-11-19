@@ -50,7 +50,7 @@ const NAV = [
 // The bottom bar on a phone carries the six places the owner visits most; the rest
 // live on the full rail. Six is the ceiling: a seventh would push each tab below a
 // comfortable thumb target.
-const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/produk', '/integrasi', '/admin/members']
+const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/produk', '/facebook', '/admin/members']
 
 function QuietNavButton({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
