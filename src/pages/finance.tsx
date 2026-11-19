@@ -1,4 +1,5 @@
 import type { GetServerSideProps } from 'next'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { and, desc, eq } from 'drizzle-orm'
 import { ConsoleFrame } from '@/components/ConsoleFrame'
@@ -57,7 +58,7 @@ function FinancePage({ finance, monthly, target, live, demo }: Props) {
     <PageStack>
       <FinanceSummary live={finance.live} target={target} />
       <ProfitReport points={monthly.points} total={monthly.total} />
-      <Toolbar><TransactionForm ledger="owner" onSaved={() => router.replace(router.asPath)} /></Toolbar>
+      <Toolbar><Link href="/company-finance" className="text-sm font-semibold text-signal hover:underline">Keuangan perusahaan</Link><TransactionForm ledger="owner" onSaved={() => router.replace(router.asPath)} /></Toolbar>
       <FinanceLedger live={live} demo={demo} title="Buku besar Owner" />
     </PageStack>
   )
