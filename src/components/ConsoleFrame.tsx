@@ -37,7 +37,9 @@ const NAV = [
   { href: '/saas-admin', label: 'Langganan', short: 'Langganan', icon: Repeat },
   { href: '/billing', label: 'Tagihan berulang', short: 'Tagihan', icon: Repeat },
   { href: '/email', label: 'Kotak keluar email', short: 'Email', icon: Mail },
-  { href: '/finance', label: 'Keuangan', short: 'Keuangan', icon: Wallet },
+  { href: '/finance', label: 'Keuangan Owner', short: 'Owner', icon: Wallet },
+  { href: '/company-finance', label: 'Keuangan perusahaan', short: 'Perusahaan', icon: BriefcaseBusiness },
+  { href: '/discovery', label: 'Business Discovery', short: 'Discovery', icon: Store },
   { href: '/revenue', label: 'Mesin pendapatan', short: 'Pendapatan', icon: Store },
   { href: '/social', label: 'Studio konten sosial', short: 'Konten', icon: Megaphone },
   { href: '/facebook', label: 'Facebook Page', short: 'Facebook', icon: Share2 },
@@ -50,7 +52,7 @@ const NAV = [
 // The bottom bar on a phone carries the six places the owner visits most; the rest
 // live on the full rail. Six is the ceiling: a seventh would push each tab below a
 // comfortable thumb target.
-const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/produk', '/integrasi', '/admin/members']
+const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/finance', '/produk', '/integrasi']
 
 function QuietNavButton({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (

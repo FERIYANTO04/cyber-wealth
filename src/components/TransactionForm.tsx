@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button, Field, Input, Panel, PanelHead } from '@/components/ui'
 
-export function TransactionForm({ onSaved }: { onSaved: () => void }) {
+export function TransactionForm({ onSaved, ledger = 'owner' }: { onSaved: () => void; ledger?: 'owner' | 'company' }) {
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<'revenue' | 'expense'>('revenue')
   const [category, setCategory] = useState('')
@@ -21,6 +21,7 @@ export function TransactionForm({ onSaved }: { onSaved: () => void }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind,
+          ledger,
           category,
           description,
           amountIdr: Number(amount.replace(/[^\d]/g, '')),
@@ -55,7 +56,7 @@ export function TransactionForm({ onSaved }: { onSaved: () => void }) {
   return (
     <Panel className="w-full">
       <PanelHead
-        label="Catatan baru"
+        label={ledger === 'company' ? 'Catatan baru perusahaan' : 'Catatan baru Owner'}
         aside={
           <button
             type="button"

@@ -1,9 +1,9 @@
 import { createHash, createHmac } from 'node:crypto'
 
-const ENDPOINT = process.env.AWS_ENDPOINT_URL_S3 || ''
-const REGION = process.env.AWS_REGION || 'ap-southeast-1'
-const ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID || ''
-const SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY || ''
+const ENDPOINT = process.env.AWS_ENDPOINT_URL_S3 || process.env.STORAGE_ENDPOINT || ''
+const REGION = process.env.AWS_REGION || process.env.STORAGE_REGION || 'ap-southeast-1'
+const ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID || process.env.STORAGE_ACCESS_KEY_ID || ''
+const SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY || process.env.STORAGE_SECRET_ACCESS_KEY || ''
 const BUCKET = process.env.STORAGE_BUCKET || 'cyber-wealth-products'
 const ALGORITHM = 'AWS4-HMAC-SHA256'
 

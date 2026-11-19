@@ -3,6 +3,20 @@ import path from 'node:path'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Baseline browser security headers for the public web app and API routes.
+  async headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        { key: 'X-DNS-Prefetch-Control', value: 'off' },
+        { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+      ],
+    }]
+  },
   // The Dockerfile ships .next/standalone: only the modules the app imports.
   // Netlify's Next.js runtime needs the regular .next server output.
   // Keep standalone output for Docker/container deployments elsewhere.

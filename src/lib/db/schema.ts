@@ -67,6 +67,7 @@ export const transactions = pgTable('transaction', {
   amountIdr: bigint('amount_idr', { mode: 'number' }).notNull(),
   occurredAt: timestamp('occurred_at').notNull().defaultNow(),
   dataSource: text('data_source').notNull().default('live'),
+  ledger: text('ledger').notNull().default('owner'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -76,6 +77,7 @@ export const assets = pgTable('asset', {
   kind: text('kind').notNull(),
   valueIdr: bigint('value_idr', { mode: 'number' }).notNull(),
   dataSource: text('data_source').notNull().default('live'),
+  ledger: text('ledger').notNull().default('owner'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -561,8 +563,8 @@ export const aiProviderPayments = pgTable('ai_provider_payment', {
 
 export const moneyAllocationPolicy = pgTable('money_allocation_policy', {
   id: text('id').primaryKey(),
-  ownerPercent: integer('owner_percent').notNull().default(70),
-  operationsPercent: integer('operations_percent').notNull().default(20),
+  ownerPercent: integer('owner_percent').notNull().default(50),
+  operationsPercent: integer('operations_percent').notNull().default(40),
   reservePercent: integer('reserve_percent').notNull().default(10),
   autoPayEnabled: boolean('auto_pay_enabled').notNull().default(false),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

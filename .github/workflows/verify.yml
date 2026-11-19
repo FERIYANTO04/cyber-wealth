@@ -1,0 +1,45 @@
+name: Verify Cyber Wealth
+
+on:
+  push:
+    branches:
+      - main
+      - feature/growth-engine-owner-wealth-separation
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/build-only
+      JWT_SECRET: ci-only-not-a-production-secret
+      CRON_SECRET: ci-only-not-a-production-secret
+      NEXT_PUBLIC_IS_PLAYGROUND: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify migration snapshot matches application schema
+        run: |
+          npx drizzle-kit generate --name=ci_schema_check --config=drizzle.config.ts
+          if [ -n "$(git status --porcelain -- drizzle)" ]; then
+            echo 'Drizzle generated an unexpected migration; schema snapshot is out of date.'
+            git status --short -- drizzle
+            exit 1
+          fi
+      - name: Type check
+        run: npm run check
+      - name: Production build
+        run: npm run build

@@ -2,10 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fonts come from next/font in src/pages/_app.tsx. Every colour the app shows is a
-   token below, mapped in tailwind.config.mjs. */
+/* System font stacks keep builds independent of external font downloads. Every colour
+   the app shows is a token below, mapped in tailwind.config.mjs. */
 
 :root {
+  --font-inter: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sora: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-plex-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color-scheme: light;
   --canvas: 247 248 246;
   --surface: 255 255 255;

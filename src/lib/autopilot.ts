@@ -11,6 +11,8 @@ import {
   proposals,
   revenueLeads,
   socialPosts,
+  transactions,
+  moneyAllocationPolicy,
   serviceRequests,
   services,
   settings,
@@ -608,74 +610,53 @@ async function runFinance(trigger: string) {
   const run = await startRun('AI Finance', 'finance', trigger)
 
   const since = new Date(Date.now() - 30 * DAY_MS)
-  const [orderRevenue] = await db
-    .select({ total: sql<number>`coalesce(sum(${orders.amountIdr}),0)::bigint` })
-    .from(orders)
-    .where(and(eq(orders.status, 'paid'), eq(orders.dataSource, 'live'), gte(orders.paidAt, since)))
-  const [subRevenue] = await db
-    .select({ total: sql<number>`coalesce(sum(${subscriptions.amountIdr}),0)::bigint` })
-    .from(subscriptions)
-    .where(
-      and(eq(subscriptions.status, 'active'), eq(subscriptions.dataSource, 'live'), gte(subscriptions.paidAt, since))
-    )
+  const [ledger] = await db
+    .select({
+      revenue: sql<number>`coalesce(sum(case when ${transactions.kind} = 'revenue' then ${transactions.amountIdr} else 0 end),0)::bigint`,
+      expenses: sql<number>`coalesce(sum(case when ${transactions.kind} = 'expense' then ${transactions.amountIdr} else 0 end),0)::bigint`,
+    })
+    .from(transactions)
+    .where(and(
+      eq(transactions.dataSource, 'live'),
+      eq(transactions.ledger, 'company'),
+      gte(transactions.occurredAt, since)
+    ))
+
   const [pendingProposal] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(proposals)
-    .where(
-      and(
-        eq(proposals.status, 'pending'),
-        eq(proposals.category, 'finance'),
-        eq(proposals.dataSource, 'live')
-      )
-    )
+    .where(and(
+      eq(proposals.status, 'pending'),
+      eq(proposals.category, 'finance'),
+      eq(proposals.dataSource, 'live')
+    ))
 
-  const total = Number(orderRevenue?.total ?? 0) + Number(subRevenue?.total ?? 0)
+  const [policy] = await db
+    .select()
+    .from(moneyAllocationPolicy)
+    .limit(1)
 
-  // The one place the autopilot touches money: it may *propose* a spend, and the row
-  // waits at the owner's desk. No transaction exists until that decision is approved.
-  let proposed = 0
-  if (total > 0 && (pendingProposal?.n ?? 0) === 0) {
-    const [openOutreach] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(revenueLeads)
-      .where(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']))
-
-    const idea =
-      (openOutreach?.n ?? 0) > 0
-        ? {
-            title: 'Anggaran promosi untuk menindaklanjuti prospek',
-            summary: `${openOutreach?.n} prospek masih terbuka. Usulan anggaran promosi kecil untuk menjangkau ulang mereka; dana hanya dicatat sebagai pengeluaran setelah Anda setujui.`,
-          }
-        : {
-            title: 'Anggaran uji promosi produk terbit',
-            summary:
-              'Usulan anggaran kecil untuk menguji satu kanal promosi pada produk yang sudah terbit. Tidak ada dana berpindah sebelum Anda menyetujui usulan ini.',
-          }
-
-    await db.insert(proposals).values({
-      title: idea.title,
-      summary: idea.summary,
-      category: 'finance',
-      amountIdr: Math.max(50_000, Math.round((total * 0.1) / 1000) * 1000),
-      risk: 'medium',
-      status: 'pending',
-      dataSource: 'live',
-    })
-    proposed = 1
-  }
+  const revenue = Number(ledger?.revenue ?? 0)
+  const expenses = Number(ledger?.expenses ?? 0)
+  const bookDifference = revenue - expenses
+  const pending = pendingProposal?.n ?? 0
+  const policyNote = policy
+    ? `Kebijakan laba: Owner ${policy.ownerPercent}%, operasional ${policy.operationsPercent}%, cadangan ${policy.reservePercent}%; transfer otomatis ${policy.autoPayEnabled ? 'aktif' : 'nonaktif'}.`
+    : 'Kebijakan alokasi belum tersedia.'
 
   const summary =
-    `Pendapatan terkonfirmasi 30 hari terakhir: Rp ${total.toLocaleString('id-ID')}. ` +
-    `${(pendingProposal?.n ?? 0) + proposed} usulan pengeluaran menunggu keputusan Anda.`
+    `Buku perusahaan 30 hari: pendapatan Rp ${revenue.toLocaleString('id-ID')}; ` +
+    `pengeluaran Rp ${expenses.toLocaleString('id-ID')}; selisih buku Rp ${bookDifference.toLocaleString('id-ID')}. ` +
+    `${pending} usulan pengeluaran menunggu keputusan Owner.`
 
   await finishRun(
     run.id,
     'ok',
     summary,
-    'Hanya pembayaran yang diverifikasi pemilik setelah dana masuk yang dihitung. Usulan pengeluaran hanya menjadi catatan setelah Anda menyetujuinya — tidak ada transfer otomatis.',
-    proposed
+    `${policyNote} Selisih buku bukan otomatis laba yang dapat dibagikan. Pajak, refund, biaya provider, dan kewajiban lain harus diperhitungkan serta dicatat terlebih dahulu. AI Finance tidak membuat anggaran belanja dari omzet dan tidak memindahkan dana; setiap pengeluaran tetap menunggu persetujuan Owner.`,
+    0
   )
-  await noteAgent('AI Finance', 'Rekap keuangan disusun', summary)
+  await noteAgent('AI Finance', 'Rekap buku perusahaan disusun', summary)
   return { summary }
 }
 
@@ -820,15 +801,21 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     return { ranAt: new Date().toISOString(), paused: true, results: [] }
   }
 
+  // A dedicated cycle row prevents a manual run of one specialist from postponing
+  // the next full daily CEO cycle.
+  const cycleRun = await startRun('AI CEO', 'autopilot', trigger)
   const outcomes: AutopilotResult['results'] = []
   try {
     const ceo = await runCeo(trigger)
     outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: ceo.summary })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui'
-    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: `Tugas gagal: ${message}. Agen lain tidak dijalankan agar keputusan tanpa arahan CEO tidak diteruskan.` })
+    const summary = `Tugas CEO gagal: ${message}. Agen lain tidak dijalankan agar keputusan tanpa arahan CEO tidak diteruskan.`
+    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary })
+    await finishRun(cycleRun.id, 'failed', summary, summary, 0)
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
+
   const plan = await buildCeoDispatchPlan()
   const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis' }
   await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Mode delegasi deterministik; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
@@ -859,6 +846,10 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     .set({ updatedAt: new Date() })
     .where(eq(settings.id, SETTINGS_ID))
 
+  const summary = `Siklus autopilot selesai: ${outcomes.length} tugas diproses. ${outcomes.filter((item) => item.summary.startsWith('Tugas gagal:')).length} tugas spesialis gagal.`
+  const detail = outcomes.map((item) => `${item.label}: ${item.summary}`).join('\n')
+  await finishRun(cycleRun.id, 'ok', summary, detail, 0)
+
   return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
 }
 
@@ -875,9 +866,16 @@ export async function getLastRun() {
 export async function autopilotDue(): Promise<boolean> {
   const current = await getSettings()
   if (current.aiPaused) return false
-  const last = await getLastRun()
-  if (!last) return true
-  return Date.now() - last.startedAt.getTime() > DAY_MS
+  const [lastCycle] = await db
+    .select()
+    .from(agentRuns)
+    .where(eq(agentRuns.task, 'autopilot'))
+    .orderBy(desc(agentRuns.startedAt))
+    .limit(1)
+  if (!lastCycle) return true
+  const elapsed = Date.now() - lastCycle.startedAt.getTime()
+  if (lastCycle.status === 'failed' || lastCycle.status === 'running') return elapsed > 15 * 60 * 1000
+  return elapsed > DAY_MS
 }
 
 export async function getAgentRuns(limit = 40) {

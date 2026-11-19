@@ -56,19 +56,18 @@ function LedgerList({ rows, compact }: { rows: LedgerRow[]; compact?: boolean })
 }
 
 /** The owner's real ledger and, folded away, the sample rows shown beside it. */
-export function FinanceLedger({ live, demo }: { live: LedgerRow[]; demo: LedgerRow[] }) {
+export function FinanceLedger({ live, demo, title = 'Catatan asli' }: { live: LedgerRow[]; demo: LedgerRow[]; title?: string }) {
   const [showDemo, setShowDemo] = useState(false)
 
   return (
     <div className="grid grid-cols-1 gap-block lg:grid-cols-3">
       <Panel className="lg:col-span-2">
-        <PanelHead label="Catatan asli" aside={<SourceTag source="live" />} />
+        <PanelHead label={title} aside={<SourceTag source="live" />} />
         {live.length === 0 ? (
           <div className="flex flex-col gap-2 px-page py-section">
             <p className="heading-tight text-sm">Belum ada catatan</p>
             <p className="max-w-prose text-[0.8125rem] leading-relaxed text-ink-quiet">
-              Setiap pemasukan dan pengeluaran yang Anda catat di sini membentuk kekayaan bersih yang sebenarnya —
-              tidak dicampur data contoh.
+              Buku besar ini hanya menampilkan transaksi pada lingkup yang dipilih — Owner atau perusahaan — dan tidak dicampur data contoh.
             </p>
           </div>
         ) : (
