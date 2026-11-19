@@ -28,20 +28,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  const existing = await db.select({ n: sql<number>`count(*)::int` }).from(ownerAccount)
-  if ((existing[0]?.n ?? 0) > 0) {
+  // Serialize first-owner setup attempts so two visitors cannot race to
+  // create separate owner accounts while the table is still empty.
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(734921806)`)
+    const existing = await tx.select({ n: sql<number>`count(*)::int` }).from(ownerAccount)
+    if ((existing[0]?.n ?? 0) > 0) return { conflict: true as const }
+
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12)
+    const [owner] = await tx
+      .insert(ownerAccount)
+      .values({
+        name: parsed.data.name,
+        email: parsed.data.email,
+        passwordHash,
+      })
+      .returning()
+    return { conflict: false as const, owner }
+  })
+
+  if (result.conflict) {
     return res.status(409).json({ error: 'Akun pemilik sudah ada. Silakan masuk.' })
   }
-
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12)
-  const [owner] = await db
-    .insert(ownerAccount)
-    .values({
-      name: parsed.data.name,
-      email: parsed.data.email,
-      passwordHash,
-    })
-    .returning()
+  const owner = result.owner
 
   const token = await createSessionToken(owner.id, owner.email)
   if (!token) return res.status(500).json({ error: 'Kunci keamanan belum siap. Coba lagi.' })
