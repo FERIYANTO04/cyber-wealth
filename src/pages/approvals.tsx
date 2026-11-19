@@ -10,8 +10,12 @@ import type { ProposalItem } from '@/components/ProposalCard'
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const guard = await requireOwnerPage(ctx)
   if ('redirectTo' in guard) return { redirect: { destination: guard.redirectTo, permanent: false } }
-  const pending = await getPendingProposals()
-  const decided = await getRecentDecisions(15)
+  // Owner sees only decisions that legally or financially require their authority.
+  // Routine operations and technical work stay with the AI CEO.
+  const ownerCategories = new Set(['finance', 'investment', 'contract', 'legal', 'identity', 'kyc', 'security'])
+  const [allPending, allDecided] = await Promise.all([getPendingProposals(), getRecentDecisions(30)])
+  const pending = allPending.filter((row) => ownerCategories.has(row.proposal.category))
+  const decided = allDecided.filter((row) => ownerCategories.has(row.category)).slice(0, 15)
 
   return {
     props: {
