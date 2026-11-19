@@ -1,4 +1,5 @@
 import type { GetServerSideProps } from 'next'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { and, desc, eq } from 'drizzle-orm'
 import { ConsoleFrame } from '@/components/ConsoleFrame'
@@ -61,7 +62,7 @@ function CompanyFinancePage({ company, orderCounts, live, allocationPolicy }: Pr
       <SalesOutcomeCard netCash={company.netCash} paid={orderCounts.paid} pending={orderCounts.pending} revenue={orderCounts.revenueIdr} />
       <CompanyFinanceSummary live={company} />
       <AllocationPolicyCard policy={allocationPolicy} />
-      <Toolbar><TransactionForm ledger="company" onSaved={() => router.replace(router.asPath)} /></Toolbar>
+      <Toolbar><Link href="/finance" className="text-sm font-semibold text-signal hover:underline">Keuangan Owner</Link><TransactionForm ledger="company" onSaved={() => router.replace(router.asPath)} /></Toolbar>
       <FinanceLedger live={live} demo={[]} title="Buku besar perusahaan" />
     </PageStack>
   )
