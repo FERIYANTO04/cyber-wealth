@@ -1,4 +1,4 @@
-import { isPlaceholder } from './env'
+import { chatWithAi } from './ai'
 import { putFile, deleteFile } from './storage'
 
 /**
@@ -50,72 +50,24 @@ export function bankTransferStatus(): { state: CheckState; message: string } {
 
 /** Calls the model with a one-token prompt. The answer is not used as content. */
 export async function testAi(): Promise<{ state: CheckState; message: string }> {
-  const { key, model, baseUrl } = aiConfig()
-  if (isPlaceholder(key)) {
-    return {
-      state: 'missing',
-      message: 'Kunci API model AI belum diisi. Agen yang menulis teks akan dilewati sampai kunci ini ada.',
-    }
+  // Exercise the same primary-plus-fallback path used by the agents. Testing only
+  // the primary provider can report a false failure when Neon is unavailable but
+  // the configured Groq fallback is healthy.
+  const outcome = await chatWithAi({
+    messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
+    maxTokens: 20,
+    temperature: 0,
+  })
+
+  if (outcome.ok) {
+    return { state: 'ready', message: `Model ${outcome.model} menjawab. Jalur AI siap digunakan.` }
   }
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 20_000)
-  try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model,
-        max_tokens: 200,
-        reasoning_effort: 'low',
-        messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
-      }),
-      signal: controller.signal,
-      cache: 'no-store',
-    })
-    const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null
-
-    if (response.ok) return { state: 'ready', message: `Model ${model} menjawab. Agen siap menulis.` }
-    if (response.status === 401 || response.status === 403) {
-      return { state: 'invalid', message: 'Penyedia menolak kunci ini. Periksa apakah kuncinya benar dan masih aktif.' }
-    }
-    if (response.status === 404) {
-      return {
-        state: 'invalid',
-        message: `Model "${model}" tidak dikenal di alamat ini. Periksa nama model dan alamat API-nya.`,
-      }
-    }
-    return {
-      state: 'error',
-      message: `Penyedia menjawab ${response.status}${body?.error?.message ? `: ${body.error.message}` : ''}.`,
-    }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { state: 'error', message: 'Penyedia tidak menjawab dalam 20 detik.' }
-    }
-    return { state: 'error', message: 'Tidak bisa menghubungi penyedia. Periksa alamat API dan koneksi keluar.' }
-  } finally {
-    clearTimeout(timer)
+  if (/belum ada kredensial/i.test(outcome.reason)) {
+    return { state: 'missing', message: outcome.reason }
   }
+  if (/menolak autentikasi \((401|403)\)/i.test(outcome.reason)) {
+    return { state: 'invalid', message: outcome.reason }
+  }
+  return { state: 'error', message: outcome.reason }
 }
-
-export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
-  if (
-    !process.env.AWS_ENDPOINT_URL_S3 ||
-    !process.env.AWS_ACCESS_KEY_ID ||
-    !process.env.AWS_SECRET_ACCESS_KEY ||
-    !process.env.STORAGE_BUCKET
-  ) {
-    return { state: 'missing', message: 'Konfigurasi Neon Object Storage belum lengkap. Periksa endpoint, access key, secret key, dan nama bucket.' }
-  }
-  const probeKey = `pemeriksaan/koneksi-${Date.now()}.txt`
-  try {
-    await putFile(probeKey, 'Cyber Wealth storage connection check', 'text/plain')
-    await deleteFile(probeKey)
-    return { state: 'ready', message: 'Object Storage berhasil menerima dan menghapus berkas uji.' }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'tidak diketahui'
-    return { state: 'error', message: `Penyimpanan berkas belum siap: ${message}.` }
-  }
-}
-
