@@ -6,10 +6,11 @@ import { FinanceLedger, type LedgerRow } from '@/components/FinanceLedger'
 import { TransactionForm } from '@/components/TransactionForm'
 import { SalesOutcomeCard } from '@/components/SalesOutcomeCard'
 import { CompanyFinanceSummary } from '@/components/CompanyFinanceSummary'
+import { AllocationPolicyCard, type AllocationPolicy } from '@/components/AllocationPolicyCard'
 import { PageStack, Toolbar } from '@/components/ui'
 import { requireOwnerPage } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { transactions } from '@/lib/db/schema'
+import { moneyAllocationPolicy, transactions } from '@/lib/db/schema'
 import { getFinance } from '@/lib/data'
 import { getOrderCounts } from '@/lib/revenue'
 import type { PageWithFrame } from '@/lib/frame'
@@ -19,12 +20,13 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if ('redirectTo' in guard) return { redirect: { destination: guard.redirectTo, permanent: false } }
   ctx.res.setHeader('Cache-Control', 'private, no-store, max-age=0')
 
-  const [finance, orderCounts, rows] = await Promise.all([
+  const [finance, orderCounts, rows, policyRows] = await Promise.all([
     getFinance(),
     getOrderCounts(),
     db.select().from(transactions)
       .where(and(eq(transactions.dataSource, 'live'), eq(transactions.ledger, 'company')))
       .orderBy(desc(transactions.occurredAt)).limit(40),
+    db.select().from(moneyAllocationPolicy).where(eq(moneyAllocationPolicy.id, 'default')).limit(1),
   ])
   const live: LedgerRow[] = rows.map((row) => ({
     id: row.id,
@@ -35,21 +37,30 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     occurredAt: row.occurredAt.toISOString(),
     dataSource: 'live',
   }))
-  return { props: { company: finance.company, orderCounts, live } }
+  const policy = policyRows[0]
+  const allocationPolicy: AllocationPolicy | null = policy ? {
+    ownerPercent: policy.ownerPercent,
+    operationsPercent: policy.operationsPercent,
+    reservePercent: policy.reservePercent,
+    autoPayEnabled: policy.autoPayEnabled,
+  } : null
+  return { props: { company: finance.company, orderCounts, live, allocationPolicy } }
 }
 
 type Props = {
   company: Awaited<ReturnType<typeof getFinance>>['company']
   orderCounts: Awaited<ReturnType<typeof getOrderCounts>>
   live: LedgerRow[]
+  allocationPolicy: AllocationPolicy | null
 }
 
-function CompanyFinancePage({ company, orderCounts, live }: Props) {
+function CompanyFinancePage({ company, orderCounts, live, allocationPolicy }: Props) {
   const router = useRouter()
   return (
     <PageStack>
       <SalesOutcomeCard netCash={company.netCash} paid={orderCounts.paid} pending={orderCounts.pending} revenue={orderCounts.revenueIdr} />
       <CompanyFinanceSummary live={company} />
+      <AllocationPolicyCard policy={allocationPolicy} />
       <Toolbar><TransactionForm ledger="company" onSaved={() => router.replace(router.asPath)} /></Toolbar>
       <FinanceLedger live={live} demo={[]} title="Buku besar perusahaan" />
     </PageStack>
