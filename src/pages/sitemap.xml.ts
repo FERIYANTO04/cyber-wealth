@@ -1,6 +1,7 @@
 import type { GetServerSideProps } from 'next'
 import { getPublishedPlans } from '@/lib/saas'
 import { getStoreProducts } from '@/lib/revenue'
+import { getPublishedServices } from '@/lib/services'
 
 /** The pages a search engine should index: the public storefront only. */
 function urlSet(base: string, paths: string[]) {
@@ -17,7 +18,11 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? 'https'
   const base = host ? `${proto}://${host}` : ''
 
-  const [products, plans] = await Promise.all([getStoreProducts(), getPublishedPlans()])
+  const [products, plans, services] = await Promise.all([
+    getStoreProducts(),
+    getPublishedPlans(),
+    getPublishedServices(),
+  ])
   const paths = [
     '/',
     '/toko',
@@ -29,6 +34,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
     '/syarat',
     ...products.map((product) => `/toko/${product.slug}`),
     ...plans.map((plan) => `/langganan/paket/${plan.code}`),
+    ...services.map((service) => `/jasa/${service.slug}`),
   ]
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8')
