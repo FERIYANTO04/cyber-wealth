@@ -36,7 +36,11 @@ export function CheckoutForm({ slug, priceIdr }: { slug: string; priceIdr: numbe
         router.push(`/pesanan/${data.token}`)
         return
       }
-      setNote('Pesanan dibuat. Buka halaman pesanan untuk melihat instruksi transfer manual.')
+      if (data.paymentUrl) {
+        window.location.assign(data.paymentUrl)
+        return
+      }
+      setNote('Pesanan dibuat. Buka halaman pesanan untuk melihat metode pembayaran.')
       router.push(`/pesanan/${data.token}`)
     } catch {
       setError('Koneksi terputus. Coba lagi.')
@@ -77,7 +81,7 @@ export function CheckoutForm({ slug, priceIdr }: { slug: string; priceIdr: numbe
         {!busy && <ArrowRight className="size-4" aria-hidden="true" />}
       </Button>
       <p className="text-xs leading-relaxed text-ink-quiet">
-        Pembayaran dilakukan melalui transfer manual. Produk dikirim setelah pemilik memverifikasi dana masuk.
+        Metode pembayaran akan ditampilkan setelah pesanan dibuat. Produk dikirim setelah pembayaran terverifikasi.
       </p>
     </form>
   )
