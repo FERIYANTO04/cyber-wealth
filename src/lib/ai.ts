@@ -22,7 +22,9 @@ export function aiConfig() {
 }
 
 export function aiConfigured(): boolean {
-  return !isPlaceholder(PRIMARY_KEY)
+  const primaryReady = Boolean(PRIMARY_KEY) && !isPlaceholder(PRIMARY_KEY)
+  const fallbackReady = Boolean(FALLBACK_KEY) && !isPlaceholder(FALLBACK_KEY)
+  return primaryReady || fallbackReady
 }
 
 export type AiMessage = { role: 'system' | 'user' | 'assistant'; content: string }
@@ -106,6 +108,14 @@ export async function chatWithAi(args: {
 
   if (!primaryIsConfigured && !fallbackKey) {
     return { ok: false, reason: 'Belum ada kredensial model AI utama maupun cadangan di server.' }
+  }
+  if (!primaryIsConfigured && fallbackKey) {
+    return requestProvider({
+      baseUrl: FALLBACK_BASE_URL,
+      model: FALLBACK_MODEL,
+      key: fallbackKey,
+      label: 'Groq cadangan',
+    }, args)
   }
 
   const primary: Provider = {
