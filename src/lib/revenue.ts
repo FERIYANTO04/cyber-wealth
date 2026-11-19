@@ -135,6 +135,7 @@ export async function settlePaidOrder(args: {
       description: updated.productName + ' — pesanan ' + updated.code,
       amountIdr: amount,
       dataSource: 'live',
+      ledger: 'company',
     })
 
     await tx.insert(activity).values({
