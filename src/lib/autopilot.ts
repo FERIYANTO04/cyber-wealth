@@ -172,7 +172,7 @@ async function runCeo(trigger: string) {
       blockers.length ? blockers.join('; ') : 'Tidak ada kendala dasar yang terdeteksi.',
       'Buat keputusan operasional yang bisa dilaksanakan oleh agen AI Market Research, AI Sales, AI Product Creator, AI Marketing, AI Finance, dan AI Business Intelligence. Tulis siapa melakukan apa, urutan, dan hasil yang harus dicatat. Jangan mengklaim tugas tersebut sudah selesai.',
     ].join('\n'),
-    maxTokens: 1100,
+    maxTokens: 1800,
   })
 
   if (!outcome.ok) {
