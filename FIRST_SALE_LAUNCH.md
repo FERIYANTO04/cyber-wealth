@@ -18,11 +18,11 @@ Sebelum promosi, pastikan file PDF benar-benar bisa dibaca, sesuai deskripsi, da
 ## Alur transaksi saat ini
 1. Pembeli membuka halaman produk dan mengisi nama serta email.
 2. Website membuat pesanan berstatus `pending`.
-3. Pembeli menerima instruksi transfer dan kode pesanan.
-4. Pembayaran hanya dicatat sebagai pendapatan setelah dana benar-benar masuk dan diverifikasi.
-5. Sistem mencatat transaksi, mengirim produk, dan memberi notifikasi.
+3. Checkout menampilkan instruksi transfer manual jika konfigurasi rekening tersedia, atau mengarahkan pembeli ke halaman pembayaran Midtrans bila gateway sudah dikonfigurasi.
+4. Pembayaran manual hanya dicatat setelah dana masuk diverifikasi dari mutasi rekening. Pembayaran Midtrans hanya dicatat setelah webhook bertanda tangan valid mengonfirmasi status dan nominal.
+5. Setelah pembayaran terverifikasi, sistem mencatat pendapatan satu kali dan mencoba mengirim produk serta notifikasi.
 
-**Batas saat ini:** implementasi checkout memakai transfer bank manual. Belum ada integrasi payment gateway otomatis pada kode aplikasi. Untuk operasi tanpa verifikasi manual per pesanan, perusahaan harus memiliki akun merchant payment gateway, kredensial API, dan webhook yang sudah diuji. Jangan mengarang pembayaran atau menandai pesanan lunas hanya dari screenshot/klik.
+**Batas saat ini:** kode aplikasi sudah mendukung Midtrans Snap dan webhook, tetapi integrasi itu belum aktif di TEST karena kredensial merchant Midtrans belum dikonfigurasi. Transfer bank manual tetap memerlukan pemeriksaan mutasi rekening oleh pemilik. Jangan mengarang pembayaran atau menandai pesanan lunas hanya dari screenshot/klik.
 
 ## Pembayaran otomatis Midtrans (opsional, belum aktif)
 
@@ -33,9 +33,11 @@ Aplikasi kini mendukung Midtrans Snap sebagai pilihan pembayaran otomatis bila `
 Webhook memverifikasi signature SHA-512, kode pesanan, mata uang, dan nominal sebelum pesanan dilunasi. Status `pending` tidak dihitung sebagai pendapatan. Gunakan sandbox dan uji alur checkout/webhook terlebih dahulu; jangan mengaktifkan mode produksi sebelum verifikasi selesai. Biaya transaksi mengikuti perjanjian merchant Midtrans.
 
 ## Kesiapan konfigurasi
-Nama variabel rekening bank terpisah (`BANK_NAME`, `BANK_ACCOUNT_NAME`, `BANK_ACCOUNT_NUMBER`) belum tampak pada daftar variabel layanan Railway saat diperiksa. Variabel `BANK_TRANSFER_INSTRUCTIONS` tersedia, tetapi isi rahasianya tidak dibaca. Aplikasi telah diperbaiki agar blok instruksi khusus yang benar-benar memuat nama bank/rekening dan nomor rekening dapat dipakai sebagai instruksi lengkap.
+Pemeriksaan daftar nama variabel TEST terbaru menemukan `BANK_NAME`, `BANK_ACCOUNT_NAME`, `BANK_ACCOUNT_NUMBER`, dan `BANK_TRANSFER_INSTRUCTIONS`. Nilai rahasianya tidak dibaca. Keberadaan nama variabel belum membuktikan rekening benar atau pembayaran telah diuji; jalankan pemeriksaan koneksi dan verifikasi instruksi di halaman Owner.
 
-Penyimpanan objek pada environment uji memakai nama variabel `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, dan `STORAGE_REGION`. Kode penyimpanan kini menerima nama tersebut sebagai alias selain nama AWS standar. Status integrasi juga memeriksa nama variabel yang benar.
+Variabel penyimpanan TEST juga tersedia dengan nama `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, dan `STORAGE_REGION`. Kode menerima nama tersebut sebagai alias selain nama AWS standar. Koneksi penyimpanan tetap perlu diuji langsung.
+
+Pada pemeriksaan TEST terbaru, `MIDTRANS_SERVER_KEY`, `MIDTRANS_IS_PRODUCTION`, `EMAIL_API_KEY`, dan `EMAIL_FROM` belum ada dalam daftar variabel. Karena itu pembayaran otomatis dan email transaksional belum siap. Nama variabel Meta App ID dan App Secret tersedia, tetapi belum ada akun sosial yang tercatat terhubung di database TEST. Jangan menempelkan nilai rahasia ke dokumen atau chat.
 
 ## Materi promosi organik — draf, belum dipublikasikan
 
@@ -76,11 +78,12 @@ Lihat produk: `/toko/panduan-konten-media-sosial`
 Target pertama adalah satu penjualan terverifikasi, bukan angka omzet yang diproyeksikan.
 
 ## Langkah berikutnya
-1. Verifikasi PDF dan halaman produk di environment uji.
-2. Pastikan instruksi pembayaran benar atau pilih payment gateway yang disetujui dan aktif.
-3. Uji checkout dari awal sampai pengiriman dengan transaksi uji yang tidak masuk pembukuan pendapatan.
-4. Hubungkan kanal promosi yang benar-benar aktif; konten publik harus ditinjau sebelum diterbitkan.
-5. Jalankan promosi organik, ukur funnel, dan perbaiki halaman berdasarkan data.
-6. Setelah satu pembayaran nyata terverifikasi, cocokkan transaksi, biaya, dan pengiriman sebelum menyatakan penjualan pertama berhasil.
+1. Uji koneksi AI, penyimpanan, rekening, email, dan kanal Meta dari halaman Integrasi sebagai Owner.
+2. Verifikasi PDF dan halaman produk di environment TEST.
+3. Aktifkan Midtrans sandbox hanya setelah akun merchant dan kredensial sandbox tersedia; uji webhook tanpa membukukan pembayaran nyata.
+4. Uji checkout, status pesanan, penguncian unduhan, dan pengiriman email dari awal sampai akhir.
+5. Hubungkan kanal promosi yang benar-benar aktif; tinjau materi dan aturan persetujuan publikasi.
+6. Siapkan backup database, pemantauan, dan prosedur pemulihan sebelum operasi produksi.
+7. Setelah satu pembayaran nyata terverifikasi, cocokkan transaksi, biaya, dan pengiriman sebelum menyatakan penjualan pertama berhasil.
 
 Tidak ada iklan berbayar, biaya pihak ketiga, kontrak, atau pemindahan dana tanpa persetujuan eksplisit owner.
