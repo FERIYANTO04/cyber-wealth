@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/data'
 
 const Body = z.object({
   kind: z.enum(['revenue', 'expense']),
+  ledger: z.enum(['owner', 'company']).default('owner'),
   category: z.string().trim().min(2, 'Kategori wajib diisi').max(60),
   description: z.string().trim().min(3, 'Keterangan wajib diisi').max(160),
   amountIdr: z.coerce.number().int('Jumlah harus bilangan bulat').positive('Jumlah harus lebih dari nol').max(1_000_000_000_000_000),
@@ -23,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Data tidak valid' })
   }
 
-  const { kind, category, description, amountIdr } = parsed.data
+  const { kind, ledger, category, description, amountIdr } = parsed.data
 
   await db.insert(transactions).values({
     kind,
@@ -31,12 +32,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     description,
     amountIdr,
     dataSource: 'live',
+    ledger,
   })
 
   await logActivity({
     actor: 'owner',
     action: kind === 'revenue' ? 'Pemasukan dicatat' : 'Pengeluaran dicatat',
-    detail: `${description} — Rp ${amountIdr.toLocaleString('id-ID')}`,
+    detail: `[${ledger === 'company' ? 'Perusahaan' : 'Owner'}] ${description} — Rp ${amountIdr.toLocaleString('id-ID')}`,
   })
 
   return res.status(200).json({ ok: true })
