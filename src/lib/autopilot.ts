@@ -169,7 +169,7 @@ async function runCeo(trigger: string) {
       blockers.length ? blockers.join('; ') : 'Tidak ada hambatan dasar yang tercatat.',
       'Pilih langkah berikutnya yang paling mungkin menghasilkan produk siap jual, prospek nyata, layanan klien, atau pemasukan terkonfirmasi. Sebutkan agen dan hasil yang harus dicatat.',
     ].join('\\n'),
-    maxTokens: 2200,
+    maxTokens: 1000,
   })
 
   if (!outcome.ok) {
@@ -232,6 +232,7 @@ async function runResearch(trigger: string) {
     const catalog = await db
       .select({ name: products.name, category: products.category, priceIdr: products.priceIdr, status: products.status })
       .from(products)
+      .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
       .limit(12)
     const jobMarkets = await db
       .select({ market: serviceRequests.market, n: sql<number>`count(*)::int` })
@@ -273,7 +274,7 @@ async function runResearch(trigger: string) {
         await db.insert(marketSignals).values({
           title: title.slice(0, 160),
           market: 'Indonesia',
-          evidence: `${reason}${test ? ` Langkah uji: ${test}` : ''} Usulan model ${outcome.model}, bukan angka pasar terukur.`,
+          evidence: `Usulan model ${outcome.model}, bukan fakta pasar atau bukti penjualan. Belum ada pesanan terkonfirmasi yang membuktikan peluang ini.${test ? ` Langkah uji tanpa biaya: ${test}` : ''}`,
           metric: 'Perlu diuji',
           confidence: 'proposal',
           dataSource: 'live',
