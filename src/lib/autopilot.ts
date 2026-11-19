@@ -801,15 +801,21 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     return { ranAt: new Date().toISOString(), paused: true, results: [] }
   }
 
+  // A dedicated cycle row prevents a manual run of one specialist from postponing
+  // the next full daily CEO cycle.
+  const cycleRun = await startRun('AI CEO', 'autopilot', trigger)
   const outcomes: AutopilotResult['results'] = []
   try {
     const ceo = await runCeo(trigger)
     outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: ceo.summary })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui'
-    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: `Tugas gagal: ${message}. Agen lain tidak dijalankan agar keputusan tanpa arahan CEO tidak diteruskan.` })
+    const summary = `Tugas CEO gagal: ${message}. Agen lain tidak dijalankan agar keputusan tanpa arahan CEO tidak diteruskan.`
+    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary })
+    await finishRun(cycleRun.id, 'failed', summary, summary, 0)
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
+
   const plan = await buildCeoDispatchPlan()
   const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis' }
   await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Mode delegasi deterministik; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
@@ -840,6 +846,10 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     .set({ updatedAt: new Date() })
     .where(eq(settings.id, SETTINGS_ID))
 
+  const summary = `Siklus autopilot selesai: ${outcomes.length} tugas diproses. ${outcomes.filter((item) => item.summary.startsWith('Tugas gagal:')).length} tugas spesialis gagal.`
+  const detail = outcomes.map((item) => `${item.label}: ${item.summary}`).join('\n')
+  await finishRun(cycleRun.id, 'ok', summary, detail, 0)
+
   return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
 }
 
@@ -856,9 +866,16 @@ export async function getLastRun() {
 export async function autopilotDue(): Promise<boolean> {
   const current = await getSettings()
   if (current.aiPaused) return false
-  const last = await getLastRun()
-  if (!last) return true
-  return Date.now() - last.startedAt.getTime() > DAY_MS
+  const [lastCycle] = await db
+    .select()
+    .from(agentRuns)
+    .where(eq(agentRuns.task, 'autopilot'))
+    .orderBy(desc(agentRuns.startedAt))
+    .limit(1)
+  if (!lastCycle) return true
+  const elapsed = Date.now() - lastCycle.startedAt.getTime()
+  if (lastCycle.status === 'failed' || lastCycle.status === 'running') return elapsed > 15 * 60 * 1000
+  return elapsed > DAY_MS
 }
 
 export async function getAgentRuns(limit = 40) {
