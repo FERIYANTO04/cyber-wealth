@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const rows = await db
     .select()
     .from(products)
-    .where(and(eq(products.slug, parsed.data.slug), eq(products.status, 'published')))
+    .where(and(eq(products.slug, parsed.data.slug), eq(products.status, 'published'), eq(products.dataSource, 'live')))
     .limit(1)
   const product = rows[0]
   if (!product) return res.status(404).json({ error: 'Produk tidak ditemukan atau belum dijual.' })
