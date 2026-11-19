@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { db } from './db'
 import {
   activity,
@@ -64,15 +64,15 @@ export type Ledger = {
   rows: number
 }
 
-async function buildLedger(source: 'live' | 'demo'): Promise<Ledger> {
+async function buildLedger(source: 'live' | 'demo', ledger: 'owner' | 'company'): Promise<Ledger> {
   const txRows = await db
     .select({ kind: transactions.kind, amount: transactions.amountIdr })
     .from(transactions)
-    .where(eq(transactions.dataSource, source))
+    .where(and(eq(transactions.dataSource, source), eq(transactions.ledger, ledger)))
   const assetRows = await db
     .select({ value: assets.valueIdr })
     .from(assets)
-    .where(eq(assets.dataSource, source))
+    .where(and(eq(assets.dataSource, source), eq(assets.ledger, ledger)))
 
   let revenue = 0
   let expenses = 0
@@ -95,9 +95,12 @@ async function buildLedger(source: 'live' | 'demo'): Promise<Ledger> {
 }
 
 export async function getFinance() {
-  const live = await buildLedger('live')
-  const demo = await buildLedger('demo')
-  return { live, demo }
+  const [live, company, demo] = await Promise.all([
+    buildLedger('live', 'owner'),
+    buildLedger('live', 'company'),
+    buildLedger('demo', 'owner'),
+  ])
+  return { live, company, demo }
 }
 
 export async function getAgents() {
@@ -175,7 +178,7 @@ export async function getDailyReport() {
       dataSource: transactions.dataSource,
     })
     .from(transactions)
-    .where(sql`${transactions.occurredAt} >= ${startOfDay.toISOString()}`)
+    .where(and(gte(transactions.occurredAt, startOfDay), eq(transactions.ledger, 'owner')))
 
   let liveRevenue = 0
   let liveExpenses = 0
@@ -282,7 +285,7 @@ export async function getMonthlyReport(months = 6): Promise<{ points: MonthlyPoi
       occurredAt: transactions.occurredAt,
     })
     .from(transactions)
-    .where(and(eq(transactions.dataSource, 'live'), sql`${transactions.occurredAt} >= ${start.toISOString()}`))
+    .where(and(eq(transactions.dataSource, 'live'), eq(transactions.ledger, 'owner'), sql`${transactions.occurredAt} >= ${start.toISOString()}`))
 
   const buckets = new Map<string, { revenue: number; expenses: number }>()
   for (let i = 0; i < months; i += 1) {
