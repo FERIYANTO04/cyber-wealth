@@ -63,6 +63,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const product = rows[0]
   if (!product) return res.status(404).json({ error: 'Produk tidak ditemukan atau belum dijual.' })
 
+  // Never accept money for a missing or explicitly draft-labelled deliverable.
+  // Storefront filtering is the first guard; this server-side check protects direct API calls too.
+  if (!product.fileKey || /(?:draft|draf)/i.test(product.fileName ?? '')) {
+    return res.status(409).json({
+      error: 'Berkas produk masih dalam pemeriksaan dan belum tersedia untuk dibeli.',
+    })
+  }
+
   const code = orderCode()
   const accessToken = crypto.randomUUID().replace(/-/g, '')
   const amount = Number(product.priceIdr)
