@@ -111,37 +111,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({ ok: true, token: accessToken, free: true })
   }
 
-  const xenditKey = process.env.XENDIT_SECRET_KEY ?? ''
-  if (xenditKey && !/placeholder|XXXX|your[-_ ]?key|changeme/i.test(xenditKey)) {
-    const proto = String(req.headers['x-forwarded-proto'] ?? 'https').split(',')[0].trim()
-    const host = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '').split(',')[0].trim()
-    const origin = `${proto}://${host}`
-    const auth = Buffer.from(`${xenditKey}:`).toString('base64')
-    const response = await fetch('https://api.xendit.co/sessions', {
+  const paddleApiKey = process.env.PADDLE_API_KEY ?? ''
+  const priceMapRaw = process.env.PADDLE_PRICE_IDS ?? '{}'
+  let paddlePriceId: string | undefined
+  try {
+    const priceMap = JSON.parse(priceMapRaw) as Record<string, string>
+    paddlePriceId = priceMap[product.slug] || process.env.PADDLE_DEFAULT_PRICE_ID
+  } catch {
+    return res.status(503).json({ error: 'Konfigurasi katalog pembayaran belum valid. Pesanan belum dibayar.' })
+  }
+
+  if (paddleApiKey && paddlePriceId && /^pri_[a-z0-9]{26}$/i.test(paddlePriceId)) {
+    const apiBase = process.env.PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
+    const response = await fetch(apiBase + '/transactions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + paddleApiKey },
       body: JSON.stringify({
-        reference_id: code, session_type: 'PAY', mode: 'PAYMENT_LINK',
-        amount, currency: 'IDR', country: 'ID', capture_method: 'AUTOMATIC', locale: 'id',
-        description: `Pembelian ${product.name} — ${code}`.slice(0, 1000),
-        items: [{ reference_id: product.id, type: 'DIGITAL_PRODUCT', name: product.name.slice(0, 255),
-          description: product.summary.slice(0, 255), category: (product.category || 'Digital').slice(0, 255),
-          net_unit_amount: amount, quantity: 1, currency: 'IDR', url: `${origin}/produk/${product.slug}` }],
-        success_return_url: `${origin}/pesanan/${accessToken}?payment=return`,
-        cancel_return_url: `${origin}/pesanan/${accessToken}?payment=cancel`,
-        metadata: { order_code: code },
-      }), cache: 'no-store',
+        items: [{ price_id: paddlePriceId, quantity: 1 }],
+        custom_data: { order_code: code, access_token: accessToken, product_slug: product.slug },
+      }),
+      cache: 'no-store',
     })
-    const session = await response.json().catch(() => null) as { payment_session_id?: string; payment_link_url?: string; message?: string; error_code?: string } | null
-    if (!response.ok || !session?.payment_session_id || !session.payment_link_url) {
-      await db.insert(activity).values({ actor: 'system', action: 'Pembuatan sesi pembayaran Xendit gagal',
-        detail: `${code}: ${String(session?.message ?? session?.error_code ?? response.status).slice(0, 300)}`, dataSource: 'live' })
-      return res.status(502).json({ error: 'Penyedia pembayaran belum dapat membuat tautan pembayaran. Pesanan belum dibayar; coba lagi.' })
+    const payload = await response.json().catch(() => null) as {
+      data?: { id?: string; status?: string; checkout?: { url?: string | null } }
+      error?: { detail?: string; code?: string }
+    } | null
+
+    if (!response.ok || !payload?.data?.id || !payload.data.checkout?.url) {
+      await db.insert(activity).values({
+        actor: 'system', action: 'Pembuatan checkout Paddle gagal',
+        detail: code + ': ' + String(payload?.error?.detail ?? payload?.error?.code ?? response.status).slice(0, 300),
+        dataSource: 'live',
+      })
+      return res.status(502).json({ error: 'Paddle belum dapat membuat checkout. Pesanan belum dibayar; coba lagi.' })
     }
-    await db.update(orders).set({ provider: 'xendit', invoiceId: session.payment_session_id, invoiceUrl: session.payment_link_url }).where(eq(orders.id, order.id))
-    await db.insert(activity).values({ actor: 'system', action: 'Tautan pembayaran Xendit dibuat',
-      detail: `${product.name} — ${code}. Menunggu notifikasi pembayaran resmi dari Xendit.`, dataSource: 'live' })
-    return res.status(201).json({ ok: true, token: accessToken, paymentUrl: session.payment_link_url, provider: 'xendit' })
+
+    await db.update(orders).set({ provider: 'paddle', invoiceId: payload.data.id, invoiceUrl: payload.data.checkout.url }).where(eq(orders.id, order.id))
+    await db.insert(activity).values({
+      actor: 'system', action: 'Checkout Paddle dibuat',
+      detail: product.name + ' — ' + code + '. Menunggu konfirmasi pembayaran resmi dari Paddle.',
+      dataSource: 'live',
+    })
+    return res.status(201).json({ ok: true, token: accessToken, paymentUrl: payload.data.checkout.url, provider: 'paddle' })
+  }
+
+  if (paddleApiKey && !paddlePriceId) {
+    await db.insert(activity).values({
+      actor: 'system', action: 'Harga Paddle belum dipetakan',
+      detail: product.name + ' — ' + code + '. Tambahkan price ID Paddle untuk slug ' + product.slug + ' di PADDLE_PRICE_IDS.',
+      dataSource: 'live',
+    })
+    return res.status(503).json({ error: 'Harga produk ini belum terhubung ke katalog Paddle. Pesanan belum dibayar.' })
   }
 
   await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
