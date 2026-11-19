@@ -43,8 +43,8 @@ export function bankTransferStatus(): { state: CheckState; message: string } {
     }
   }
   return {
-    state: 'ready',
-    message: `Instruksi transfer tersedia untuk rekening ${bank} atas nama ${accountName}. Pembayaran tetap diverifikasi dari mutasi rekening sebelum pesanan aktif.`,
+    state: 'unverified',
+    message: `Detail rekening ${bank} atas nama ${accountName} sudah diisi, tetapi aplikasi tidak dapat membuktikan kepemilikan atau keakuratan rekening. Owner harus mencocokkannya langsung di aplikasi bank sebelum menerima pembayaran.`,
   }
 }
 
