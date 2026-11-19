@@ -120,7 +120,7 @@ export async function getEmailLog(limit = 40) {
 }
 
 /** Checks the provider really answers for this key — the cheapest honest proof. */
-export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'invalid' | 'error'; message: string }> {
+export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'invalid' | 'error' | 'unverified'; message: string }> {
   const { key, from, baseUrl } = emailConfig()
   if (isPlaceholder(key)) {
     return {
@@ -137,13 +137,27 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
       headers: { Authorization: `Bearer ${key}` },
       cache: 'no-store',
     })
-    if (response.ok) {
-      return { state: 'ready', message: `Penyedia email menerima kunci ini. Pengirim: ${from}.` }
-    }
     if (response.status === 401 || response.status === 403) {
       return { state: 'invalid', message: 'Penyedia email menolak kunci ini. Salin ulang kunci API-nya.' }
     }
-    return { state: 'error', message: `Penyedia email menjawab ${response.status}. Periksa alamat API dan alamat pengirim.` }
+    if (!response.ok) {
+      return { state: 'error', message: `Penyedia email menjawab ${response.status}. Periksa alamat API dan alamat pengirim.` }
+    }
+
+    const payload = (await response.json().catch(() => null)) as
+      | { data?: { name?: string; status?: string }[] }
+      | null
+    const senderDomain = from.split('@').pop()?.trim().toLowerCase() ?? ''
+    const verified = (payload?.data ?? []).some(
+      (domain) => domain.name?.trim().toLowerCase() === senderDomain && domain.status?.toLowerCase() === 'verified',
+    )
+    if (!verified) {
+      return {
+        state: 'unverified',
+        message: `Kunci API diterima, tetapi domain pengirim ${senderDomain || '(tidak valid)'} belum terbukti berstatus verified di penyedia email.`,
+      }
+    }
+    return { state: 'ready', message: `Kunci API dan domain pengirim terverifikasi. Pengirim: ${from}.` }
   } catch {
     return { state: 'error', message: 'Tidak bisa menghubungi penyedia email. Periksa alamat API dan koneksi keluar.' }
   }
