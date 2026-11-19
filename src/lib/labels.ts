@@ -1,7 +1,8 @@
 /** Labels shared by server pages and browser components — no database import here. */
 export const SERVICE_STATUS: { value: string; label: string }[] = [
   { value: 'new', label: 'Baru' },
-  { value: 'proposed', label: 'Penawaran dikirim' },
+  { value: 'proposed', label: 'Draf penawaran' },
+  { value: 'proposal_sent', label: 'Penawaran terkirim' },
   { value: 'won', label: 'Disetujui klien' },
   { value: 'in_progress', label: 'Dikerjakan' },
   { value: 'delivered', label: 'Selesai' },
