@@ -634,7 +634,6 @@ async function runFinance(trigger: string) {
   const [policy] = await db
     .select()
     .from(moneyAllocationPolicy)
-    .where(eq(moneyAllocationPolicy.id, SETTINGS_ID))
     .limit(1)
 
   const revenue = Number(ledger?.revenue ?? 0)
