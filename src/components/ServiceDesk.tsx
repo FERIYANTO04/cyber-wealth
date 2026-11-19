@@ -49,6 +49,7 @@ export type OwnerService = {
 const STATUS_TONE: Record<string, 'neutral' | 'signal' | 'hold' | 'danger'> = {
   new: 'hold',
   proposed: 'hold',
+  proposal_sent: 'signal',
   won: 'signal',
   in_progress: 'signal',
   delivered: 'signal',
@@ -78,6 +79,7 @@ export function ServiceDesk({
   const [expanded, setExpanded] = useState<string | null>(null)
   const [offerAmount, setOfferAmount] = useState<Record<string, string>>({})
   const [drafting, setDrafting] = useState<string | null>(null)
+  const [sending, setSending] = useState<string | null>(null)
   const [query, setQuery] = useState('')
 
   const filtered = useMemo(() => {
@@ -140,6 +142,34 @@ export function ServiceDesk({
       return
     }
     setRows((old) => old.map((row) => (row.id === id ? { ...row, status } : row)))
+  }
+
+  async function sendOffer(row: JobRow) {
+    setSending(row.id)
+    setError(null)
+    setNote(null)
+    try {
+      const response = await fetch('/api/services/send-proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: row.id }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(data.error ?? 'Penawaran tidak bisa dikirim.')
+        return
+      }
+      if (data.sent) {
+        setRows((old) => old.map((item) => item.id === row.id ? { ...item, status: 'proposal_sent' } : item))
+        setNote('Penawaran berhasil dikirim ke email calon klien.')
+      } else {
+        setNote(`Email belum terkirim dan masih tercatat di kotak keluar: ${data.message ?? 'Penyedia email belum siap.'}`)
+      }
+    } catch {
+      setError('Koneksi terputus. Coba lagi.')
+    } finally {
+      setSending(null)
+    }
   }
 
   async function draftOffer(row: JobRow) {
@@ -310,9 +340,14 @@ export function ServiceDesk({
                       ))}
                     </Select>
                     {row.proposalBody && (
-                      <Button size="sm" variant="secondary" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
-                        {expanded === row.id ? 'Tutup penawaran' : 'Lihat penawaran'}
-                      </Button>
+                      <>
+                        <Button size="sm" variant="secondary" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
+                          {expanded === row.id ? 'Tutup penawaran' : 'Lihat penawaran'}
+                        </Button>
+                        <Button size="sm" onClick={() => sendOffer(row)} disabled={sending === row.id || row.status === 'proposal_sent'}>
+                          {sending === row.id ? 'Mengirim…' : row.status === 'proposal_sent' ? 'Sudah dikirim' : 'Kirim penawaran'}
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
