@@ -104,9 +104,10 @@ async function runCeo(trigger: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(revenueLeads)
     .where(inArray(revenueLeads.status, ['new', 'qualified', 'proposal']))
-  const [agentCounts] = await db
-    .select({ total: sql<number>`count(*)::int`, active: sql<number>`count(*) filter (where ${agents.status} = 'active')::int` })
+  const agentRoster = await db
+    .select({ name: agents.name, role: agents.role, status: agents.status })
     .from(agents)
+    .orderBy(agents.sortOrder)
   const finance = await getFinance()
 
   const blockers: string[] = []
@@ -128,7 +129,8 @@ async function runCeo(trigger: string) {
     `Prospek yang perlu ditindaklanjuti: ${newLeads?.n ?? 0}`,
     `Kas bersih tercatat: Rp ${Number(finance.live.netCash).toLocaleString('id-ID')} (bukan saldo bank terverifikasi)`,
     `Aset tercatat: Rp ${Number(finance.live.assets).toLocaleString('id-ID')} (perlu verifikasi kepemilikan/nilai)`,
-    `Agen aktif: ${agentCounts?.active ?? 0} dari ${agentCounts?.total ?? 0}`,
+    `Agen terdaftar: ${agentRoster.length}; aktif: ${agentRoster.filter((agent) => agent.status === 'active').length}`,
+    `Daftar agen yang benar-benar tersedia: ${agentRoster.map((agent) => `${agent.name} (${agent.role}, ${agent.status})`).join('; ') || 'belum ada'}`,
   ].join('\n')
 
   const factualSummary =
@@ -156,10 +158,10 @@ async function runCeo(trigger: string) {
   const outcome = await askAi({
     system: [
       'Anda adalah AI CEO Cyber Wealth. Analisis hanya fakta yang diberikan; jangan mengarang angka atau mengklaim pekerjaan selesai.',
-      'Tentukan tiga prioritas paling penting dan delegasikan tugas konkret ke agen yang relevan.',
+      'Tentukan tiga prioritas paling penting. Sebut hanya agen dari daftar roster yang diberikan; jangan menciptakan nama, jabatan, atau agen baru. Bedakan rekomendasi tugas dari pekerjaan yang benar-benar sudah selesai.',
       'Tugas rutin berisiko rendah boleh dikerjakan agen otomatis. Pengeluaran, transfer, investasi, kontrak, perubahan harga, dan publikasi eksternal tetap menunggu persetujuan Owner.',
       'Lindungi dana Owner dan cadangan. Jangan membuat komitmen berbayar. Jangan menganggap saldo pembukuan sebagai saldo bank terverifikasi.',
-      'Jawab Bahasa Indonesia, maksimal 90 kata, format persis: KONDISI: ...; PRIORITAS: 1) ... 2) ... 3) ...; DELEGASI: ...; OWNER: ... .',
+      'Jawab Bahasa Indonesia, maksimal 90 kata, format persis: KONDISI: ...; PRIORITAS: 1) ... 2) ... 3) ...; SARAN AGEN: <nama dari roster dan tugas yang disarankan, bukan klaim selesai>; OWNER: ... .',
     ].join(' '),
     prompt: [
       `Pemicu: ${trigger}`,
@@ -167,7 +169,7 @@ async function runCeo(trigger: string) {
       facts,
       'Hambatan:',
       blockers.length ? blockers.join('; ') : 'Tidak ada hambatan dasar yang tercatat.',
-      'Pilih langkah berikutnya yang paling mungkin menghasilkan produk siap jual, prospek nyata, layanan klien, atau pemasukan terkonfirmasi. Sebutkan agen dan hasil yang harus dicatat.',
+      'Pilih langkah berikutnya yang paling mungkin menghasilkan produk siap jual, prospek nyata, layanan klien, atau pemasukan terkonfirmasi. Sebutkan hanya agen dari roster yang tersedia dan hasil yang perlu dicatat. Jangan mengklaim tugas telah dilakukan oleh agen lain.',
     ].join('\\n'),
     maxTokens: 1000,
   })
