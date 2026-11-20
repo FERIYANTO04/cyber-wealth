@@ -58,7 +58,7 @@ async function requestProvider(provider: Provider, args: {
         ...(provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-')
           ? { reasoning_effort: 'high', reasoning_format: 'hidden' }
           : {}),
-        messages: governedMessages,
+        messages: args.messages,
       }),
       signal: controller.signal,
       cache: 'no-store',
