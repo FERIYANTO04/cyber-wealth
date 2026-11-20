@@ -56,8 +56,6 @@ export function SocialStudio({
   channels,
   markets,
   aiReady,
-  facebookReady,
-  instagramReady,
   telegramReady,
 }: {
   initialPosts: PostItem[]
@@ -65,8 +63,6 @@ export function SocialStudio({
   channels: ChannelOption[]
   markets: MarketOption[]
   aiReady: boolean
-  facebookReady: boolean
-  instagramReady: boolean
   telegramReady: boolean
 }) {
   const [posts, setPosts] = useState(initialPosts)
