@@ -75,9 +75,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Never accept money for a missing or explicitly draft-labelled deliverable.
   // Storefront filtering is the first guard; this server-side check protects direct API calls too.
-  if (!product.fileKey || /(?:draft|draf)/i.test(product.fileName ?? '')) {
+  if (!product.fileKey || /^https?:\/\//i.test(product.fileKey) || /(?:draft|draf)/i.test(product.fileName ?? '')) {
     return res.status(409).json({
-      error: 'Berkas produk masih dalam pemeriksaan dan belum tersedia untuk dibeli.',
+      error: 'Berkas produk belum tersimpan secara privat atau masih dalam pemeriksaan. Owner harus mengamankan berkas sebelum produk dijual.',
     })
   }
 
