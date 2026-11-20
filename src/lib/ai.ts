@@ -88,7 +88,8 @@ async function requestProvider(provider: Provider, args: {
           : `${provider.label} tidak mengembalikan jawaban.`,
       }
     }
-    return { ok: true, text, model: `${provider.label} / ${provider.model} (reasoning high)` }
+    const reasoningLabel = provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-') ? ' (reasoning high)' : ''
+    return { ok: true, text, model: `${provider.label} / ${provider.model}${reasoningLabel}` }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       return { ok: false, reason: `${provider.label} tidak menjawab dalam 45 detik.` }
@@ -100,7 +101,7 @@ async function requestProvider(provider: Provider, args: {
 }
 
 function canFailOver(reason: string): boolean {
-  return /menolak autentikasi \\((401|403)\\)|kuota|429|menolak permintaan \\(5\\d\\d\\)|tidak bisa menghubungi|tidak menjawab dalam 45 detik|terpotong sebelum selesai|tidak mengembalikan jawaban/i.test(reason)
+  return /menolak autentikasi \((401|403)\)|kuota|429|menolak permintaan \(5\d\d\)|tidak bisa menghubungi|tidak menjawab dalam 45 detik|terpotong sebelum selesai|tidak mengembalikan jawaban/i.test(reason)
 }
 
 export async function chatWithAi(args: {
