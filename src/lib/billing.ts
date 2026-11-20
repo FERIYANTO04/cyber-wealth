@@ -1,4 +1,3 @@
-import { bankTransferInstructions } from './bank-transfer'
 import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from './db'
 import {
@@ -424,9 +423,7 @@ async function remindIfNeeded(
   result.remindersSent += 1
 }
 
-/** Manual bank-transfer subscriptions cannot be charged automatically.
- * When a cycle becomes due, notify the subscriber and wait for a new transfer.
- */
+/** Recurring Paddle billing is not enabled yet. Never fall back to a manual bank-transfer invoice. */
 async function invoiceCycleIfDue(
   subscription: typeof subscriptions.$inferSelect,
   cycle: typeof billingCycles.$inferSelect,
@@ -438,25 +435,9 @@ async function invoiceCycleIfDue(
 
   await db
     .update(billingCycles)
-    .set({ note: 'Pembayaran transfer manual: pelanggan harus transfer ulang. Tidak ada auto-debit.' })
+    .set({ status: 'failed', note: 'Paddle recurring checkout belum tersedia. Tidak ada tagihan atau transfer manual yang diminta.' })
     .where(eq(billingCycles.id, cycle.id))
-  result.notes.push(`Perpanjangan ${subscription.accountEmail} menunggu transfer manual; tidak ada tagihan otomatis.`)
-  await sendEmail({
-    to: subscription.accountEmail,
-    subject: `Perpanjangan ${subscription.planName} menunggu transfer`,
-    body: [
-      `Halo ${subscription.accountName},`,
-      '',
-      `Periode ${subscription.planName} telah jatuh tempo. Untuk melanjutkan, lakukan transfer manual sebesar ${money(Number(cycle.amountIdr))}.`,
-      bankTransferInstructions(),
-      `Status langganan: /langganan/status/${subscription.accessToken}`,
-      '',
-      'Tidak ada auto-debit atau penagihan otomatis.',
-    ].join('\n'),
-    kind: 'cycle-manual-transfer',
-    relatedType: 'cycle',
-    relatedId: cycle.id,
-  }).catch(() => undefined)
+  result.notes.push(`Perpanjangan ${subscription.accountEmail} ditahan: Paddle recurring belum aktif. Tidak ada pembayaran yang diminta.`)
 }
 
 /** The subscriber turns automatic renewal on or off. Their own click, their own record. */
