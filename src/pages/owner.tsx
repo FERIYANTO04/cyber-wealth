@@ -67,7 +67,7 @@ function OwnerDashboard({ owner, revenue, expenses, netCash, assets, netWorth, t
     <Head><title>Dashboard Owner · Cyber Wealth</title><meta name="robots" content="noindex,nofollow" /><meta name="viewport" content="width=device-width, initial-scale=1" /></Head>
     <header className="border-b border-black/10 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-        <div><p className="text-xs font-semibold uppercase tracking-[.18em] text-emerald-700">Laporan privat</p><h1 className="mt-1 text-xl font-bold tracking-tight">Dashboard Owner</h1><p className="mt-1 text-sm text-gray-500">Pemantauan saja · operasional ditangani sistem AI.</p></div>
+        <div><p className="text-xs font-semibold uppercase tracking-[.18em] text-emerald-700">Laporan privat</p><h1 className="mt-1 text-xl font-bold tracking-tight">Dashboard Owner</h1><p className="mt-1 text-sm text-gray-500">Pemantauan dan persetujuan · agen AI menyiapkan pekerjaan, sedangkan tindakan eksternal menunggu otorisasi Owner.</p></div>
         <div className="flex flex-wrap items-center gap-2"><a href="/facebook" className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Hubungkan Meta</a><form action="/api/auth/logout" method="post"><button className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50">Keluar</button></form></div>
       </div>
     </header>
