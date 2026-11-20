@@ -55,12 +55,10 @@ export function SubscriptionStatus({
   subscription,
   cycles,
   emails,
-  paymentInstructions,
 }: {
   subscription: SubscriptionDetail
   cycles: CycleRow[]
   emails: EmailRow[]
-  paymentInstructions: string
 }) {
   const [autoRenew, setAutoRenew] = useState(subscription.autoRenew)
   const [busy, setBusy] = useState(false)
@@ -167,10 +165,7 @@ export function SubscriptionStatus({
                 <Clock className="size-4 shrink-0 text-hold" aria-hidden="true" />
                 <p className="text-[0.8125rem] font-medium text-hold">Menunggu pembayaran</p>
               </div>
-              <p className="list-lead">Transfer sesuai jumlah di atas langsung ke rekening pemilik. Masukkan kode referensi berikut pada berita transfer, jika bank mendukungnya:</p>
-              <p className="font-mono text-xs font-semibold">{subscription.token}</p>
-              <div className="message-box border-line bg-panel"><p className="whitespace-pre-wrap text-sm leading-relaxed">{paymentInstructions}</p></div>
-              <p className="list-lead">Setelah dana benar-benar masuk, pemilik akan memverifikasi mutasi dan mengaktifkan langganan. Jangan mengirim PIN, OTP, atau kata sandi.</p>
+              <p className="list-lead">Pembayaran langganan berbayar melalui Paddle belum tersedia. Tidak ada pembayaran yang diminta atau dicatat. Hubungi pemilik untuk informasi ketersediaan paket.</p>
 
             </div>
           ) : (
