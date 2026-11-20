@@ -9,11 +9,10 @@ import {
 import { PageStack } from '@/components/ui'
 import { SchedulerGuide } from '@/components/SchedulerGuide'
 import { requireOwnerPage } from '@/lib/auth'
-import { aiConfig, bankTransferStatus, storageStatus } from '@/lib/integrations'
+import { aiConfig, bankTransferStatus, storageStatus, testPaddle } from '@/lib/integrations'
+import { telegramConnectionStatus } from '@/lib/telegram'
 import { isPlaceholder } from '@/lib/env'
 import { emailConfig } from '@/lib/email'
-import { getActiveFacebookAccount, metaConfig } from '@/lib/meta'
-import { getActiveInstagramAccount } from '@/lib/instagram'
 import { getEngineCounts } from '@/lib/data'
 import type { PageWithFrame } from '@/lib/frame'
 
@@ -26,22 +25,16 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   const ai = aiConfig()
   const email = emailConfig()
-  const meta = metaConfig()
-  const facebook = await getActiveFacebookAccount()
-  const instagram = await getActiveInstagramAccount()
   const bank = bankTransferStatus()
   const storage = await storageStatus()
+  const telegram = await telegramConnectionStatus()
+  const paddle = await testPaddle()
   const engines = await getEngineCounts()
 
   const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'unverified'
   const emailState: CheckState = isPlaceholder(email.key) || isPlaceholder(email.from) ? 'missing' : 'unverified'
-  const metaState: CheckState = !meta.configured
-    ? 'missing'
-    : facebook
-      ? facebook.status === 'connected'
-        ? 'ready'
-        : 'invalid'
-      : 'missing'
+  const paddleState: CheckState = paddle.state
+
 
   const cards: ServiceCard[] = [
     {
@@ -101,51 +94,36 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       testable: true,
     },
     {
-      key: 'social',
-      title: 'Akun kanal sosial',
-      summary: 'Mengirim konten yang sudah Anda setujui ke Facebook Page dan Instagram Bisnis; X, LinkedIn, dan TikTok belum terhubung.',
-      state: metaState === 'missing' ? 'missing' : instagram ? 'ready' : 'missing',
-      message:
-        metaState === 'missing'
-          ? 'Meta App ID dan App Secret belum diisi, jadi Instagram Bisnis belum bisa dihubungkan.'
-          : instagram
-            ? `Akun Instagram ${instagram.name} terhubung ke Halaman induknya. Konten Instagram yang Anda setujui dan beri foto atau video akan dikirim lewat Meta Graph API.`
-            : 'Halaman Facebook sudah terhubung, tetapi akun Instagram Bisnisnya belum. Buka menu Instagram Bisnis untuk menautkannya.',
-      channels: [
-        {
-          key: 'facebook',
-          label: 'Facebook Page',
-          state: !meta.configured ? 'missing' : facebook ? (facebook.status === 'connected' ? 'ready' : 'invalid') : 'missing',
-          detail: !meta.configured
-            ? 'App ID dan App Secret belum diisi.'
-            : facebook
-              ? `${facebook.name} tersimpan, terhubung ${facebook.connectedAt.toISOString().slice(0, 10)}.`
-              : 'Belum ada halaman yang terhubung.',
-        },
-        {
-          key: 'instagram',
-          label: 'Instagram Bisnis',
-          state: !meta.configured ? 'missing' : instagram ? (instagram.status === 'connected' ? 'ready' : 'invalid') : 'missing',
-          detail: !meta.configured
-            ? 'App ID dan App Secret belum diisi.'
-            : instagram
-              ? `${instagram.name} tertaut pada halaman induknya.`
-              : 'Belum tertaut; hubungkan halaman Facebook dulu.',
-        },
-      ],
-      required: [
-        'META_APP_ID dan META_APP_SECRET (wajib)',
-        'Akun Instagram yang sudah diubah menjadi Bisnis dan tertaut ke Halaman',
-        'Izin instagram_basic dan instagram_content_publish',
-      ],
+      key: 'paddle',
+      title: 'Pembayaran Paddle',
+      summary: 'Membuat checkout dan menerima konfirmasi pembayaran otomatis melalui webhook Paddle.',
+      state: paddleState,
+      message: paddle.message,
+      required: ['PADDLE_API_KEY', 'PADDLE_WEBHOOK_SECRET', 'PADDLE_ENV (sandbox atau live)'],
       steps: [
-        'Ubah akun Instagram Anda menjadi akun Bisnis, lalu tautkan ke Halaman Facebook melalui aplikasi Instagram.',
-        'Pakai aplikasi Meta yang sama dengan halaman Facebook; tambahkan produk Instagram Graph API.',
-        'Hubungkan Halaman Facebook Anda di menu Facebook Page, lalu buka menu Instagram Bisnis.',
-        'Tekan Hubungkan Instagram; akun hanya disebut terhubung setelah Meta menyebutkan nama akunnya.',
+        'Pastikan API key dan webhook secret berasal dari lingkungan yang sama: Sandbox atau Live.',
+        'Di dashboard Paddle, daftarkan endpoint webhook: ' + `https://${host}/api/webhooks/paddle`,
+        'Pilih event transaction.completed dan transaction.paid, lalu salin secret endpoint ke PADDLE_WEBHOOK_SECRET.',
+        'Tekan Uji koneksi. Uji ini memeriksa API key tanpa membuat tagihan atau menarik uang.',
       ],
-      where:
-        'Token kanal hanya dipakai di server. Konten baru disebut terbit setelah kanal mengembalikan nomor kiriman; bila gagal, alasannya dicatat dan konten tetap belum terbit.',
+      where: 'Uji API yang berhasil belum membuktikan webhook sudah terdaftar. Jangan menerima pembayaran Live sampai endpoint dan event webhook cocok.',
+      copyValue: { label: 'URL webhook Paddle', value: `https://${host}/api/webhooks/paddle` },
+      testable: true,
+    },
+    {
+      key: 'telegram',
+      title: 'Telegram Channel',
+      summary: 'Menerbitkan konten pemasaran secara langsung ke kanal Telegram bisnis.',
+      state: telegram.state,
+      message: telegram.message,
+      required: ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'],
+      steps: [
+        'Buat bot melalui @BotFather dan salin token bot.',
+        'Buat kanal Telegram bisnis, lalu tambahkan bot sebagai admin dengan izin mengirim pesan.',
+        'Isi TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID di Railway Production.',
+        'Tekan Uji koneksi. Sistem memeriksa identitas bot, kanal, dan hak admin tanpa mengirim posting percobaan.',
+      ],
+      where: 'Publikasi hanya dinyatakan berhasil setelah Telegram mengembalikan ID pesan. X, LinkedIn, dan TikTok saat ini hanya disiapkan sebagai draf, bukan kanal penerbitan otomatis.',
       testable: true,
     },
     {
@@ -176,9 +154,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if (engines.products === 0) blockers.push('Belum ada produk digital yang terbit, jadi belum ada yang bisa dibeli.')
   if (engines.services === 0) blockers.push('Belum ada layanan jasa yang terbit, jadi calon klien belum bisa mengirim brief.')
   if (engines.plans === 0) blockers.push('Belum ada paket langganan yang terbit.')
-  if (!meta.configured) blockers.push('Meta App ID dan App Secret belum diisi, sehingga Halaman Facebook dan Instagram belum bisa dihubungkan.')
-  else if (!facebook) blockers.push('Belum ada Halaman Facebook yang terhubung, jadi konten Facebook dan Instagram belum bisa terbit.')
-  else if (!instagram) blockers.push('Akun Instagram Bisnis belum tertaut, jadi konten Instagram belum bisa terbit.')
+  if (paddle.state !== 'ready') blockers.push(paddle.state === 'unverified' ? 'API Paddle merespons, tetapi webhook masih harus diverifikasi terdaftar di dashboard Paddle.' : 'Checkout Paddle belum terverifikasi; aktifkan transfer bank sebagai jalur pembayaran cadangan jika rekening sudah benar.')
+  if (telegram.state !== 'ready') blockers.push(telegram.message)
+  
 
   const endpoint = `${proto}://${host}/api/cron/autopilot`
   const schedulerConfigured = !isPlaceholder(process.env.CRON_SECRET) && (process.env.CRON_SECRET?.length ?? 0) >= 32
