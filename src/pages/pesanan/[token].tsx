@@ -16,6 +16,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   let downloadUrl: string | null = null
   let deliverableNote: string | null = null
+  const bankTransfer = order.provider === 'manual_transfer' ? {
+    bankName: process.env.BANK_NAME?.trim() ?? '',
+    accountName: process.env.BANK_ACCOUNT_NAME?.trim() ?? '',
+    accountNumber: process.env.BANK_ACCOUNT_NUMBER?.trim() ?? '',
+    instructions: process.env.BANK_TRANSFER_INSTRUCTIONS?.trim() ?? '',
+  } : null
 
   if (order.status === 'paid') {
     const [product] = await db.select().from(products).where(eq(products.id, order.productId)).limit(1)
@@ -46,16 +52,17 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       } satisfies OrderDetail,
       downloadUrl,
       deliverableNote,
+      bankTransfer,
     },
   }
 }
 
-type Props = { order: OrderDetail; downloadUrl: string | null; deliverableNote: string | null }
+type Props = { order: OrderDetail; downloadUrl: string | null; deliverableNote: string | null; bankTransfer: { bankName: string; accountName: string; accountNumber: string; instructions: string } | null }
 
-function OrderPage({ order, downloadUrl, deliverableNote }: Props) {
+function OrderPage({ order, downloadUrl, deliverableNote, bankTransfer }: Props) {
   return (
     <PageStack>
-      <OrderStatusPanel order={order} downloadUrl={downloadUrl} deliverableNote={deliverableNote} />
+      <OrderStatusPanel order={order} downloadUrl={downloadUrl} deliverableNote={deliverableNote} bankTransfer={bankTransfer} />
       <InlineNote>
         Simpan halaman ini. Alamatnya adalah kunci pesanan Anda dan hanya bisa dibuka oleh siapa pun yang memilikinya.
       </InlineNote>
