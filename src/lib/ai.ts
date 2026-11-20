@@ -11,7 +11,11 @@ const PRIMARY_BASE_URL = (
   (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
 ).replace(/\/+$/, '')
 const PRIMARY_MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
-const PRIMARY_KEY = process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''
+// If the configured endpoint is Groq, use the Groq credential directly.
+ // Do not send a Neon Gateway token to Groq or waste every request on a known-disabled Neon endpoint.
+const PRIMARY_KEY = PRIMARY_BASE_URL.includes('api.groq.com')
+  ? (process.env.GROQ_API_KEY || '')
+  : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '')
 const FALLBACK_KEY = process.env.GROQ_API_KEY || ''
 const FALLBACK_BASE_URL = 'https://api.groq.com/openai/v1'
 const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || 'openai/gpt-oss-120b'
