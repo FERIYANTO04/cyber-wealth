@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { timingSafeEqual } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { runAutopilot, autopilotDue } from '@/lib/autopilot'
 import { logActivity } from '@/lib/data'
 import { runBillingPass } from '@/lib/billing'
@@ -13,7 +13,6 @@ import { db } from '@/lib/db'
 import { products } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { putFile } from '@/lib/storage'
-import { randomUUID } from 'node:crypto'
 
 // Scheduled hosts call this endpoint with: Authorization: Bearer <CRON_SECRET>.
 // Keep CRON_SECRET private; never expose it through NEXT_PUBLIC_* variables.
@@ -127,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action: 'Putaran terjadwal autopilot berjalan',
       detail: result.results.map((item) => `${item.label}: ${item.summary}`).join(' · '),
     })
-    return res.status(200).json({ ran: true, results: result.results, billing, social, housekeeping, integrations })
+    return res.status(200).json({ ran: true, results: result.results, billing, social, housekeeping, productFileMigration, integrations })
   } catch (error) {
     console.error('[cron autopilot]', error)
     return res.status(500).json({ ran: false, reason: 'Putaran gagal. Periksa log server.' })
