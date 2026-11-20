@@ -195,7 +195,7 @@ async function runCeo(trigger: string) {
   const summary = factualSummary + ' Analisis dan rekomendasi AI CEO tersimpan di detail laporan.'
   let dispatch: AutopilotTask[] = []
   try {
-    const raw = outcome.text.match(/\\{[\\s\\S]*\\}/)?.[0]
+    const raw = outcome.text.match(/\{[\s\S]*\}/)?.[0]
     const parsed = raw ? JSON.parse(raw) as { dispatch?: unknown } : null
     const allowed = new Set(TASKS.map((task) => task.task).filter((task) => task !== 'ceo'))
     if (Array.isArray(parsed?.dispatch)) {
