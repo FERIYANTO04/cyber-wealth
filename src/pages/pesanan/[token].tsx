@@ -1,4 +1,3 @@
-import { bankTransferInstructions } from '@/lib/bank-transfer'
 import type { GetServerSideProps } from 'next'
 import { StoreFrame } from '@/components/StoreFrame'
 import { InlineNote, PageStack } from '@/components/ui'
@@ -47,17 +46,16 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       } satisfies OrderDetail,
       downloadUrl,
       deliverableNote,
-      paymentInstructions: bankTransferInstructions(order.code),
     },
   }
 }
 
-type Props = { order: OrderDetail; downloadUrl: string | null; deliverableNote: string | null; paymentInstructions: string }
+type Props = { order: OrderDetail; downloadUrl: string | null; deliverableNote: string | null }
 
-function OrderPage({ order, downloadUrl, deliverableNote, paymentInstructions }: Props) {
+function OrderPage({ order, downloadUrl, deliverableNote }: Props) {
   return (
     <PageStack>
-      <OrderStatusPanel order={order} downloadUrl={downloadUrl} deliverableNote={deliverableNote} paymentInstructions={paymentInstructions} />
+      <OrderStatusPanel order={order} downloadUrl={downloadUrl} deliverableNote={deliverableNote} />
       <InlineNote>
         Simpan halaman ini. Alamatnya adalah kunci pesanan Anda dan hanya bisa dibuka oleh siapa pun yang memilikinya.
       </InlineNote>
