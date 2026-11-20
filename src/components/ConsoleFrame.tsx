@@ -5,7 +5,6 @@ import type { ReactNode } from 'react'
 import {
   Bot,
   BriefcaseBusiness,
-  Camera,
   LayoutDashboard,
   Link2,
   LogOut,
@@ -16,7 +15,6 @@ import {
   Repeat,
   ScrollText,
   Settings,
-  Share2,
   ShieldCheck,
   Store,
   Users,
@@ -40,8 +38,6 @@ const NAV = [
   { href: '/finance', label: 'Keuangan', short: 'Keuangan', icon: Wallet },
   { href: '/revenue', label: 'Mesin pendapatan', short: 'Pendapatan', icon: Store },
   { href: '/social', label: 'Studio konten sosial', short: 'Konten', icon: Megaphone },
-  { href: '/facebook', label: 'Facebook Page', short: 'Facebook', icon: Share2 },
-  { href: '/instagram', label: 'Instagram Bisnis', short: 'Instagram', icon: Camera },
   { href: '/integrasi', label: 'Integrasi', short: 'Integrasi', icon: Plug },
   { href: '/activity', label: 'Log aktivitas', short: 'Log', icon: ScrollText },
   { href: '/settings', label: 'Pengaturan', short: 'Akun', icon: Settings },
@@ -50,7 +46,7 @@ const NAV = [
 // The bottom bar on a phone carries the six places the owner visits most; the rest
 // live on the full rail. Six is the ceiling: a seventh would push each tab below a
 // comfortable thumb target.
-const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/produk', '/facebook', '/admin/members']
+const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/produk', '/admin/members', '/integrasi']
 
 function QuietNavButton({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Loader2, Undo2 } from 'lucide-react'
+import { Loader2, Undo2 } from 'lucide-react'
 import { Badge, Button, CountNote, EmptyState, Field, InlineNote, Input, Panel, PanelBody, PanelHead, SearchInput, Select } from '@/components/ui'
 import { compactMoney, dateTime } from '@/lib/format'
 
@@ -41,17 +41,6 @@ export function OrderList({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-
-  async function confirmTransfer(orderId: string) {
-    setBusy(true); setError(null); setNotice(null)
-    try {
-      const response = await fetch('/api/admin/orders/confirm-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId }) })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data.settled) { setError(data.error ?? 'Pembayaran belum dapat dikonfirmasi.'); return }
-      setRows((old) => old.map((row) => row.id === orderId ? { ...row, status: 'paid', paidAt: new Date().toISOString() } : row))
-      setNotice('Transfer dikonfirmasi. Produk dapat diakses pembeli.')
-    } catch { setError('Koneksi terputus.') } finally { setBusy(false) }
-  }
 
   async function refund(orderId: string) {
     setBusy(true)
@@ -156,15 +145,6 @@ export function OrderList({
                         ? `lunas ${dateTime(order.paidAt)}`
                         : `dibuat ${dateTime(order.createdAt)}`}
                   </p>
-                  {order.status === 'pending' && order.provider === 'manual_transfer' && (
-                    <div className="mt-2 flex flex-col items-start gap-1">
-                      <Button size="sm" variant="secondary" disabled={busy} onClick={() => confirmTransfer(order.id)}>
-                        {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-3.5" aria-hidden="true" />}
-                        Verifikasi transfer masuk
-                      </Button>
-                      <p className="max-w-xs text-[0.6875rem] leading-relaxed text-ink-quiet">Gunakan hanya setelah mutasi rekening menunjukkan dana sudah masuk.</p>
-                    </div>
-                  )}
                   {order.status === 'paid' && (
                     <Button
                       size="sm"

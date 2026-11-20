@@ -2,11 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
-import { testAi, storageStatus, bankTransferStatus, testPaddle } from '@/lib/integrations'
+import { testAi, storageStatus, testPaddle } from '@/lib/integrations'
 import { testEmail } from '@/lib/email'
 
 const Body = z.object({
-  target: z.enum(['ai', 'bank', 'email', 'telegram', 'paddle', 'storage', 'all']),
+  target: z.enum(['ai', 'email', 'paddle', 'storage', 'all']),
 })
 
 /**
@@ -27,10 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const results: Record<string, { state: string; message: string }> = {}
 
   if (target === 'ai' || target === 'all') results.ai = await testAi()
-  if (target === 'bank' || target === 'all') results.bank = bankTransferStatus()
   if (target === 'email' || target === 'all') results.email = await testEmail()
   if (target === 'storage' || target === 'all') results.storage = await storageStatus()
-  if (target === 'telegram' || target === 'all') results.telegram = await telegramConnectionStatus()
   if (target === 'paddle' || target === 'all') results.paddle = await testPaddle()
 
   const summary = Object.entries(results)

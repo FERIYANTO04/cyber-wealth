@@ -8,8 +8,6 @@ Set these values in the hosting provider's private environment-variable settings
 
 - `DATABASE_URL`: PostgreSQL connection URL. For Supabase, open **Connect → ORMs → Drizzle** or **Connect → Connection string → URI**. Prefer the **Session pooler** URI for a long-running Next.js server when the direct database host is not reachable from the hosting provider. Use the exact URI supplied by Supabase, replace only its password placeholder locally, and append `?sslmode=require` only if the supplied URI does not already specify SSL. Never use a browser-exposed `NEXT_PUBLIC_` variable for this value.
 - `JWT_SECRET`: long, random secret used to sign owner sessions.
-- `BANK_NAME`, `BANK_ACCOUNT_NAME`, `BANK_ACCOUNT_NUMBER`: rekening tujuan transfer milik owner.
-- `BANK_TRANSFER_INSTRUCTIONS`: instruksi tambahan untuk pembeli. Pembayaran diverifikasi manual setelah mutasi rekening diperiksa.
 - `GROQ_API_KEY`: API key for the Groq OpenAI-compatible model provider (required by the current code).
 - `AI_BASE_URL`: optional; defaults to `https://api.openai.com/v1`.
 - `AI_MODEL`: optional; defaults to `gpt-4o-mini`.
@@ -53,11 +51,11 @@ Important:
 - Do not expose `CRON_SECRET` in browser code, public environment variables, logs, or screenshots.
 - The in-process overlap guard prevents duplicate runs on one server instance only. If the host runs multiple concurrent instances, configure the scheduler for a single active invocation or add a shared database lock before scaling horizontally.
 - A scheduled request is not proof that every external task succeeded. Inspect the JSON response and server logs.
-- Keep owner approvals enabled for irreversible or public-facing actions. Payment settlement must only be confirmed by the owner after independently checking the bank statement.
+- Keep owner approvals enabled for irreversible or public-facing actions. Paid orders are settled only by a signature-verified Paddle webhook. Never mark an order paid based on a redirect or browser response.
 
 ## Health check
 
-`GET /api/health` is a basic process liveness endpoint. `GET /api/health/ready` checks PostgreSQL connectivity, a strong JWT secret, and whether payment gateway credentials are present. It does not verify the bank balance or initiate a bank transfer. Use the Integrasi page for provider checks.
+`GET /api/health` is a basic process liveness endpoint. `GET /api/health/ready` checks PostgreSQL connectivity, a strong JWT secret, and whether Paddle gateway credentials are present. It does not verify account balances or initiate bank transfers. Use the Integrasi page for provider checks.
 
 ## GetLaunch deployment notes
 
