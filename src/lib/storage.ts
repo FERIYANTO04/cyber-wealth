@@ -83,6 +83,9 @@ export async function fileUrl(
   key: string,
   { expiresIn = 3600, download }: { expiresIn?: number; download?: boolean | string } = {},
 ): Promise<string | null> {
+  // Public, version-controlled deliverables may use a trusted HTTPS URL.
+  // Private customer files continue to use short-lived signed object-storage URLs.
+  if (/^https:\/\//i.test(key)) return key
   return presign('GET', key, expiresIn, download ? (typeof download === 'string' ? download : 'download') : undefined)
 }
 
