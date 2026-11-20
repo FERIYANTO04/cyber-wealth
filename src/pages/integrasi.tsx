@@ -19,7 +19,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const ai = aiConfig()
   const email = emailConfig()
   const storage = await storageStatus()
-  const paddle = await testPaddle()
+  const paddle = await testPaddle(`https://${host}/api/webhooks/paddle`)
   const engines = await getEngineCounts()
 
   const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'unverified'
