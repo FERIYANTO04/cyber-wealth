@@ -581,7 +581,7 @@ async function runMarketing(trigger: string) {
     summary,
     failures.length > 0
       ? `Sebagian draf disusun tanpa AI karena: ${failures[0]}`
-      : 'Draf disimpan sebagai draf. Tidak ada yang dikirim otomatis ke platform mana pun.',
+      : 'Konten disusun dan dijadwalkan. Kanal yang sudah terhubung akan menerbitkan saat jadwal tiba; kanal tanpa kredensial tetap tertahan.',
     created
   )
   await noteAgent('AI Marketing', 'Materi promosi disiapkan', summary)
