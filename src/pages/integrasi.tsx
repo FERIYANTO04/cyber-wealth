@@ -100,8 +100,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   const readyCount = cards.filter((card) => card.state === 'ready').length
   const blockers: string[] = []
-  if (aiState !== 'ready') blockers.push('Koneksi model AI belum lulus uji langsung.')
-  if (emailState !== 'ready') blockers.push('Pengiriman email transaksional belum lulus uji langsung.')
+  blockers.push('Koneksi model AI perlu lulus uji langsung.')
+  blockers.push('Pengiriman email transaksional perlu lulus uji langsung.')
   if (engines.products === 0) blockers.push('Belum ada produk digital yang terbit.')
   if (engines.services === 0) blockers.push('Belum ada layanan jasa yang terbit.')
   if (engines.plans === 0) blockers.push('Belum ada paket langganan yang terbit.')
