@@ -128,13 +128,13 @@ export async function chatWithAi(args: {
     }, args)
   }
 
+  const primaryIsGroq = PRIMARY_BASE_URL.includes('api.groq.com')
   const primary: Provider = {
     baseUrl: PRIMARY_BASE_URL,
     model: PRIMARY_MODEL,
     key: primaryKey,
     label: primaryIsGroq ? 'Groq' : (NEON_BASE_URL || process.env.AI_BASE_URL ? 'AI Gateway' : 'Groq'),
   }
-  const primaryIsGroq = primary.baseUrl.includes('api.groq.com')
   const result = primaryIsConfigured
     ? await requestProvider(primary, args)
     : { ok: false as const, reason: 'Model utama belum dikonfigurasi; mencoba model cadangan.' }
