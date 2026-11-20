@@ -12,6 +12,7 @@ import { CHANNELS, MARKETS, channelShort } from '@/lib/labels'
 import { aiConfigured } from '@/lib/ai'
 import { getActiveFacebookAccount } from '@/lib/meta'
 import { getActiveInstagramAccount } from '@/lib/instagram'
+import { telegramReady as checkTelegramReady } from '@/lib/telegram'
 import type { PageWithFrame } from '@/lib/frame'
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
@@ -22,6 +23,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const totals = await getStudioTotals()
   const facebook = await getActiveFacebookAccount()
   const instagram = await getActiveInstagramAccount()
+  const telegram = await checkTelegramReady().catch(() => false)
   const drafts = await db.select().from(campaignDrafts).orderBy(desc(campaignDrafts.createdAt)).limit(20)
 
   const channels: ChannelOption[] = CHANNELS.map((channel) => ({
@@ -42,6 +44,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       aiReady: aiConfigured(),
       facebookReady: Boolean(facebook && facebook.status === 'connected'),
       instagramReady: Boolean(instagram && instagram.status === 'connected'),
+      telegramReady: telegram,
       drafts: drafts.map(
         (row): CampaignRow => ({
           id: row.id,
@@ -65,6 +68,7 @@ type Props = {
   aiReady: boolean
   facebookReady: boolean
   instagramReady: boolean
+  telegramReady: boolean
   drafts: CampaignRow[]
 }
 
@@ -79,6 +83,7 @@ function SocialPage(props: Props) {
         aiReady={props.aiReady}
         facebookReady={props.facebookReady}
         instagramReady={props.instagramReady}
+        telegramReady={props.telegramReady}
       />
       <CampaignDrafts drafts={props.drafts} />
     </PageStack>
