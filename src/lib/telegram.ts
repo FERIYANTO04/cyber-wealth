@@ -43,3 +43,27 @@ export async function publishToTelegram(text: string): Promise<
   const url = username ? `https://t.me/${username}/${messageId}` : `https://t.me/c/${String(chat?.id ?? '').replace('-100', '')}/${messageId}`
   return { ok: true, messageId, url }
 }
+
+/** Verifies the bot can actually publish to the configured destination without sending a message. */
+export async function telegramConnectionStatus(): Promise<{ state: 'ready' | 'missing' | 'invalid' | 'error'; message: string }> {
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
+    return { state: 'missing', message: 'TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID belum dikonfigurasi.' }
+  }
+  try {
+    const me = await telegramRequest('getMe')
+    if (!me.ok) return { state: 'invalid', message: 'Token bot ditolak Telegram: ' + (me.description ?? 'autentikasi gagal') }
+    const chat = await telegramRequest('getChat', { chat_id: process.env.TELEGRAM_CHAT_ID })
+    if (!chat.ok) return { state: 'invalid', message: 'Tujuan Telegram tidak dapat diakses: ' + (chat.description ?? 'chat tidak ditemukan') }
+    const member = await telegramRequest('getChatMember', { chat_id: process.env.TELEGRAM_CHAT_ID, user_id: me.result?.id })
+    if (!member.ok) return { state: 'error', message: 'Telegram tidak dapat memeriksa hak admin bot: ' + (member.description ?? 'pemeriksaan gagal') }
+    const role = member.result?.status
+    if (role !== 'administrator' && role !== 'creator') {
+      return { state: 'invalid', message: 'Bot ditemukan, tetapi belum menjadi admin kanal. Jadikan bot admin agar dapat menerbitkan konten.' }
+    }
+    const title = String(chat.result?.title ?? chat.result?.username ?? 'kanal Telegram')
+    const username = me.result?.username ? '@' + me.result.username : 'Bot Telegram'
+    return { state: 'ready', message: username + ' terhubung sebagai admin di ' + title + '. Koneksi siap menerbitkan pesan.' }
+  } catch {
+    return { state: 'error', message: 'Tidak dapat menghubungi Telegram. Periksa koneksi server dan coba lagi.' }
+  }
+}
