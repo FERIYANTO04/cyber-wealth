@@ -94,7 +94,7 @@ async function runCeo(trigger: string) {
     .where(and(
       eq(products.status, 'published'),
       eq(products.dataSource, 'live'),
-      sql`(${products.fileKey} is null or ${products.fileName} ~* '(draft|draf)')`
+      sql`(${products.fileKey} is null or ${products.fileKey} ~* '^https?://' or ${products.fileName} ~* '(draft|draf)')`
     ))
   const [activeSubs] = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -316,7 +316,7 @@ async function runProduct(trigger: string) {
   // labelled deliverables instead of silently skipping an existing offline draft.
   const needsReview = existing.filter((product) =>
     product.status === 'draft' ||
-    (product.status === 'published' && (!product.fileKey || /draft|draf/i.test(product.fileName ?? '')))
+    (product.status === 'published' && (!product.fileKey || /^https?:\/\//i.test(product.fileKey) || /draft|draf/i.test(product.fileName ?? '')))
   )
   if (needsReview.length > 0) {
     let proposalsCreated = 0
@@ -857,7 +857,7 @@ async function buildCeoDispatchPlan(): Promise<AutopilotTask[]> {
   const [publishedProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
   const [publishedServices] = await db.select({ n: sql<number>`count(*)::int` }).from(services).where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
   const [draftProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'draft'), eq(products.dataSource, 'live')))
-  const [publishedNeedsReview] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live'), sql`(${products.fileKey} is null or ${products.fileName} ~* '(draft|draf)')`))
+  const [publishedNeedsReview] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live'), sql`(${products.fileKey} is null or ${products.fileKey} ~* '^https?://' or ${products.fileName} ~* '(draft|draf)')`))
   const [openLeads] = await db.select({ n: sql<number>`count(*)::int` }).from(revenueLeads).where(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']))
   const [newServiceRequests] = await db.select({ n: sql<number>`count(*)::int` }).from(serviceRequests).where(eq(serviceRequests.status, 'new'))
   const [pendingOrders] = await db.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.status, 'pending'), eq(orders.dataSource, 'live')))
