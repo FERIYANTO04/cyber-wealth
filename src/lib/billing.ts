@@ -454,7 +454,7 @@ export async function setAutoRenew(token: string, enabled: boolean) {
   }
 
   if (enabled) {
-    return { ok: false as const, error: 'Perpanjangan otomatis tidak tersedia untuk transfer manual. Pelanggan perlu transfer ulang setiap periode.' }
+    return { ok: false as const, error: 'Perpanjangan otomatis belum tersedia karena alur recurring Paddle belum diaktifkan.' }
   }
 
   await db
@@ -698,7 +698,7 @@ export async function decideBillingRequest(args: {
 
 export async function billingConfigStatus() {
   return {
-    paymentReady: Boolean(process.env.BANK_NAME?.trim() && process.env.BANK_ACCOUNT_NAME?.trim() && process.env.BANK_ACCOUNT_NUMBER?.trim()),
+    paymentReady: false,
     emailReady: emailConfigured(),
   }
 }
