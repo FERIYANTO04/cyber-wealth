@@ -125,6 +125,11 @@ export function FacebookConnect({
     }
   }
 
+  const friendlyConfigError = configError === 'config'
+    ? 'Koneksi Meta belum bisa dimulai karena App ID atau App Secret belum terpasang dengan benar di server.'
+    : configError === 'secret'
+      ? 'Kunci keamanan sesi belum tersedia di server. Hubungi administrator aplikasi.'
+      : configError
   const state = test ?? (page ? { state: page.status === 'connected' ? 'ready' : 'invalid', message: page.lastError ?? 'Halaman tersimpan. Tekan Uji koneksi untuk memastikan tokennya masih berlaku.' } : { state: 'missing', message: 'Belum ada halaman Facebook yang terhubung.' })
   const tone = state.state === 'ready' ? 'signal' : state.state === 'missing' ? 'hold' : 'danger'
 
@@ -138,9 +143,9 @@ export function FacebookConnect({
           </span>
         </InlineNote>
       )}
-      {configError && (
+      {friendlyConfigError && (
         <InlineNote tone="danger">
-          <span role="alert">{configError}</span>
+          <span role="alert">{friendlyConfigError}</span>
         </InlineNote>
       )}
       {error && (
