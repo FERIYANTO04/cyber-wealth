@@ -187,7 +187,7 @@ async function runCeo(trigger: string) {
     const summary = factualSummary + ' Arahan operasional disusun dari data database; model AI belum tersedia.'
     await finishRun(run.id, 'ok', summary, offlineCeoAnalysis + `\\n\\nAlasan mode offline: ${outcome.reason}`, 0)
     await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
-    return { summary, dispatch: [] as AutopilotTask[] }
+    return { summary, dispatch: [] as Exclude<AutopilotTask, 'ceo'>[] }
   }
 
   // The model may recommend actions, but it is not an accounting system.
