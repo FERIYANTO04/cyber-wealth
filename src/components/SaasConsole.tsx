@@ -77,18 +77,7 @@ export function SaasConsole({
   const [editPrice, setEditPrice] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
-  const [settling, setSettling] = useState<string | null>(null)
 
-
-  async function confirmSubscription(row: SubscriberRow) {
-    setSettling(row.id); setError(null); setNote(null)
-    try {
-      const response = await fetch('/api/admin/subscriptions/confirm-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: row.token }) })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data.settled) { setError(data.error ?? 'Pembayaran belum dapat dikonfirmasi.'); return }
-      window.location.reload()
-    } catch { setError('Koneksi terputus.') } finally { setSettling(null) }
-  }
 
   async function create(event: React.FormEvent) {
     event.preventDefault()
@@ -362,11 +351,6 @@ export function SaasConsole({
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                  {row.status === 'pending' && row.dataSource === 'live' && (
-                    <Button size="sm" variant="secondary" disabled={settling === row.id} onClick={() => confirmSubscription(row)}>
-                      {settling === row.id ? 'Memproses…' : 'Verifikasi transfer'}
-                    </Button>
-                  )}
                   <CalendarCheck className="size-3.5 text-ink-quiet" aria-hidden="true" />
                   <span className="figure text-[0.8125rem]">{compactMoney(row.amountIdr)}</span>
                   <span className="text-[0.625rem] text-ink-quiet">/{row.interval === 'year' ? 'tahun' : 'bulan'}</span>
