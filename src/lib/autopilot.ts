@@ -948,9 +948,13 @@ export async function autopilotDue(): Promise<boolean> {
   if (current.aiPaused) return false
   const last = await getLastRun()
   if (!last) return true
-  // The Railway cron runs every six hours; allow one full operational pass per tick.
-  // A five-hour guard prevents overlap while keeping the scheduled CEO cycle active.
-  return Date.now() - last.startedAt.getTime() > 5 * 60 * 60 * 1000
+  // The Railway cron normally runs every six hours. A configurable guard also
+  // permits an owner-approved immediate cycle without rewriting the run history.
+  const configuredHours = Number(process.env.AUTOPILOT_MIN_INTERVAL_HOURS ?? 5)
+  const intervalHours = Number.isFinite(configuredHours) && configuredHours >= 1
+    ? Math.min(configuredHours, 24)
+    : 5
+  return Date.now() - last.startedAt.getTime() > intervalHours * 60 * 60 * 1000
 }
 
 export async function getAgentRuns(limit = 40) {
