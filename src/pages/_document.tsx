@@ -40,8 +40,9 @@ const inertHmrSocket = `(function () {
 
 export default function Document() {
   return (
-    <Html lang="en">
+    <Html lang="id">
       <Head>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         {isPlayground && <script dangerouslySetInnerHTML={{ __html: inertHmrSocket }} />}
       </Head>
       <body>
