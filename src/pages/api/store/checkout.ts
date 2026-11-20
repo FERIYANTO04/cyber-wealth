@@ -49,8 +49,7 @@ function rateLimited(ip: string): boolean {
 }
 
 /**
- * Starts a purchase using manual bank transfer. An owner must verify receipt
- * before the order is marked paid and the digital product is delivered.
+ * Starts a purchase through Paddle only. The order is settled exclusively by a verified Paddle webhook.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
@@ -97,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       buyerEmail: parsed.data.email,
       amountIdr: amount,
       status: 'pending',
-      provider: 'manual_transfer',
+      provider: 'paddle',
       refCode: parsed.data.ref ?? refFromCookie(req) ?? null,
       dataSource: 'live',
     })
@@ -122,9 +121,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const paddleApiKey = process.env.PADDLE_API_KEY ?? ''
-  if (!paddleApiKey && (!process.env.BANK_NAME?.trim() || !process.env.BANK_ACCOUNT_NAME?.trim() || !process.env.BANK_ACCOUNT_NUMBER?.trim())) {
-    await failCheckout(order.id, code, 'Paddle belum aktif dan detail rekening transfer belum lengkap')
-    return res.status(503).json({ error: 'Pembayaran belum siap. Aktifkan Paddle atau lengkapi rekening transfer bank. Pesanan ditutup dan belum dibayar.' })
+  if (!paddleApiKey) {
+    await failCheckout(order.id, code, 'Paddle API key belum tersedia')
+    return res.status(503).json({ error: 'Checkout Paddle belum aktif. Pesanan ditutup dan belum dibayar.' })
   }
   let paddlePriceId: string | undefined
   if (paddleApiKey) {
@@ -222,8 +221,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({ ok: true, token: accessToken, paymentUrl: payload.data.checkout.url, provider: 'paddle' })
   }
 
-  await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
-  await db.insert(activity).values({ actor: 'system', action: 'Pesanan menunggu transfer manual',
-    detail: `${product.name} — ${code}. Pemilik harus memeriksa dana masuk sebelum menandai lunas.`, dataSource: 'live' })
-  return res.status(201).json({ ok: true, token: accessToken, manualPayment: true })
+  await failCheckout(order.id, code, 'Tidak ada metode pembayaran selain Paddle yang diizinkan')
+  return res.status(503).json({ error: 'Metode pembayaran tidak tersedia. Pesanan ditutup dan belum dibayar.' })
 }
