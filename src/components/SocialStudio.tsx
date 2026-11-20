@@ -58,6 +58,7 @@ export function SocialStudio({
   aiReady,
   facebookReady,
   instagramReady,
+  telegramReady,
 }: {
   initialPosts: PostItem[]
   totals: StudioTotals
@@ -66,6 +67,7 @@ export function SocialStudio({
   aiReady: boolean
   facebookReady: boolean
   instagramReady: boolean
+  telegramReady: boolean
 }) {
   const [posts, setPosts] = useState(initialPosts)
   // Counts come from the list on screen, so a freshly generated draft moves them at
@@ -89,7 +91,7 @@ export function SocialStudio({
   const [openId, setOpenId] = useState<string | null>(null)
 
   const [genMarkets, setGenMarkets] = useState<string[]>(markets.map((m) => m.key))
-  const [genChannels, setGenChannels] = useState<string[]>(['facebook', 'instagram', 'linkedin', 'x'])
+  const [genChannels, setGenChannels] = useState<string[]>(['telegram', 'tiktok'])
 
   const filtered = useMemo(() => {
     return posts.filter((post) => {
@@ -143,8 +145,8 @@ export function SocialStudio({
       if (refreshed?.posts) setPosts(refreshed.posts)
       setNote(
         data.created === 0
-          ? 'Semua kombinasi kanal dan pasar sudah punya draf. Ubah kanal atau pasar untuk membuat variasi baru.'
-          : `${data.created} draf baru dibuat dan menunggu persetujuan Anda. Tidak ada yang dijadwalkan.`
+          ? 'Semua kombinasi kanal dan pasar sudah punya konten. Ubah kanal atau pasar untuk membuat variasi baru.'
+          : `${data.created} konten baru dibuat. Konten untuk kanal yang diotorisasi dijadwalkan untuk diterbitkan otomatis.`
       )
       if (data.reason) setNote((old) => `${old} Sebagian draf disusun tanpa AI: ${data.reason}`)
     } catch {
@@ -173,7 +175,7 @@ export function SocialStudio({
       if (refreshed?.posts) setPosts(refreshed.posts)
       setNote(
         kind === 'decide' && payload.decision === 'approved'
-          ? 'Konten disetujui. Kirimannya terjadi saat jadwalnya tiba, dan baru terhitung terbit setelah kanal mengonfirmasi.'
+          ? 'Konten disetujui. Kanal yang terhubung akan menerbitkannya saat jadwal tiba.'
           : kind === 'decide'
             ? 'Konten ditolak dan tidak akan dijadwalkan.'
             : 'Perubahan tersimpan.'
@@ -199,11 +201,11 @@ export function SocialStudio({
         </Notice>
       )}
 
-      <Notice tone={facebookReady || instagramReady ? 'signal' : 'hold'} icon={<AlertTriangle className="warn-icon" aria-hidden="true" />}>
+      <Notice tone={telegramReady ? 'signal' : 'hold'} icon={<AlertTriangle className="warn-icon" aria-hidden="true" />}>
         <p className="note-text">
-          {facebookReady || instagramReady
-            ? `Kanal yang sudah terhubung: ${[facebookReady ? 'Facebook Page' : null, instagramReady ? 'Instagram Bisnis' : null].filter(Boolean).join(' dan ')}. Konten yang Anda setujui dan jadwalkan dikirim lewat Meta Graph API, dan baru disebut terbit setelah Meta mengembalikan nomor kiriman. Instagram hanya menerima kiriman yang berisi foto atau video. Kanal lain belum terhubung.`
-            : 'Belum ada akun kanal resmi yang terhubung, jadi tidak ada konten yang bisa terbit. Semua draf di sini menunggu persetujuan Anda, dan statusnya tetap “belum terbit” sampai sebuah akun kanal menerima kirimannya.'}
+          {telegramReady
+            ? 'Telegram terhubung. Agen pemasaran dapat menerbitkan konten yang sudah disetujui sesuai jadwal dan menyimpan tautan serta ID pesan sebagai bukti.'
+            : 'Telegram belum terhubung. Sistem penerbitan sudah disiapkan, tetapi bot dan kanal Telegram perlu diotorisasi melalui TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID pada pengaturan layanan. Agen tidak akan mengaku konten terbit sebelum Telegram mengonfirmasi.'}
         </p>
       </Notice>
 
