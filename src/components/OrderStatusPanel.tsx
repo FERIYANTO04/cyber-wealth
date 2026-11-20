@@ -64,12 +64,10 @@ export function OrderStatusPanel({
   order,
   downloadUrl,
   deliverableNote,
-  paymentInstructions,
 }: {
   order: OrderDetail
   downloadUrl: string | null
   deliverableNote: string | null
-  paymentInstructions: string
 }) {
   const tag = STATUS_TAG[order.status] ?? { label: order.status, tone: 'hold' as const }
 
@@ -109,14 +107,6 @@ export function OrderStatusPanel({
           </>
         )}
 
-        {order.status === 'pending' && order.provider === 'manual_transfer' && (
-          <StatusNote
-            icon="wait"
-            tone="hold"
-            title="Menunggu transfer dan verifikasi penjual"
-            body={`${paymentInstructions} Cantumkan kode pesanan ${order.code} pada berita transfer, lalu hubungi penjual. Produk baru terbuka setelah dana benar-benar diterima dan diverifikasi.`}
-          />
-        )}
 
         {order.status === 'pending' && order.invoiceUrl && (
           <>
