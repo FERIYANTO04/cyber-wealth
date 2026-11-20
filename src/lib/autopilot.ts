@@ -162,7 +162,7 @@ async function runCeo(trigger: string) {
     const summary = factualSummary + ' Arahan operasional disusun dari data database tanpa model AI.'
     await finishRun(run.id, 'ok', summary, offlineCeoAnalysis, 0)
     await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
-    return { summary, dispatch: [] as AutopilotTask[] }
+    return { summary, dispatch: [] as Exclude<AutopilotTask, 'ceo'>[] }
   }
 
   const outcome = await askAi({
@@ -193,13 +193,13 @@ async function runCeo(trigger: string) {
   // The model may recommend actions, but it is not an accounting system.
   // Keep all numeric/status claims in the summary strictly database-derived.
   const summary = factualSummary + ' Analisis dan rekomendasi AI CEO tersimpan di detail laporan.'
-  let dispatch: AutopilotTask[] = []
+  let dispatch: Exclude<AutopilotTask, 'ceo'>[] = []
   try {
     const raw = outcome.text.match(/\{[\s\S]*\}/)?.[0]
     const parsed = raw ? JSON.parse(raw) as { dispatch?: unknown } : null
     const allowed = new Set(TASKS.map((task) => task.task).filter((task) => task !== 'ceo'))
     if (Array.isArray(parsed?.dispatch)) {
-      dispatch = [...new Set(parsed.dispatch.filter((task): task is AutopilotTask => typeof task === 'string' && allowed.has(task as AutopilotTask)))]
+      dispatch = [...new Set(parsed.dispatch.filter((task): task is Exclude<AutopilotTask, 'ceo'> => typeof task === 'string' && task !== 'ceo' && allowed.has(task as Exclude<AutopilotTask, 'ceo'>)))]
     }
   } catch { dispatch = [] }
   const detail = `${facts}\\n\\nAnalisis model ${outcome.model}:\\n${outcome.text}\\n\\nUrutan delegasi AI: ${dispatch.join(' → ') || 'AI tidak menghasilkan dispatch valid'}`
@@ -901,24 +901,25 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
   }
 
   const outcomes: AutopilotResult['results'] = []
+  let ceoResult: Awaited<ReturnType<typeof runCeo>>
   try {
-    const ceo = await runCeo(trigger)
-    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: ceo.summary })
+    ceoResult = await runCeo(trigger)
+    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: ceoResult.summary })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui'
     outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: `Tugas gagal: ${message}. Agen lain tidak dijalankan agar keputusan tanpa arahan CEO tidak diteruskan.` })
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
-  const plan = ceo.dispatch ?? []
+  const plan: Exclude<AutopilotTask, 'ceo'>[] = ceoResult.dispatch
   if (plan.length === 0) {
     outcomes.push({ task: 'intelligence', label: 'Intelijen bisnis', summary: 'CEO AI tidak menghasilkan rencana delegasi yang valid; agen lain tidak dijalankan agar tidak kembali memakai urutan kerja tetap.' })
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
   const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis' }
   await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Urutan dipilih AI CEO berdasarkan analisis siklus ini; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
-  const runners: Record<AutopilotTask, () => Promise<{ summary: string }>> = {
+  const runners: Record<Exclude<AutopilotTask, 'ceo'>, () => Promise<{ summary: string }>> = {
     research: () => runResearch(trigger), sales: () => runSales(trigger), product: () => runProduct(trigger),
-    marketing: () => runMarketing(trigger), finance: () => runFinance(trigger), ceo: () => runCeo(trigger),
+    marketing: () => runMarketing(trigger), finance: () => runFinance(trigger),
     intelligence: () => runIntelligence(trigger),
   }
   const sequence = plan.map((task) => [task, labels[task], runners[task]] as const)
