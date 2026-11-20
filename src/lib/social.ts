@@ -4,6 +4,7 @@ import { activity, orders, postTracks, products, revenueLeads, services, socialA
 import { askAi, aiConfigured } from './ai'
 import { publishToFacebook } from './meta'
 import { publishToInstagram } from './instagram'
+import { publishToTelegram } from './telegram'
 import { fileUrl } from './storage'
 import { CHANNELS, MARKETS, MARKET_CHANNELS, channelLabel, channelLimit, type ChannelKey } from './labels'
 
@@ -67,11 +68,17 @@ export function toPostItem(row: typeof socialPosts.$inferSelect, mediaUrl: strin
 
 /** Which channels have a stored, accepted account right now. */
 export async function connectedChannels(): Promise<Set<string>> {
+  const connected = new Set<string>()
+  if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+    const { telegramReady } = await import('./telegram')
+    if (await telegramReady()) connected.add('telegram')
+  }
   const rows = await db
     .select({ channel: socialAccounts.channel })
     .from(socialAccounts)
     .where(eq(socialAccounts.status, 'connected'))
-  return new Set(rows.map((row) => row.channel))
+  for (const row of rows) connected.add(row.channel)
+  return connected
 }
 
 export async function getPosts(limit = 120) {
@@ -455,9 +462,9 @@ export async function setPostSchedule(postId: string, iso: string | null) {
 /**
  * Publishes approved posts whose scheduled time has come.
  *
- * Facebook goes through Meta's Graph API. A post becomes `published` only when Meta
+ * Connected channels publish through their official APIs. A post becomes `published` only when Meta
  * returns a post id, and that id and the publish time are stored with it. Anything
- * else is recorded as `failed` with Meta's own reason, and the content stays unpublished.
+ * else is recorded as `failed` with the provider's own reason, and the content stays unpublished.
  * Channels without an integration yet are recorded as `not_connected`, never as done.
  */
 export async function publishDuePosts(): Promise<{
@@ -500,6 +507,41 @@ export async function publishDuePosts(): Promise<{
         })
         .where(eq(socialPosts.id, post.id))
       blocked += 1
+      continue
+    }
+
+    if (post.channel === 'telegram') {
+      const result = await publishToTelegram(post.body)
+      if (result.ok) {
+        const track = await createPostTrack(post)
+        await db.update(socialPosts).set({
+          publishState: 'published',
+          externalId: result.messageId,
+          externalUrl: result.url,
+          publishedAt: new Date(),
+          publishNote: `Dikirim ke Telegram pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.${track ? ' Tautan pelacak disiapkan.' : ''}`,
+        }).where(eq(socialPosts.id, post.id))
+        await db.insert(activity).values({
+          actor: 'system',
+          action: 'Konten terbit di Telegram',
+          detail: `${post.headline} — message id ${result.messageId}, ${result.url}. Dikonfirmasi Telegram Bot API.`,
+          dataSource: 'live',
+        })
+        published += 1
+        continue
+      }
+      await db.update(socialPosts).set({
+        publishState: 'failed',
+        publishNote: `Telegram menolak publikasi: ${result.reason}`,
+      }).where(eq(socialPosts.id, post.id))
+      await db.insert(activity).values({
+        actor: 'system',
+        action: 'Publikasi Telegram gagal',
+        detail: `${post.headline} — ${result.reason}`,
+        dataSource: 'live',
+      })
+      notes.push(result.reason)
+      failed += 1
       continue
     }
 
