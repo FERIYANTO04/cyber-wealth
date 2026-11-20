@@ -64,10 +64,12 @@ export function OrderStatusPanel({
   order,
   downloadUrl,
   deliverableNote,
+  bankTransfer,
 }: {
   order: OrderDetail
   downloadUrl: string | null
   deliverableNote: string | null
+  bankTransfer: { bankName: string; accountName: string; accountNumber: string; instructions: string } | null
 }) {
   const tag = STATUS_TAG[order.status] ?? { label: order.status, tone: 'hold' as const }
 
@@ -108,7 +110,25 @@ export function OrderStatusPanel({
         )}
 
 
-        {order.status === 'pending' && order.invoiceUrl && (
+        {order.status === 'pending' && order.provider === 'manual_transfer' && bankTransfer && (
+          <>
+            <StatusNote
+              icon="wait"
+              tone="hold"
+              title="Menunggu transfer bank"
+              body="Transfer sesuai nominal berikut. Pesanan baru dianggap lunas setelah mutasi rekening diverifikasi penjual."
+            />
+            <div className="inset-box flex flex-col gap-2 rounded-xl p-4 text-sm">
+              <p><strong>Bank:</strong> {bankTransfer.bankName}</p>
+              <p><strong>Nama rekening:</strong> {bankTransfer.accountName}</p>
+              <p><strong>Nomor rekening:</strong> <span className="font-semibold tracking-wide">{bankTransfer.accountNumber}</span></p>
+              <p><strong>Nominal tepat:</strong> <span className="font-semibold">{money(order.amountIdr)}</span></p>
+              {bankTransfer.instructions && <p className="whitespace-pre-wrap text-ink-quiet">{bankTransfer.instructions}</p>}
+              <p className="text-xs text-ink-quiet">Cantumkan kode pesanan {order.code} pada berita transfer jika bank mendukungnya.</p>
+            </div>
+          </>
+        )}
+        {order.status === 'pending' && order.provider === 'paddle' && order.invoiceUrl && (
           <>
             <StatusNote
               icon="wait"
