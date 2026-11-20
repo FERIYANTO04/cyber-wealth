@@ -3,6 +3,7 @@ import { db } from './db'
 import { activity, orders, postTracks, products, revenueLeads, services, socialAccounts, socialPosts } from './db/schema'
 import { askAi, aiConfigured } from './ai'
 import { publishToTelegram } from './telegram'
+import { xReady, publishToX } from './x'
 import { fileUrl } from './storage'
 import { CHANNELS, MARKETS, MARKET_CHANNELS, channelLabel, channelLimit, type ChannelKey } from './labels'
 
@@ -71,6 +72,7 @@ export async function connectedChannels(): Promise<Set<string>> {
     const { telegramReady } = await import('./telegram')
     if (await telegramReady()) connected.add('telegram')
   }
+  if (await xReady()) connected.add('x')
   const rows = await db
     .select({ channel: socialAccounts.channel })
     .from(socialAccounts)
@@ -505,6 +507,40 @@ export async function publishDuePosts(): Promise<{
         })
         .where(eq(socialPosts.id, post.id))
       blocked += 1
+      continue
+    }
+
+    if (post.channel === 'x') {
+      const result = await publishToX(post.body)
+      if (result.ok) {
+        await db.update(socialPosts).set({
+          publishState: 'published',
+          externalId: result.tweetId,
+          externalUrl: result.url,
+          publishedAt: new Date(),
+          publishNote: 'Diterbitkan di X dan dikonfirmasi oleh API X.',
+        }).where(eq(socialPosts.id, post.id))
+        await db.insert(activity).values({
+          actor: 'system',
+          action: 'Konten terbit di X',
+          detail: `${post.headline} — ${result.url}. Dikonfirmasi X API.`,
+          dataSource: 'live',
+        })
+        published += 1
+        continue
+      }
+      await db.update(socialPosts).set({
+        publishState: 'failed',
+        publishNote: `X menolak publikasi: ${result.reason}`,
+      }).where(eq(socialPosts.id, post.id))
+      await db.insert(activity).values({
+        actor: 'system',
+        action: 'Publikasi X gagal',
+        detail: `${post.headline} — ${result.reason}`,
+        dataSource: 'live',
+      })
+      notes.push(result.reason)
+      failed += 1
       continue
     }
 
