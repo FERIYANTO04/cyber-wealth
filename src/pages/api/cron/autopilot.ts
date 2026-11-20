@@ -6,6 +6,8 @@ import { runBillingPass } from '@/lib/billing'
 import { publishDuePosts } from '@/lib/social'
 import { isPlaceholder } from '@/lib/env'
 import { runHousekeeping } from '@/lib/housekeeping'
+import { testAi, testPaddle, storageStatus } from '@/lib/integrations'
+import { testEmail } from '@/lib/email'
 
 // Scheduled hosts call this endpoint with: Authorization: Bearer <CRON_SECRET>.
 // Keep CRON_SECRET private; never expose it through NEXT_PUBLIC_* variables.
@@ -51,14 +53,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return { error: 'Publikasi sosial gagal; periksa log server.' }
     })
 
+    // Provider checks are read-only except for a temporary storage probe file that is
+    // deleted immediately. This gives the owner verified status rather than just key presence.
+    const [aiCheck, emailCheck, paddleCheck, storageCheck] = await Promise.all([
+      testAi().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'AI check failed' })),
+      testEmail().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Email check failed' })),
+      testPaddle().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Paddle check failed' })),
+      storageStatus().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Storage check failed' })),
+    ])
+    const integrations = { ai: aiCheck, email: emailCheck, paddle: paddleCheck, storage: storageCheck }
+    await logActivity({
+      actor: 'system',
+      action: 'Pemeriksaan integrasi terjadwal',
+      detail: Object.entries(integrations).map(([name, check]) => `${name}: ${check.state} — ${check.message}`).join(' | '),
+    })
+
     const due = await autopilotDue()
     if (!due) {
-      return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, social, housekeeping })
+      return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, social, housekeeping, integrations })
     }
 
     const result = await runAutopilot('schedule')
     if (result.paused) {
-      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, social, housekeeping })
+      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, social, housekeeping, integrations })
     }
 
     await logActivity({
@@ -66,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action: 'Putaran terjadwal autopilot berjalan',
       detail: result.results.map((item) => `${item.label}: ${item.summary}`).join(' · '),
     })
-    return res.status(200).json({ ran: true, results: result.results, billing, social, housekeeping })
+    return res.status(200).json({ ran: true, results: result.results, billing, social, housekeeping, integrations })
   } catch (error) {
     console.error('[cron autopilot]', error)
     return res.status(500).json({ ran: false, reason: 'Putaran gagal. Periksa log server.' })

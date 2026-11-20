@@ -129,9 +129,6 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
         'Kunci API penyedia email belum diisi. Email konfirmasi, pengingat, dan pemberitahuan pemilik hanya tercatat di kotak keluar aplikasi, belum terkirim.',
     }
   }
-  if (isPlaceholder(from)) {
-    return { state: 'missing', message: 'Alamat pengirim email belum diisi, jadi penyedia email belum bisa menerima pesan.' }
-  }
   try {
     const response = await fetch(`${baseUrl}/domains`, {
       headers: { Authorization: `Bearer ${key}` },
@@ -147,6 +144,9 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
     const payload = (await response.json().catch(() => null)) as
       | { data?: { name?: string; status?: string }[] }
       | null
+    if (isPlaceholder(from)) {
+      return { state: 'missing', message: 'Kunci API email diterima penyedia, tetapi EMAIL_FROM belum diisi. Tambahkan alamat pengirim dari domain yang diverifikasi.' }
+    }
     const senderDomain = from.split('@').pop()?.trim().toLowerCase() ?? ''
     const verified = (payload?.data ?? []).some(
       (domain) => domain.name?.trim().toLowerCase() === senderDomain && domain.status?.toLowerCase() === 'verified',
