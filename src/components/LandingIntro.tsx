@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, MessageCircle, UserRound } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, MessageCircle, UserRound, ShieldCheck } from 'lucide-react'
 import { Button, Panel, SignalLink } from '@/components/ui'
 
 /** Public company homepage. Owner controls stay behind the private sign-in route. */
@@ -14,9 +14,14 @@ export function LandingIntro({ needsSetup: _needsSetup }: { needsSetup: boolean 
           <SignalLink href="/jasa">Layanan</SignalLink>
           <SignalLink href="/kontak">Kontak</SignalLink>
         </nav>
-        <Link href="/member" className="flex items-center gap-1 text-xs font-medium text-ink hover:text-signal">
-          <UserRound className="size-3" aria-hidden="true" /> Portal pelanggan
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/member" className="flex items-center gap-1 text-xs font-medium text-ink hover:text-signal">
+            <UserRound className="size-3" aria-hidden="true" /> Portal pelanggan
+          </Link>
+          <Link href="/login" className="flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink hover:border-signal hover:text-signal">
+            <ShieldCheck className="size-3.5" aria-hidden="true" /> Owner
+          </Link>
+        </div>
       </header>
 
       <section className="grid gap-8 py-8 sm:grid-cols-[1.2fr_0.8fr] sm:items-center sm:py-14">
