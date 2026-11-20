@@ -104,7 +104,7 @@ export async function testPaddle(expectedWebhookUrl?: string): Promise<{ state: 
   const base = process.env.PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
   const webhookUrl = expectedWebhookUrl || (
     process.env.RAILWAY_PUBLIC_DOMAIN
-      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN.replace(/^https?:\\/\\//, '').replace(/\\/+$/, '')}/api/webhooks/paddle`
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN.replace('https://', '').replace('http://', '').split('/')[0]}/api/webhooks/paddle`
       : ''
   )
   try {
