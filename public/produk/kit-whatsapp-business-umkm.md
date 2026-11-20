@@ -1,143 +1,219 @@
-# KIT WHATSAPP BUSINESS UNTUK UMKM — SISTEM JUALAN 30 HARI
+# KIT WHATSAPP BUSINESS UMKM
+## Sistem layanan pelanggan, katalog, follow-up, dan penjualan 30 hari
+Versi 1.1 | Bahasa Indonesia
 
-Versi 1.0 | Bahasa Indonesia
+Kit ini membantu usaha kecil menata WhatsApp Business sebagai kanal layanan dan penjualan. Cocok untuk usaha rumahan, toko kecil, makanan/minuman, reseller, dan jasa. Sesuaikan contoh dengan produk, kapasitas, harga, serta kebijakan usaha yang sebenarnya.
 
-Paket kerja praktis untuk menata katalog, membalas calon pembeli, menindaklanjuti chat, dan mencatat pesanan. Cocok untuk usaha rumahan, reseller, jasa, makanan, dan toko kecil.
+## Peta implementasi
+1. Rapikan profil dan jam layanan.
+2. Buat katalog dengan informasi lengkap.
+3. Siapkan balasan cepat dan alur order.
+4. Catat prospek dan pesanan.
+5. Terbitkan konten yang membantu calon pelanggan.
+6. Evaluasi angka setiap minggu.
 
-## BAGIAN A — SETUP 60 MENIT
+## A. Setup profil bisnis dalam 60 menit
 
-### Profil bisnis
-Nama bisnis: [Nama]  
-Deskripsi: Kami menyediakan [produk/jasa] untuk [target pelanggan] dengan [keunggulan yang benar-benar dimiliki].  
-Jam layanan: [Hari dan jam]  
-Alamat/area: [Lokasi atau area pengiriman]  
-Tautan katalog: [Link]
+### Profil
+- Nama bisnis: [Nama yang digunakan konsisten]
+- Deskripsi: Kami menyediakan [produk/jasa] untuk [target pelanggan] dengan [keunggulan yang benar-benar dimiliki].
+- Kategori: [Kategori paling sesuai]
+- Jam layanan: [Hari dan jam]
+- Area/alamat: [Area layanan atau alamat aman dipublikasikan]
+- Email/situs: [Jika tersedia]
+- Tautan katalog/pemesanan: [Tautan aktif]
 
-### Format katalog per produk
-Nama: [Nama produk]  
-Harga: Rp[Harga]  
-Isi/ukuran: [Detail]  
-Manfaat utama: [Manfaat spesifik]  
-Pilihan: [Varian]  
-Stok: [Jumlah/tersedia sesuai kondisi]  
-Pengiriman: [Metode dan estimasi realistis]  
-Cara pesan: Kirim nama produk + jumlah + alamat.
+### Checklist keamanan dan kepercayaan
+- [ ] Aktifkan verifikasi dua langkah.
+- [ ] Gunakan PIN yang tidak mudah ditebak; jangan bagikan OTP.
+- [ ] Batasi perangkat tertaut hanya perangkat milik tim.
+- [ ] Tulis jam layanan dan estimasi balasan realistis.
+- [ ] Gunakan foto produk asli dan logo yang memang dimiliki.
+- [ ] Jangan tampilkan alamat rumah pribadi jika tidak diperlukan.
+- [ ] Siapkan kebijakan pengiriman, retur, dan komplain sebelum menerima order.
 
-Gunakan foto produk asli, harga jelas, dan informasi yang akurat. Jangan memakai testimoni atau klaim palsu.
+## B. Format katalog per produk/jasa
 
-## BAGIAN B — 12 TEMPLATE CHAT SIAP SALIN
+Nama: [Nama produk/varian]  
+Harga: Rp[angka]  
+Isi/ukuran: [Jumlah, ukuran, bahan, atau ruang lingkup jasa]  
+Manfaat/fungsi: [Manfaat spesifik tanpa klaim berlebihan]  
+Pilihan: [Varian yang benar-benar tersedia]  
+Stok/kapasitas: [Jumlah atau kapasitas aktual]  
+Waktu pengerjaan/pengiriman: [Estimasi realistis]  
+Area/ongkir: [Ketentuan]  
+Cara pesan: Kirim nama produk + jumlah + area tujuan.
 
-1. Sambutan
-Halo Kak, terima kasih sudah menghubungi [Nama Bisnis]. Kakak sedang mencari [kategori produk] atau ingin tanya pilihan yang tersedia?
+Sebelum katalog dipublikasikan, cek harga, stok, foto, varian, dan syarat. Perbarui segera jika ada perubahan.
 
-2. Menggali kebutuhan
-Boleh tahu kebutuhan utama Kakak apa dan kisaran anggaran yang disiapkan? Saya bantu pilihkan opsi yang sesuai.
+## C. 12 template chat siap salin
 
-3. Menjelaskan produk
-Produk [nama] berisi [detail]. Cocok untuk [kebutuhan]. Harga Rp[harga]. Ini foto dan detail aslinya: [tautan].
+### 1. Sambutan
+Halo Kak, terima kasih sudah menghubungi [Nama Bisnis]. Kami melayani [produk/jasa]. Kakak ingin melihat katalog atau bertanya tentang kebutuhan tertentu?
 
-4. Menjawab harga
-Untuk [varian], harganya Rp[harga]. Sudah termasuk [komponen]. Ongkir dihitung berdasarkan alamat tujuan.
+### 2. Menggali kebutuhan
+Boleh tahu produk/jasa yang dicari, jumlah atau kebutuhannya, dan area tujuan? Saya bantu cek pilihan yang sesuai.
 
-5. Menangani keberatan
-Tidak apa-apa Kak, silakan dipertimbangkan. Kalau ada bagian yang masih kurang jelas, saya bantu jelaskan tanpa harus langsung membeli.
+### 3. Menjelaskan produk
+Untuk [kebutuhan], pilihan [nama produk] memiliki [detail utama]. Harganya Rp[harga]. Informasi ukuran/isi dan foto produk dapat dilihat di [tautan].
 
-6. Menutup pesanan
-Jika sudah cocok, mohon kirim nama penerima, nomor WhatsApp, alamat lengkap, dan pilihan produk. Saya kirim ringkasan pesanan sebelum pembayaran.
+### 4. Menjawab harga
+Harga [nama/varian] adalah Rp[harga] untuk [isi/ukuran]. [Biaya yang termasuk]. Ongkir atau biaya tambahan dikonfirmasi sebelum pesanan dibuat.
 
-7. Ringkasan pesanan
-Ringkasan pesanan:
-Produk: [Nama/varian]
-Jumlah: [Jumlah]
-Subtotal: Rp[angka]
-Ongkir: Rp[angka]
-Total: Rp[angka]
-Mohon periksa kembali. Pesanan diproses setelah pembayaran terverifikasi.
+### 5. Menangani keberatan
+Terima kasih sudah mempertimbangkan, Kak. Tidak perlu terburu-buru. Jika ada bagian yang ingin dibandingkan—isi, harga, atau cara penggunaan—saya bantu jelaskan.
 
-8. Follow-up 1 (setelah 1 hari)
-Halo Kak, izin menindaklanjuti informasi [produk] kemarin. Apakah masih ingin dibantu memilih? Jika belum, tidak masalah.
+### 6. Menutup pesanan
+Jika sudah cocok, mohon kirim [data minimum yang diperlukan]. Kami akan membuat ringkasan pesanan dan meminta Kakak memeriksanya sebelum pembayaran.
 
-9. Follow-up 2 (setelah 3 hari)
-Halo Kak, saya cek kembali apakah ada pertanyaan tentang [produk]. Saya siap bantu jika masih diperlukan. Jika tidak berminat, saya tidak akan mengganggu lagi.
+### 7. Ringkasan pesanan
+RINGKASAN PESANAN  
+Kode: [Kode]  
+Produk/varian: [Nama]  
+Jumlah: [Jumlah]  
+Subtotal: Rp[angka]  
+Ongkir/biaya: Rp[angka]  
+Total: Rp[angka]  
+Estimasi proses: [Waktu]  
+Mohon periksa nama, jumlah, alamat, dan total. Pesanan diproses setelah pembayaran terverifikasi.
 
-10. Konfirmasi pembayaran
-Pembayaran sudah kami cocokkan pada catatan transaksi. Pesanan [kode] sedang diproses. Terima kasih.
+### 8. Follow-up pertama
+Halo Kak, izin menindaklanjuti informasi [produk] yang sempat ditanyakan. Apakah masih ada hal yang ingin dibantu? Jika belum membutuhkan, tidak masalah.
 
-11. Update pengiriman
-Pesanan [kode] telah diserahkan kepada [kurir/metode] pada [tanggal]. Nomor pelacakan: [nomor jika tersedia].
+### 9. Follow-up terakhir
+Halo Kak, saya menghubungi sekali lagi terkait [produk]. Jika belum cocok atau belum diperlukan, saya tutup tindak lanjutnya agar tidak mengganggu. Terima kasih sudah menghubungi kami.
 
-12. Meminta ulasan
-Jika produk sudah diterima, boleh berbagi pendapat jujur tentang pengalaman Kakak? Masukan Kakak membantu kami memperbaiki layanan.
+### 10. Konfirmasi pembayaran
+Pembayaran untuk pesanan [kode] sudah kami cocokkan melalui catatan transaksi. Pesanan masuk tahap [proses]. Terima kasih.
 
-## BAGIAN C — SOP PENANGANAN CHAT
-1. Balas pada jam layanan yang diumumkan.
-2. Tanyakan kebutuhan sebelum menawarkan produk.
-3. Berikan harga, isi, batasan, dan ongkir secara transparan.
-4. Jangan menyatakan stok terbatas atau diskon jika tidak benar.
-5. Kirim ringkasan order sebelum meminta pembayaran.
-6. Cocokkan pembayaran di rekening/payment provider, bukan hanya screenshot.
-7. Catat status order dan nomor resi.
-8. Hentikan follow-up jika pelanggan meminta tidak dihubungi.
+### 11. Update pengiriman
+Pesanan [kode] diserahkan kepada [kurir/metode] pada [tanggal]. Nomor pelacakan: [nomor jika tersedia]. Jika ada kendala, silakan hubungi kami pada jam layanan.
 
-## BAGIAN D — KALENDER KONTEN 30 HARI
-Hari 1: Perkenalan bisnis dan siapa yang dilayani.  
-Hari 2: Masalah pelanggan yang diselesaikan produk.  
-Hari 3: Foto detail produk asli.  
-Hari 4: Cara penggunaan/perawatan.  
-Hari 5: FAQ harga dan pemesanan.  
-Hari 6: Proses produksi/persiapan pesanan.  
-Hari 7: Cerita alasan memulai usaha.  
-Hari 8: Perbandingan varian secara jujur.  
-Hari 9: Kesalahan umum saat memilih produk.  
-Hari 10: Panduan memilih ukuran/varian.  
-Hari 11: Video proses packing.  
-Hari 12: Jawaban pertanyaan pelanggan.  
-Hari 13: Cerita bahan atau proses.  
-Hari 14: Ringkasan manfaat dan batasan produk.  
-Hari 15: Promo nyata dengan syarat dan masa berlaku jelas.  
-Hari 16: Tutorial singkat.  
-Hari 17: Behind the scenes.  
-Hari 18: Testimoni asli dengan izin pelanggan.  
-Hari 19: Cara order langkah demi langkah.  
-Hari 20: Penjelasan ongkir dan pengiriman.  
-Hari 21: Produk terlaris hanya jika datanya mendukung.  
-Hari 22: Mitos dan fakta seputar kategori produk.  
-Hari 23: Cerita pertanyaan yang sering muncul.  
-Hari 24: Perkenalkan varian lain.  
-Hari 25: Cara menyimpan/merawat.  
-Hari 26: Tampilkan review jujur.  
-Hari 27: Jelaskan garansi/retur sesuai kebijakan.  
-Hari 28: Rekap proses pesanan minggu ini.  
-Hari 29: Tanya kebutuhan audiens.  
-Hari 30: Rangkuman produk dan ajakan chat yang jelas.
+### 12. Meminta ulasan
+Halo Kak, apakah pesanan [kode] sudah diterima dengan baik? Jika berkenan, kami menghargai ulasan jujur tentang produk dan layanan. Masukan Kakak membantu kami memperbaiki usaha.
 
-## BAGIAN E — TRACKER PENJUALAN
-Salin tabel ini ke spreadsheet:
+Etika follow-up: hubungi hanya orang yang memulai percakapan atau memberi izin. Hentikan pesan jika pelanggan menolak. Jangan membeli daftar nomor, mengirim spam, atau membuat urgensi palsu.
 
-| Tanggal | Nama/ID pelanggan | Sumber chat | Produk | Nilai | Status | Follow-up | Catatan |
+## D. SOP layanan dari chat sampai pesanan selesai
+
+1. Terima chat dan balas dalam jam layanan yang diumumkan.
+2. Pahami kebutuhan; tanyakan seperlunya.
+3. Cocokkan produk dan jelaskan isi, harga, batasan, stok, serta waktu.
+4. Buat ringkasan produk, jumlah, biaya, alamat, dan total.
+5. Verifikasi pembayaran melalui catatan rekening/payment provider; screenshot bukan bukti final.
+6. Catat status dan penanggung jawab order.
+7. Kirim/update pesanan dan bagikan resi jika tersedia.
+8. Tangani komplain sesuai kebijakan dan minta ulasan secara wajar.
+
+### Status order
+Baru → Menunggu konfirmasi → Menunggu pembayaran → Dibayar → Diproses → Dikirim/Diserahkan → Selesai.  
+Status lain: Batal, Refund, Perlu bantuan. Simpan alasan pembatalan agar masalah berulang terlihat.
+
+## E. Balasan cepat yang perlu dibuat
+
+Buat shortcut di fitur Balas Cepat untuk:
+- /katalog — tautan katalog terbaru.
+- /harga — daftar harga atau cara menghitung harga.
+- /ongkir — area layanan dan biaya pengiriman.
+- /jam — jam operasional dan estimasi balasan.
+- /order — format data pesanan.
+- /bayar — metode pembayaran resmi.
+- /retur — kebijakan retur/komplain.
+- /lokasi — lokasi atau area layanan yang aman dibagikan.
+
+Pastikan isi shortcut selalu diperbarui. Jangan menyimpan nomor kartu, PIN, password, atau OTP pelanggan.
+
+## F. Kalender konten 30 hari
+
+| Hari | Ide konten | Tujuan |
+|---:|---|---|
+| 1 | Perkenalan usaha dan siapa yang dilayani | Kepercayaan |
+| 2 | Masalah pelanggan yang dibantu | Edukasi |
+| 3 | Foto detail produk asli | Informasi |
+| 4 | Cara menggunakan produk | Edukasi |
+| 5 | FAQ harga dan pemesanan | Mengurangi keraguan |
+| 6 | Proses persiapan/pembuatan | Transparansi |
+| 7 | Cerita awal usaha | Kedekatan |
+| 8 | Perbandingan varian secara jujur | Membantu memilih |
+| 9 | Kesalahan umum saat memilih | Edukasi |
+| 10 | Panduan ukuran/varian | Informasi |
+| 11 | Proses packing | Kepercayaan |
+| 12 | Jawaban pertanyaan umum | Layanan |
+| 13 | Bahan atau proses produksi | Transparansi |
+| 14 | Manfaat dan batasan produk | Ekspektasi |
+| 15 | Promo nyata dengan syarat jelas | Penjualan |
+| 16 | Tutorial singkat | Edukasi |
+| 17 | Behind the scenes | Kedekatan |
+| 18 | Ulasan asli dengan izin | Bukti sosial |
+| 19 | Cara order langkah demi langkah | Konversi |
+| 20 | Ongkir dan pengiriman | Informasi |
+| 21 | Produk paling sering ditanyakan berdasarkan catatan | Edukasi |
+| 22 | Mitos dan fakta kategori produk | Edukasi |
+| 23 | Pertanyaan pelanggan yang sering muncul | Layanan |
+| 24 | Perkenalan varian lain | Penemuan |
+| 25 | Cara menyimpan/merawat | Purna jual |
+| 26 | Tampilkan review asli | Kepercayaan |
+| 27 | Jelaskan garansi/retur yang berlaku | Transparansi |
+| 28 | Rekap proses pesanan tanpa data pribadi | Kepercayaan |
+| 29 | Tanya kebutuhan audiens | Riset |
+| 30 | Rangkuman produk dan cara pesan | Penjualan |
+
+Jangan mengunggah foto, nama, nomor, alamat, atau percakapan pelanggan tanpa izin. Jangan membuat testimoni palsu.
+
+## G. Tracker prospek dan penjualan
+
+| Tanggal | ID/nama pelanggan | Sumber | Produk | Nilai | Status | Tindak lanjut | Catatan |
 |---|---|---|---|---:|---|---|---|
-| | | WA/IG/Referensi | | | Baru/Negosiasi/Paid/Batal | | |
+| | | WA/katalog/referensi | | | Baru | | |
+| | | | | | Menunggu | | |
+| | | | | | Dibayar | | |
 
-Pantau setiap minggu:
-- Chat masuk
-- Chat yang bertanya harga
-- Pesanan dibayar
-- Nilai penjualan
-- Pembatalan
-- Produk yang paling sering ditanyakan
+Gunakan ID pelanggan bila nama lengkap tidak dibutuhkan. Batasi akses spreadsheet untuk tim yang memang perlu.
 
-Rumus sederhana:
-Conversion chat = pesanan dibayar ÷ chat masuk × 100%.
-Rata-rata nilai pesanan = total penjualan ÷ jumlah pesanan dibayar.
+### Indikator mingguan
+- Chat masuk unik.
+- Chat yang memenuhi kebutuhan target.
+- Penawaran/ringkasan order dikirim.
+- Pesanan dibayar.
+- Nilai penjualan yang benar-benar diterima.
+- Pembatalan dan refund.
+- Waktu respons median.
+- Produk/pertanyaan yang paling sering muncul.
 
-## BAGIAN F — RENCANA EKSEKUSI 7 HARI
-Hari 1: Lengkapi profil dan jam layanan.  
-Hari 2: Buat katalog 5 produk/jasa dengan foto asli.  
-Hari 3: Pasang 3 jawaban cepat dan template order.  
-Hari 4: Hubungi pelanggan lama hanya jika mereka pernah memberi izin menerima pesan.  
-Hari 5: Terbitkan konten edukasi dan demo produk.  
-Hari 6: Catat semua chat dan tindak lanjuti secara sopan.  
-Hari 7: Hitung rasio chat menjadi pesanan dan perbaiki bagian yang paling lemah.
+Rumus:
+- Konversi chat = pesanan dibayar ÷ chat masuk berkualitas × 100%.
+- Rata-rata nilai pesanan = penjualan terkonfirmasi ÷ jumlah pesanan dibayar.
+- Rasio pembatalan = pesanan batal ÷ seluruh pesanan × 100%.
 
-## PENTING
-Paket ini membantu proses penjualan, bukan menjamin jumlah pesanan atau omzet. Hasil bergantung pada kualitas produk, harga, permintaan, distribusi, kecepatan layanan, dan kepercayaan pelanggan. Jangan spam, membeli testimoni, atau membuat klaim palsu.
+Hitung dari data periode yang sama. Jika jumlahnya kecil, tampilkan jumlah mentah juga agar persentase tidak menyesatkan.
+
+## H. Lembar hitung harga sederhana
+
+Harga jual perlu mempertimbangkan biaya produk/bahan, kemasan, tenaga kerja langsung, biaya platform/pembayaran, subsidi ongkir/promo, biaya operasional yang dialokasikan, dan margin.
+
+Contoh ilustrasi: biaya produk Rp20.000 + kemasan Rp2.000 + biaya proses Rp3.000 = Rp25.000. Jika biaya lain per pesanan Rp2.000, total biaya terhitung Rp27.000. Harga jual harus lebih tinggi dari angka ini agar ada kontribusi untuk biaya tetap dan laba. Ini hanya contoh; gunakan biaya usaha yang sebenarnya.
+
+## I. Rencana eksekusi 7 hari
+
+- Hari 1: lengkapi profil, jam layanan, dan keamanan akun.
+- Hari 2: masukkan 5 produk/jasa dengan foto dan informasi asli.
+- Hari 3: buat balasan cepat dan format order.
+- Hari 4: uji alur chat dengan anggota tim; periksa ringkasan order dan pembayaran.
+- Hari 5: terbitkan konten edukasi/demo yang benar-benar menggambarkan produk.
+- Hari 6: catat chat dan tindak lanjuti hanya prospek yang mengizinkan.
+- Hari 7: hitung metrik, kumpulkan pertanyaan berulang, dan perbaiki katalog/SOP.
+
+## J. Checklist sebelum operasional
+
+- [ ] Profil, harga, stok, dan jam layanan benar.
+- [ ] Katalog menampilkan foto dan deskripsi asli.
+- [ ] Metode pembayaran resmi dapat diverifikasi.
+- [ ] Biaya kirim dan estimasi dijelaskan sebelum pembayaran.
+- [ ] Kebijakan retur/komplain tersedia.
+- [ ] Tim tahu cara memverifikasi pembayaran.
+- [ ] Tracker hanya dapat diakses orang berwenang.
+- [ ] Follow-up berbasis izin dan dapat dihentikan.
+- [ ] Tidak ada klaim, diskon, stok, atau testimoni palsu.
+
+## Batasan
+Kit ini adalah sistem kerja, bukan jaminan omzet atau jumlah pelanggan. Hasil bergantung pada kualitas produk/jasa, permintaan, harga, distribusi, pelayanan, dan konsistensi. Patuhi aturan WhatsApp dan hukum perlindungan data yang berlaku.
