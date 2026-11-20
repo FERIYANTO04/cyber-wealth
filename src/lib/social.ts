@@ -228,7 +228,7 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
 
   const targets = args.channels?.length
     ? args.channels
-    : [...new Set(markets.flatMap((market) => MARKET_CHANNELS[market] ?? ['facebook']))]
+    : [...new Set(markets.flatMap((market) => MARKET_CHANNELS[market] ?? []))]
 
   let created = 0
   const notes: string[] = []
