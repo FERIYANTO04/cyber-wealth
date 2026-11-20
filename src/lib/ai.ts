@@ -1,7 +1,7 @@
 /**
  * Shared OpenAI-compatible chat-completions client.
- * Neon AI Gateway is primary; an already-configured Groq key is the automatic fallback.
- * The fallback reuses an existing credential and is attempted only when the primary fails.
+ * Uses the configured OpenAI-compatible provider. Production is routed directly to Groq;
+ * the existing Groq fallback is used only when a different primary provider fails.
  */
 import { isPlaceholder } from './env'
 
@@ -12,7 +12,7 @@ const PRIMARY_BASE_URL = (
 ).replace(/\/+$/, '')
 const PRIMARY_MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
 // If the configured endpoint is Groq, use the Groq credential directly.
- // Do not send a Neon Gateway token to Groq or waste every request on a known-disabled Neon endpoint.
+// Do not send a Neon Gateway token to Groq or waste every request on a known-disabled Neon endpoint.
 const PRIMARY_KEY = PRIMARY_BASE_URL.includes('api.groq.com')
   ? (process.env.GROQ_API_KEY || '')
   : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '')
@@ -132,7 +132,7 @@ export async function chatWithAi(args: {
     baseUrl: PRIMARY_BASE_URL,
     model: PRIMARY_MODEL,
     key: primaryKey,
-    label: NEON_BASE_URL || process.env.AI_BASE_URL ? 'AI Gateway' : 'Groq',
+    label: primaryIsGroq ? 'Groq' : (NEON_BASE_URL || process.env.AI_BASE_URL ? 'AI Gateway' : 'Groq'),
   }
   const primaryIsGroq = primary.baseUrl.includes('api.groq.com')
   const result = primaryIsConfigured
