@@ -7,6 +7,7 @@ import { requireOwnerPage } from '@/lib/auth'
 import { aiConfig, storageStatus, testPaddle } from '@/lib/integrations'
 import { isPlaceholder } from '@/lib/env'
 import { emailConfig } from '@/lib/email'
+import { telegramConnectionStatus } from '@/lib/telegram'
 import { getEngineCounts } from '@/lib/data'
 import type { PageWithFrame } from '@/lib/frame'
 
@@ -20,6 +21,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const email = emailConfig()
   const storage = await storageStatus()
   const paddle = await testPaddle(`https://${host}/api/webhooks/paddle`)
+  const telegram = await telegramConnectionStatus()
   const engines = await getEngineCounts()
 
   const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'unverified'
@@ -80,6 +82,22 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       testable: true,
     },
     {
+      key: 'telegram',
+      title: 'Telegram — kanal publikasi tanpa Meta',
+      summary: 'Menerbitkan konten yang disetujui owner ke kanal Telegram melalui Bot API.',
+      state: telegram.state,
+      message: telegram.message,
+      required: ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'],
+      steps: [
+        'Buat bot melalui @BotFather dan salin tokennya.',
+        'Tambahkan bot ke kanal Telegram sebagai admin dengan izin mengirim pesan.',
+        'Simpan TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID di Railway Production.',
+        'Tekan Uji koneksi. Pemeriksaan hanya memeriksa identitas bot dan hak admin; tidak mengirim pesan.',
+      ],
+      where: 'Token hanya dibaca server. Konten baru diterbitkan setelah disetujui dan dijadwalkan.',
+      testable: true,
+    },
+    {
       key: 'storage',
       title: 'Penyimpanan berkas privat',
       summary: 'Menyimpan file produk digital untuk diunduh pembeli setelah pembayaran dikonfirmasi.',
@@ -102,6 +120,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const blockers: string[] = []
   blockers.push('Koneksi model AI perlu lulus uji langsung.')
   blockers.push('Pengiriman email transaksional perlu lulus uji langsung.')
+  if (telegram.state !== 'ready') blockers.push('Telegram belum terhubung sebagai kanal publikasi non-Meta.')
   if (engines.products === 0) blockers.push('Belum ada produk digital yang terbit.')
   if (engines.services === 0) blockers.push('Belum ada layanan jasa yang terbit.')
   if (engines.plans === 0) blockers.push('Belum ada paket langganan yang terbit.')
