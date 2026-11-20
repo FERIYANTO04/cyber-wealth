@@ -91,3 +91,28 @@ export async function storageStatus(): Promise<{ state: CheckState; message: str
   }
 }
 
+
+/** Checks Paddle API credentials without creating a charge or checkout. */
+export async function testPaddle(): Promise<{ state: CheckState; message: string }> {
+  const key = process.env.PADDLE_API_KEY ?? ''
+  const secret = process.env.PADDLE_WEBHOOK_SECRET ?? ''
+  if (!key || isPlaceholder(key)) return { state: 'missing', message: 'PADDLE_API_KEY belum dikonfigurasi.' }
+  const base = process.env.PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
+  try {
+    const response = await fetch(base + '/event-types', {
+      headers: { Authorization: 'Bearer ' + key },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(12000),
+    })
+    if (response.status === 401 || response.status === 403) {
+      return { state: 'invalid', message: 'Paddle menolak API key (' + response.status + '). Periksa apakah key cocok dengan mode ' + (process.env.PADDLE_ENV === 'sandbox' ? 'Sandbox' : 'Live') + '.' }
+    }
+    if (!response.ok) return { state: 'error', message: 'Paddle API menjawab ' + response.status + '. Koneksi pembayaran belum terverifikasi.' }
+    if (!secret || isPlaceholder(secret)) {
+      return { state: 'missing', message: 'API key Paddle valid, tetapi PADDLE_WEBHOOK_SECRET belum diisi. Pembayaran tidak boleh dianggap otomatis terkonfirmasi.' }
+    }
+    return { state: 'unverified', message: 'API key Paddle valid (' + (process.env.PADDLE_ENV === 'sandbox' ? 'Sandbox' : 'Live') + ') dan webhook secret tersedia. Owner masih harus memastikan URL webhook dan event transaction.completed/transaction.paid terdaftar di dashboard Paddle.' }
+  } catch {
+    return { state: 'error', message: 'Tidak dapat menghubungi Paddle API dari server.' }
+  }
+}
