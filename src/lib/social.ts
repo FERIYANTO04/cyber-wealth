@@ -145,7 +145,7 @@ type Material = {
 
 async function catalogMaterials(): Promise<Material[]> {
   const [productRows, serviceRows] = await Promise.all([
-    db.select().from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live'))).limit(8),
+    db.select().from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live'), sql`${products.fileKey} is not null and ${products.fileKey} !~* '^https?://' and coalesce(${products.fileName}, '') !~* '(draft|draf)'`)).limit(8),
     db.select().from(services).where(eq(services.status, 'published')).limit(8),
   ])
 
