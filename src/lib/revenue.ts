@@ -7,7 +7,7 @@ import { fileUrl } from './storage'
 import { money } from './format'
 
 /** Storefront-visible products: published, live, and carrying a reviewed deliverable. */
-const deliverableReady = sql`${products.fileKey} is not null and coalesce(${products.fileName}, '') !~* '(draft|draf)'`
+const deliverableReady = sql`${products.fileKey} is not null and ${products.fileKey} !~* '^https?://' and coalesce(${products.fileName}, '') !~* '(draft|draf)'`
 
 export async function getStoreProducts() {
   return db
