@@ -80,10 +80,18 @@ async function runCeo(trigger: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(serviceRequests)
     .where(eq(serviceRequests.status, 'new'))
-  const [liveProducts] = await db
+  const [publishedProducts] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(products)
     .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+  const [liveProducts] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(products)
+    .where(and(
+      eq(products.status, 'published'),
+      eq(products.dataSource, 'live'),
+      sql`${products.fileKey} is not null and ${products.fileKey} !~* '^https?://' and coalesce(${products.fileName}, '') !~* '(draft|draf)'`
+    ))
   const [draftProducts] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(products)
@@ -113,7 +121,8 @@ async function runCeo(trigger: string) {
   const blockers: string[] = []
   if ((pendingOrders?.n ?? 0) > 0) blockers.push(`${pendingOrders.n} pesanan belum dibayar`)
   if ((newJobs?.n ?? 0) > 0) blockers.push(`${newJobs.n} permintaan jasa belum ditinjau`)
-  if ((liveProducts?.n ?? 0) === 0) blockers.push('belum ada produk yang terbit di katalog')
+  if ((publishedProducts?.n ?? 0) === 0) blockers.push('belum ada produk yang berstatus terbit di katalog')
+  if ((liveProducts?.n ?? 0) === 0) blockers.push('belum ada produk dengan berkas privat yang siap dijual')
   if ((draftProducts?.n ?? 0) > 0) blockers.push(`${draftProducts.n} produk masih berstatus draf dan belum siap dijual`)
   if ((publishedNeedsReview?.n ?? 0) > 0) blockers.push(`${publishedNeedsReview.n} produk berstatus terbit tetapi berkasnya belum layak jual (belum ada file atau nama berkas masih DRAF)`)
 
@@ -122,7 +131,8 @@ async function runCeo(trigger: string) {
     `Pendapatan terkonfirmasi: Rp ${Number(paidOrders?.total ?? 0).toLocaleString('id-ID')}`,
     `Pesanan belum dibayar: ${pendingOrders?.n ?? 0}`,
     `Permintaan jasa baru: ${newJobs?.n ?? 0}`,
-    `Produk terbit: ${liveProducts?.n ?? 0}`,
+    `Produk berstatus terbit: ${publishedProducts?.n ?? 0}`,
+    `Produk siap dijual (berkas privat dan nama berkas lolos pemeriksaan): ${liveProducts?.n ?? 0}`,
     `Produk draf: ${draftProducts?.n ?? 0}`,
     `Produk terbit yang berkasnya perlu diperiksa: ${publishedNeedsReview?.n ?? 0}`,
     `Langganan aktif: ${activeSubs?.n ?? 0}`,
@@ -135,7 +145,7 @@ async function runCeo(trigger: string) {
 
   const factualSummary =
     `${paidOrders?.n ?? 0} pesanan lunas (Rp ${Number(paidOrders?.total ?? 0).toLocaleString('id-ID')}), ` +
-    `${activeSubs?.n ?? 0} langganan aktif, ${liveProducts?.n ?? 0} produk terbit. ` +
+    `${activeSubs?.n ?? 0} langganan aktif, ${publishedProducts?.n ?? 0} produk berstatus terbit, ${liveProducts?.n ?? 0} produk siap dijual. ` +
     (blockers.length > 0 ? `Perlu perhatian: ${blockers.join(', ')}.` : 'Tidak ada penghambat dasar yang terdeteksi.')
 
   const offlineCeoAnalysis = [
@@ -181,8 +191,9 @@ async function runCeo(trigger: string) {
     return { summary }
   }
 
-  const firstLine = outcome.text.split('\n').find((line) => line.trim().length > 0) ?? 'Strategi CEO diperbarui.'
-  const summary = `${factualSummary} Keputusan AI CEO: ${firstLine.replace(/^#+\s*/, '').slice(0, 420)}`
+  // The model may recommend actions, but it is not an accounting system.
+  // Keep all numeric/status claims in the summary strictly database-derived.
+  const summary = factualSummary + ' Analisis dan rekomendasi AI CEO tersimpan di detail laporan.'
   await finishRun(run.id, 'ok', summary, `${facts}\n\nAnalisis model ${outcome.model}:\n${outcome.text}`, 0)
   await noteAgent('AI CEO', 'Analisis dan arahan kerja CEO diperbarui', summary)
   return { summary }
