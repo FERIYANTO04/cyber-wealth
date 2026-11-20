@@ -611,14 +611,14 @@ async function runMarketing(trigger: string) {
 async function runSales(trigger: string) {
   const run = await startRun('AI Sales', 'sales', trigger)
 
-  // Only leads that are still open and have no draft yet get one, so a repeated run
-  // never piles up duplicates or rewrites what the owner already reviewed.
+  // Track every uncontacted lead, including those whose outreach draft already exists.
+  // Existing drafts are preserved; the agent must never mistake "drafted" for "contacted".
   const openLeads = await db
     .select()
     .from(revenueLeads)
-    .where(and(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']), isNull(revenueLeads.outreachBody)))
-    .orderBy(desc(revenueLeads.createdAt))
-    .limit(5)
+    .where(and(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']), isNull(revenueLeads.lastContactedAt)))
+    .orderBy(asc(revenueLeads.createdAt))
+    .limit(50)
 
   const newJobs = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -630,7 +630,12 @@ async function runSales(trigger: string) {
     .where(and(eq(orders.status, 'pending'), gte(orders.createdAt, new Date(Date.now() - 7 * DAY_MS))))
 
   let drafted = 0
+  let existingDrafts = 0
   for (const lead of openLeads) {
+    if (lead.outreachBody) {
+      existingDrafts += 1
+      continue
+    }
     const outcome = aiConfigured()
       ? await askAi({
           system:
@@ -668,15 +673,15 @@ async function runSales(trigger: string) {
   const orderCount = waitingOrders[0]?.n ?? 0
 
   const summary =
-    drafted + leadCount + orderCount === 0
+    drafted + existingDrafts + leadCount + orderCount === 0
       ? 'Tidak ada prospek atau pesanan yang menunggu tindak lanjut.'
-      : `${drafted} draf pendekatan disiapkan, ${leadCount} permintaan jasa baru, ${orderCount} pesanan menunggu pembayaran.`
+      : `${drafted} draf pendekatan baru dibuat, ${existingDrafts} draf lama dipertahankan, ${leadCount} prospek belum dihubungi, ${orderCount} pesanan menunggu pembayaran.`
 
   await finishRun(
     run.id,
-    drafted + leadCount + orderCount > 0 ? 'ok' : 'skipped',
+    drafted + existingDrafts + leadCount + orderCount > 0 ? 'ok' : 'skipped',
     summary,
-    'Draf pendekatan disimpan di CRM dan dikirim oleh Anda sendiri. Aplikasi tidak mengirim email otomatis, dan tidak ada angka penjualan yang diperkirakan.',
+    'Draf pendekatan disimpan di CRM. Draf tidak dihitung sebagai kontak: last_contacted_at hanya boleh diisi setelah pesan benar-benar dikirim dan diterima penyedia. Email keluar belum diotomatisasi; tidak ada pesan eksternal yang dikirim oleh tugas ini.',
     drafted
   )
   await noteAgent('AI Sales', 'CRM dan prospek ditinjau', summary)
