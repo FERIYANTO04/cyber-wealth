@@ -24,7 +24,9 @@ export type IntegrationCheck = {
 export function aiConfig() {
   const neonBaseUrl = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
   return {
-    key: process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '',
+    key: (process.env.AI_BASE_URL || '').includes('api.groq.com')
+      ? (process.env.GROQ_API_KEY || '')
+      : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''),
     model: process.env.AI_MODEL || 'openai/gpt-oss-120b',
     baseUrl: (
       process.env.AI_BASE_URL ||
