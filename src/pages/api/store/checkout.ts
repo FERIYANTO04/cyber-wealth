@@ -122,9 +122,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const paddleApiKey = process.env.PADDLE_API_KEY ?? ''
-  if (!paddleApiKey) {
-    await failCheckout(order.id, code, 'PADDLE_API_KEY belum dikonfigurasi')
-    return res.status(503).json({ error: 'Pembayaran Paddle belum diaktifkan. Pesanan ditutup dan belum dibayar.' })
+  if (!paddleApiKey && (!process.env.BANK_NAME?.trim() || !process.env.BANK_ACCOUNT_NAME?.trim() || !process.env.BANK_ACCOUNT_NUMBER?.trim())) {
+    await failCheckout(order.id, code, 'Paddle belum aktif dan detail rekening transfer belum lengkap')
+    return res.status(503).json({ error: 'Pembayaran belum siap. Aktifkan Paddle atau lengkapi rekening transfer bank. Pesanan ditutup dan belum dibayar.' })
   }
   const priceMapRaw = process.env.PADDLE_PRICE_IDS ?? '{}'
   let paddlePriceId: string | undefined
