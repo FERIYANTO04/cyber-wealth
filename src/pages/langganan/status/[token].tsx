@@ -1,4 +1,3 @@
-import { bankTransferInstructions } from '@/lib/bank-transfer'
 import type { GetServerSideProps } from 'next'
 import { and, desc, eq } from 'drizzle-orm'
 import { StoreFrame } from '@/components/StoreFrame'
@@ -63,7 +62,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
           note: cycle.note,
         })
       ),
-      paymentInstructions: bankTransferInstructions(),
       emails: emails
         .filter((email) => email.relatedId === row.id || email.kind.startsWith('cycle'))
         .map((email) => ({
@@ -82,13 +80,12 @@ type Props = {
   subscription: SubscriptionDetail
   cycles: CycleRow[]
   emails: { id: string; kind: string; subject: string; status: string; detail: string | null; createdAt: string }[]
-  paymentInstructions: string
 }
 
-function StatusPage({ subscription, cycles, emails, paymentInstructions }: Props) {
+function StatusPage({ subscription, cycles, emails }: Props) {
   return (
     <PageStack>
-      <SubscriptionStatus subscription={subscription} cycles={cycles} emails={emails} paymentInstructions={paymentInstructions} />
+      <SubscriptionStatus subscription={subscription} cycles={cycles} emails={emails} />
     </PageStack>
   )
 }
