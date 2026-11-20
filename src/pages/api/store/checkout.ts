@@ -96,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       buyerEmail: parsed.data.email,
       amountIdr: amount,
       status: 'pending',
-      provider: 'paddle',
+      provider: amount === 0 ? 'free' : 'paddle',
       refCode: parsed.data.ref ?? refFromCookie(req) ?? null,
       dataSource: 'live',
     })
