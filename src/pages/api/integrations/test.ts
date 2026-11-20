@@ -3,10 +3,7 @@ import { z } from 'zod'
 import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 import { testAi, storageStatus, bankTransferStatus, testPaddle } from '@/lib/integrations'
-import { telegramConnectionStatus } from '@/lib/telegram'
 import { testEmail } from '@/lib/email'
-import { telegramConnectionStatus } from '@/lib/telegram'
-import { testPaddle } from '@/lib/integrations'
 
 const Body = z.object({
   target: z.enum(['ai', 'bank', 'email', 'telegram', 'paddle', 'storage', 'all']),
