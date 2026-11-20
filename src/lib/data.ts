@@ -218,7 +218,11 @@ export async function getEngineCounts() {
   const [publishedProducts] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(products)
-    .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+    .where(and(
+      eq(products.status, 'published'),
+      eq(products.dataSource, 'live'),
+      sql`${products.fileKey} is not null and ${products.fileKey} !~* '^https?://' and coalesce(${products.fileName}, '') !~* '(draft|draf)'`
+    ))
   const [paidOrders] = await db
     .select({ n: sql<number>`count(*)::int`, total: sql<number>`coalesce(sum(${orders.amountIdr}),0)::bigint` })
     .from(orders)
