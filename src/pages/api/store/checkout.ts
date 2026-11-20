@@ -126,17 +126,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await failCheckout(order.id, code, 'Paddle belum aktif dan detail rekening transfer belum lengkap')
     return res.status(503).json({ error: 'Pembayaran belum siap. Aktifkan Paddle atau lengkapi rekening transfer bank. Pesanan ditutup dan belum dibayar.' })
   }
-  const priceMapRaw = process.env.PADDLE_PRICE_IDS ?? '{}'
   let paddlePriceId: string | undefined
-  try {
-    const priceMap = JSON.parse(priceMapRaw) as Record<string, string>
-    paddlePriceId = priceMap[product.slug] || process.env.PADDLE_DEFAULT_PRICE_ID
-  } catch {
-    await failCheckout(order.id, code, 'PADDLE_PRICE_IDS bukan JSON yang valid')
-    return res.status(503).json({ error: 'Konfigurasi katalog pembayaran belum valid. Pesanan ditutup dan belum dibayar.' })
-  }
-
   if (paddleApiKey) {
+    try {
+      const priceMap = JSON.parse(process.env.PADDLE_PRICE_IDS ?? '{}') as Record<string, string>
+      paddlePriceId = priceMap[product.slug] || process.env.PADDLE_DEFAULT_PRICE_ID
+    } catch {
+      await failCheckout(order.id, code, 'PADDLE_PRICE_IDS bukan JSON yang valid')
+      return res.status(503).json({ error: 'Konfigurasi katalog pembayaran belum valid. Pesanan ditutup dan belum dibayar.' })
+    }
     const apiBase = process.env.PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
     let transactionItem: Record<string, unknown>
 
