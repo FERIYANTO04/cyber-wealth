@@ -1,5 +1,6 @@
 import { chatWithAi } from './ai'
 import { putFile, deleteFile } from './storage'
+import { isPlaceholder } from './env'
 
 /**
  * Live checks for every outside service the app depends on. Each one actually calls
