@@ -2,13 +2,14 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
-import { testAi, storageStatus, bankTransferStatus } from '@/lib/integrations'
+import { testAi, storageStatus, bankTransferStatus, testPaddle } from '@/lib/integrations'
+import { telegramConnectionStatus } from '@/lib/telegram'
 import { testEmail } from '@/lib/email'
-import { checkFacebookConnection } from '@/lib/meta'
-import { checkInstagramConnection } from '@/lib/instagram'
+import { telegramConnectionStatus } from '@/lib/telegram'
+import { testPaddle } from '@/lib/integrations'
 
 const Body = z.object({
-  target: z.enum(['ai', 'bank', 'email', 'social', 'storage', 'all']),
+  target: z.enum(['ai', 'bank', 'email', 'telegram', 'paddle', 'storage', 'all']),
 })
 
 /**
@@ -32,22 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (target === 'bank' || target === 'all') results.bank = bankTransferStatus()
   if (target === 'email' || target === 'all') results.email = await testEmail()
   if (target === 'storage' || target === 'all') results.storage = await storageStatus()
-
-  if (target === 'social' || target === 'all') {
-    // Both channel checks ask Meta about the account that is actually stored.
-    const [facebook, instagram] = [await checkFacebookConnection(), await checkInstagramConnection()]
-    results.facebook = { state: facebook.state, message: facebook.message }
-    results.instagram = { state: instagram.state, message: instagram.message }
-    results.social = {
-      state:
-        facebook.state === 'ready' || instagram.state === 'ready'
-          ? 'ready'
-          : facebook.state === 'missing' && instagram.state === 'missing'
-            ? 'missing'
-            : 'error',
-      message: `Facebook: ${facebook.message} Instagram: ${instagram.message}`,
-    }
-  }
+  if (target === 'telegram' || target === 'all') results.telegram = await telegramConnectionStatus()
+  if (target === 'paddle' || target === 'all') results.paddle = await testPaddle()
 
   const summary = Object.entries(results)
     .map(([key, value]) => `${key}: ${value.state}`)
