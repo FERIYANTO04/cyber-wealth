@@ -9,6 +9,11 @@ import { runHousekeeping } from '@/lib/housekeeping'
 import { testAi, testPaddle, storageStatus } from '@/lib/integrations'
 import { testEmail } from '@/lib/email'
 import { telegramConnectionStatus } from '@/lib/telegram'
+import { db } from '@/lib/db'
+import { products } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { putFile } from '@/lib/storage'
+import { randomUUID } from 'node:crypto'
 
 // Scheduled hosts call this endpoint with: Authorization: Bearer <CRON_SECRET>.
 // Keep CRON_SECRET private; never expose it through NEXT_PUBLIC_* variables.
@@ -22,6 +27,36 @@ function authorized(req: NextApiRequest): boolean {
   const supplied = Buffer.from(header.slice(7))
   const expected = Buffer.from(secret)
   return supplied.length === expected.length && timingSafeEqual(supplied, expected)
+}
+
+async function migrateProductFiles() {
+  const allowed = new Set(['Kit_CV_ATS_Lengkap.md', 'Kit_WhatsApp_Business_UMKM.md'])
+  const prefix = 'https://raw.githubusercontent.com/FERIYANTO04/cyber-wealth/main/public/produk/'
+  const rows = await db.select().from(products)
+  const results: string[] = []
+  for (const product of rows) {
+    if (!product.fileName || !allowed.has(product.fileName) || !product.fileKey?.startsWith(prefix)) continue
+    const response = await fetch(product.fileKey, { cache: 'no-store', signal: AbortSignal.timeout(15000) })
+    if (!response.ok) {
+      results.push(product.fileName + ': sumber belum dapat diambil')
+      continue
+    }
+    const bytes = await response.arrayBuffer()
+    if (!bytes.byteLength || bytes.byteLength > 20 * 1024 * 1024) {
+      results.push(product.fileName + ': ukuran berkas tidak valid')
+      continue
+    }
+    const key = 'produk/' + product.id + '/' + randomUUID() + '.md'
+    await putFile(key, bytes, 'text/markdown')
+    await db.update(products).set({ fileKey: key, fileSize: bytes.byteLength }).where(eq(products.id, product.id))
+    await logActivity({
+      actor: 'system',
+      action: 'Berkas produk dipindahkan ke penyimpanan privat',
+      detail: product.fileName + ' pada ' + product.name + '.',
+    })
+    results.push(product.fileName + ': tersimpan privat (' + bytes.byteLength + ' byte)')
+  }
+  return results
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -54,6 +89,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return { error: 'Publikasi sosial gagal; periksa log server.' }
     })
 
+    // Move the two approved catalogue Markdown deliverables into private object storage.
+    // This runs only inside the authenticated cron, never from a public endpoint.
+    const productFileMigration = await migrateProductFiles().catch((error) => {
+      console.error('[cron product file migration]', error)
+      return ['Migrasi berkas gagal; periksa log server.']
+    })
+
     // Provider checks are read-only except for a temporary storage probe file that is
     // deleted immediately. This gives the owner verified status rather than just key presence.
     const [aiCheck, emailCheck, paddleCheck, storageCheck, telegramCheck] = await Promise.all([
@@ -72,12 +114,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const due = await autopilotDue()
     if (!due) {
-      return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, social, housekeeping, integrations })
+      return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, social, housekeeping, productFileMigration, integrations })
     }
 
     const result = await runAutopilot('schedule')
     if (result.paused) {
-      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, social, housekeeping, integrations })
+      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, social, housekeeping, productFileMigration, integrations })
     }
 
     await logActivity({
