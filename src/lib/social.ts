@@ -2,8 +2,6 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from './db'
 import { activity, orders, postTracks, products, revenueLeads, services, socialAccounts, socialPosts } from './db/schema'
 import { askAi, aiConfigured } from './ai'
-import { publishToFacebook } from './meta'
-import { publishToInstagram } from './instagram'
 import { publishToTelegram } from './telegram'
 import { fileUrl } from './storage'
 import { CHANNELS, MARKETS, MARKET_CHANNELS, channelLabel, channelLimit, type ChannelKey } from './labels'
@@ -545,115 +543,6 @@ export async function publishDuePosts(): Promise<{
       continue
     }
 
-    if (post.channel === 'facebook') {
-      const result = await publishToFacebook(post.body)
-      if (result.ok) {
-        const track = await createPostTrack(post)
-        await db
-          .update(socialPosts)
-          .set({
-            publishState: 'published',
-            externalId: result.id,
-            externalUrl: result.url,
-            publishedAt: new Date(),
-            publishNote: `Diterbitkan Meta pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.${
-              track ? ' Tautan pelacak disiapkan untuk menghitung klik' : ''
-            }`,
-          })
-          .where(eq(socialPosts.id, post.id))
-        await db.insert(activity).values({
-          actor: 'system',
-          action: 'Konten terbit di Facebook',
-          detail: `${post.headline} — id kiriman ${result.id}, ${result.url}. Dikonfirmasi Meta Graph API.`,
-          dataSource: 'live',
-        })
-        published += 1
-        continue
-      }
-
-      await db
-        .update(socialPosts)
-        .set({
-          publishState: 'failed',
-          publishNote: `Meta menolak publikasi${result.code ? ` (kode ${result.code})` : ''}: ${result.reason}`,
-        })
-        .where(eq(socialPosts.id, post.id))
-      await db.insert(activity).values({
-        actor: 'system',
-        action: 'Publikasi Facebook gagal',
-        detail: `${post.headline} — ${result.reason}${result.retryable ? ' Akan dicoba lagi pada putaran berikutnya.' : ' Halaman perlu dihubungkan ulang.'}`,
-        dataSource: 'live',
-      })
-      notes.push(result.reason)
-      failed += 1
-      continue
-    }
-
-    if (post.channel === 'instagram') {
-      // Meta fetches the file itself, so the private object gets a short-lived link.
-      const mediaUrl = post.mediaKey ? await fileUrl(post.mediaKey, { expiresIn: 3600 }).catch(() => null) : null
-
-      if (post.mediaKey && !mediaUrl) {
-        await db
-          .update(socialPosts)
-          .set({
-            publishState: 'failed',
-            publishNote: 'Lampiran foto atau video tidak bisa dibuka dari penyimpanan, jadi tidak ada yang dikirim ke Instagram. Unggah ulang berkasnya.',
-          })
-          .where(eq(socialPosts.id, post.id))
-        notes.push('Lampiran konten Instagram tidak bisa dibuka dari penyimpanan.')
-        failed += 1
-        continue
-      }
-
-      const result = await publishToInstagram({
-        caption: post.body,
-        mediaUrl,
-        mediaType: post.mediaType === 'video' ? 'video' : post.mediaType === 'image' ? 'image' : null,
-      })
-
-      if (result.ok) {
-        const track = await createPostTrack(post)
-        await db
-          .update(socialPosts)
-          .set({
-            publishState: 'published',
-            externalId: result.id,
-            externalUrl: result.url,
-            publishedAt: new Date(),
-            publishNote: `Diterbitkan Instagram pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.${
-              track ? ' Tautan pelacak disiapkan untuk menghitung klik' : ''
-            }`,
-          })
-          .where(eq(socialPosts.id, post.id))
-        await db.insert(activity).values({
-          actor: 'system',
-          action: 'Konten terbit di Instagram',
-          detail: `${post.headline} — id kiriman ${result.id}, ${result.url}. Dikonfirmasi Meta Graph API.`,
-          dataSource: 'live',
-        })
-        published += 1
-        continue
-      }
-
-      await db
-        .update(socialPosts)
-        .set({
-          publishState: 'failed',
-          publishNote: `Instagram menolak publikasi${result.code ? ` (kode ${result.code})` : ''}: ${result.reason}`,
-        })
-        .where(eq(socialPosts.id, post.id))
-      await db.insert(activity).values({
-        actor: 'system',
-        action: 'Publikasi Instagram gagal',
-        detail: `${post.headline} — ${result.reason}${result.retryable ? ' Akan dicoba lagi pada putaran berikutnya.' : ' Akun perlu dihubungkan ulang atau berkasnya diperbaiki.'}`,
-        dataSource: 'live',
-      })
-      notes.push(result.reason)
-      failed += 1
-      continue
-    }
-
     await db
       .update(socialPosts)
       .set({
@@ -671,7 +560,7 @@ export async function publishDuePosts(): Promise<{
       detail: `${blocked} konten jatuh tempo untuk kanal yang belum terhubung. Tidak ada konten yang diklaim terbit.`,
       dataSource: 'live',
     })
-    notes.push('Sebagian konten jatuh tempo untuk kanal yang belum terhubung (X, LinkedIn, TikTok), jadi belum dikirim.')
+    notes.push('Sebagian konten jatuh tempo untuk kanal yang belum memiliki konektor atau kredensial, jadi belum dikirim.')
   }
 
   return { attempted: due.length, published, blocked, failed, notes }
