@@ -96,25 +96,72 @@ export async function storageStatus(): Promise<{ state: CheckState; message: str
 
 
 /** Checks Paddle API credentials without creating a charge or checkout. */
-export async function testPaddle(): Promise<{ state: CheckState; message: string }> {
+export async function testPaddle(expectedWebhookUrl?: string): Promise<{ state: CheckState; message: string }> {
   const key = process.env.PADDLE_API_KEY ?? ''
   const secret = process.env.PADDLE_WEBHOOK_SECRET ?? ''
   if (!key || isPlaceholder(key)) return { state: 'missing', message: 'PADDLE_API_KEY belum dikonfigurasi.' }
+  const mode = process.env.PADDLE_ENV === 'sandbox' ? 'Sandbox' : 'Live'
   const base = process.env.PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
+  const webhookUrl = expectedWebhookUrl || (
+    process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN.replace(/^https?:\\/\\//, '').replace(/\\/+$/, '')}/api/webhooks/paddle`
+      : ''
+  )
   try {
-    const response = await fetch(base + '/event-types', {
-      headers: { Authorization: 'Bearer ' + key },
+    const headers = { Authorization: 'Bearer ' + key }
+    const eventsResponse = await fetch(base + '/event-types', {
+      headers,
       cache: 'no-store',
       signal: AbortSignal.timeout(12000),
     })
-    if (response.status === 401 || response.status === 403) {
-      return { state: 'invalid', message: 'Paddle menolak API key (' + response.status + '). Periksa apakah key cocok dengan mode ' + (process.env.PADDLE_ENV === 'sandbox' ? 'Sandbox' : 'Live') + '.' }
+    if (eventsResponse.status === 401 || eventsResponse.status === 403) {
+      return { state: 'invalid', message: 'Paddle menolak API key (' + eventsResponse.status + '). Periksa apakah key cocok dengan mode ' + mode + '.' }
     }
-    if (!response.ok) return { state: 'error', message: 'Paddle API menjawab ' + response.status + '. Koneksi pembayaran belum terverifikasi.' }
+    if (!eventsResponse.ok) return { state: 'error', message: 'Paddle API menjawab ' + eventsResponse.status + '. Koneksi pembayaran belum terverifikasi.' }
+
     if (!secret || isPlaceholder(secret)) {
       return { state: 'missing', message: 'API key Paddle valid, tetapi PADDLE_WEBHOOK_SECRET belum diisi. Pembayaran tidak boleh dianggap otomatis terkonfirmasi.' }
     }
-    return { state: 'unverified', message: 'API key Paddle valid (' + (process.env.PADDLE_ENV === 'sandbox' ? 'Sandbox' : 'Live') + ') dan webhook secret tersedia. Owner masih harus memastikan URL webhook dan event transaction.completed/transaction.paid terdaftar di dashboard Paddle.' }
+    if (!webhookUrl) {
+      return { state: 'unverified', message: 'API key Paddle valid (' + mode + '), tetapi domain webhook aplikasi tidak dapat ditentukan dari server.' }
+    }
+
+    const destinationsResponse = await fetch(base + '/notification-settings?per_page=200', {
+      headers,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(12000),
+    })
+    if (destinationsResponse.status === 401 || destinationsResponse.status === 403) {
+      return { state: 'unverified', message: 'API key Paddle valid, tetapi tidak memiliki izin notification_setting.read untuk memeriksa tujuan webhook.' }
+    }
+    if (!destinationsResponse.ok) {
+      return { state: 'error', message: 'Paddle gagal memeriksa tujuan webhook (' + destinationsResponse.status + ').' }
+    }
+
+    const payload = await destinationsResponse.json().catch(() => null) as {
+      data?: {
+        type?: string
+        destination?: string
+        active?: boolean
+        subscribed_events?: { name?: string }[]
+        endpoint_secret_key?: string
+      }[]
+    } | null
+    const destination = (payload?.data ?? []).find((item) => item.type === 'url' && item.destination === webhookUrl && item.active === true)
+    if (!destination) {
+      return { state: 'unverified', message: 'API key Paddle valid (' + mode + '), tetapi belum ada webhook aktif yang cocok dengan URL ' + webhookUrl + '.' }
+    }
+
+    const eventNames = new Set((destination.subscribed_events ?? []).map((event) => event.name))
+    const missingEvents = ['transaction.completed', 'transaction.paid'].filter((name) => !eventNames.has(name))
+    if (missingEvents.length > 0) {
+      return { state: 'unverified', message: 'Webhook Paddle ditemukan, tetapi belum berlangganan event ' + missingEvents.join(' dan ') + '.' }
+    }
+    if (!destination.endpoint_secret_key || destination.endpoint_secret_key !== secret) {
+      return { state: 'invalid', message: 'Webhook Paddle aktif dan event sudah benar, tetapi PADDLE_WEBHOOK_SECRET tidak cocok dengan secret tujuan tersebut.' }
+    }
+
+    return { state: 'ready', message: 'Paddle ' + mode + ' terhubung. API key valid, URL webhook aktif cocok, event pembayaran lengkap, dan webhook secret sesuai.' }
   } catch {
     return { state: 'error', message: 'Tidak dapat menghubungi Paddle API dari server.' }
   }
