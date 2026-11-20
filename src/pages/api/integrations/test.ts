@@ -4,9 +4,10 @@ import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 import { testAi, storageStatus, testPaddle } from '@/lib/integrations'
 import { testEmail } from '@/lib/email'
+import { telegramConnectionStatus } from '@/lib/telegram'
 
 const Body = z.object({
-  target: z.enum(['ai', 'email', 'paddle', 'storage', 'all']),
+  target: z.enum(['ai', 'email', 'paddle', 'storage', 'telegram', 'all']),
 })
 
 /**
@@ -30,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (target === 'email' || target === 'all') results.email = await testEmail()
   if (target === 'storage' || target === 'all') results.storage = await storageStatus()
   if (target === 'paddle' || target === 'all') results.paddle = await testPaddle()
+  if (target === 'telegram' || target === 'all') results.telegram = await telegramConnectionStatus()
 
   const summary = Object.entries(results)
     .map(([key, value]) => `${key}: ${value.state}`)
