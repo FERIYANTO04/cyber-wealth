@@ -26,6 +26,16 @@ const recent = new Map<string, { hits: number; since: number }>()
 const WINDOW_MS = 60_000
 const MAX_PER_WINDOW = 6
 
+async function failCheckout(orderId: string, code: string, reason: string) {
+  await db.update(orders).set({ status: 'failed' }).where(eq(orders.id, orderId))
+  await db.insert(activity).values({
+    actor: 'system',
+    action: 'Checkout gagal — pesanan ditutup',
+    detail: code + ': ' + reason.slice(0, 300) + '. Tidak ada pembayaran yang dibuat.',
+    dataSource: 'live',
+  })
+}
+
 function rateLimited(ip: string): boolean {
   const now = Date.now()
   const entry = recent.get(ip)
@@ -113,7 +123,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const paddleApiKey = process.env.PADDLE_API_KEY ?? ''
   if (!paddleApiKey) {
-    return res.status(503).json({ error: 'Pembayaran Paddle belum diaktifkan. Pesanan belum dibayar.' })
+    await failCheckout(order.id, code, 'PADDLE_API_KEY belum dikonfigurasi')
+    return res.status(503).json({ error: 'Pembayaran Paddle belum diaktifkan. Pesanan ditutup dan belum dibayar.' })
   }
   const priceMapRaw = process.env.PADDLE_PRICE_IDS ?? '{}'
   let paddlePriceId: string | undefined
@@ -121,7 +132,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const priceMap = JSON.parse(priceMapRaw) as Record<string, string>
     paddlePriceId = priceMap[product.slug] || process.env.PADDLE_DEFAULT_PRICE_ID
   } catch {
-    return res.status(503).json({ error: 'Konfigurasi katalog pembayaran belum valid. Pesanan belum dibayar.' })
+    await failCheckout(order.id, code, 'PADDLE_PRICE_IDS bukan JSON yang valid')
+    return res.status(503).json({ error: 'Konfigurasi katalog pembayaran belum valid. Pesanan ditutup dan belum dibayar.' })
   }
 
   if (paddleApiKey) {
@@ -146,12 +158,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           detail: code + ': kurs IDR/USD tidak tersedia. Tidak ada pembayaran yang dibuat.',
           dataSource: 'live',
         })
-        return res.status(503).json({ error: 'Kurs pembayaran sedang tidak tersedia. Pesanan belum dibayar; coba lagi.' })
+        await failCheckout(order.id, code, 'kurs IDR/USD tidak tersedia')
+        return res.status(503).json({ error: 'Kurs pembayaran sedang tidak tersedia. Pesanan ditutup dan belum dibayar; coba lagi.' })
       }
 
       const usdCents = Math.round(amount * usdPerIdr * 100)
       if (usdCents < 70) {
-        return res.status(409).json({ error: 'Harga produk berada di bawah minimum pembayaran Paddle (USD 0,70). Pesanan belum dibayar.' })
+        await failCheckout(order.id, code, 'harga di bawah minimum Paddle USD 0,70')
+        return res.status(409).json({ error: 'Harga produk berada di bawah minimum pembayaran Paddle (USD 0,70). Pesanan ditutup dan belum dibayar.' })
       }
 
       transactionItem = {
@@ -171,7 +185,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const response = await fetch(apiBase + '/transactions', {
+    let response: Response
+    try {
+      response = await fetch(apiBase + '/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + paddleApiKey },
       body: JSON.stringify({
@@ -179,7 +195,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         custom_data: { order_code: code, access_token: accessToken, product_slug: product.slug, amount_idr: amount },
       }),
       cache: 'no-store',
-    })
+      })
+    } catch (error) {
+      await failCheckout(order.id, code, error instanceof Error ? error.message : 'koneksi ke Paddle gagal')
+      return res.status(502).json({ error: 'Koneksi ke Paddle gagal. Pesanan ditutup dan belum dibayar; coba lagi.' })
+    }
     const payload = await response.json().catch(() => null) as {
       data?: { id?: string; status?: string; checkout?: { url?: string | null } }
       error?: { detail?: string; code?: string }
@@ -191,7 +211,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         detail: code + ': ' + String(payload?.error?.detail ?? payload?.error?.code ?? response.status).slice(0, 300),
         dataSource: 'live',
       })
-      return res.status(502).json({ error: 'Paddle belum dapat membuat checkout. Pesanan belum dibayar; coba lagi.' })
+      await failCheckout(order.id, code, String(payload?.error?.detail ?? payload?.error?.code ?? response.status))
+      return res.status(502).json({ error: 'Paddle belum dapat membuat checkout. Pesanan ditutup dan belum dibayar; coba lagi.' })
     }
 
     await db.update(orders).set({ provider: 'paddle', invoiceId: payload.data.id, invoiceUrl: payload.data.checkout.url }).where(eq(orders.id, order.id))
