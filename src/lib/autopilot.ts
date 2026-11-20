@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
 import { db } from './db'
 import {
   activity,
