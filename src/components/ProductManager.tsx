@@ -50,6 +50,7 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
+  const [securingFor, setSecuringFor] = useState<string | null>(null)
 
   async function create(event: FormEvent) {
     event.preventDefault()
@@ -117,6 +118,30 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
       return
     }
     setRows((old) => old.map((row) => (row.id === id ? { ...row, status } : row)))
+  }
+
+  async function secureExisting(product: OwnerProduct) {
+    setError(null)
+    setNote(null)
+    setSecuringFor(product.id)
+    try {
+      const response = await fetch('/api/products/secure-existing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(data.error ?? 'Berkas belum bisa dipindahkan ke penyimpanan privat.')
+        return
+      }
+      setRows((old) => old.map((row) => row.id === product.id ? { ...row, fileKey: data.key } : row))
+      setNote(`Berkas ${product.fileName ?? ''} sudah dipindahkan ke penyimpanan privat. Produk sekarang dapat diakses pembeli setelah pembayaran terkonfirmasi.`)
+    } catch {
+      setError('Koneksi terputus saat mengamankan berkas.')
+    } finally {
+      setSecuringFor(null)
+    }
   }
 
   async function upload(product: OwnerProduct, event: ChangeEvent<HTMLInputElement>) {
@@ -274,6 +299,11 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
                         <ExternalLink className="size-4" aria-hidden="true" />
                         Lihat
                       </Link>
+                    )}
+                    {row.fileKey?.startsWith('https://raw.githubusercontent.com/FERIYANTO04/cyber-wealth/main/public/produk/') && (
+                      <Button size="sm" variant="secondary" onClick={() => secureExisting(row)} disabled={securingFor === row.id}>
+                        {securingFor === row.id ? 'Mengamankan…' : 'Amankan berkas'}
+                      </Button>
                     )}
                     <label className="nav-quiet cursor-pointer">
                       <Upload className="size-4" aria-hidden="true" />
