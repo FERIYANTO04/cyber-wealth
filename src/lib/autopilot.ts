@@ -162,41 +162,50 @@ async function runCeo(trigger: string) {
     const summary = factualSummary + ' Arahan operasional disusun dari data database tanpa model AI.'
     await finishRun(run.id, 'ok', summary, offlineCeoAnalysis, 0)
     await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
-    return { summary }
+    return { summary, dispatch: [] as Exclude<AutopilotTask, 'ceo'>[] }
   }
 
   const outcome = await askAi({
     system: [
-      'Anda adalah AI CEO Cyber Wealth. Analisis hanya fakta yang diberikan; jangan mengarang angka atau mengklaim pekerjaan selesai.',
-      'Tentukan tiga prioritas paling penting. Sebut hanya agen dari daftar roster yang diberikan; jangan menciptakan nama, jabatan, atau agen baru. Bedakan rekomendasi tugas dari pekerjaan yang benar-benar sudah selesai.',
-      'Tugas rutin berisiko rendah boleh dikerjakan agen otomatis. Pengeluaran, transfer, investasi, kontrak, perubahan harga, dan publikasi eksternal tetap menunggu persetujuan Owner.',
-      'Lindungi dana Owner dan cadangan. Jangan membuat komitmen berbayar. Jangan menganggap saldo pembukuan sebagai saldo bank terverifikasi.',
-      'Jawab Bahasa Indonesia, maksimal 90 kata, format persis: KONDISI: ...; PRIORITAS: 1) ... 2) ... 3) ...; SARAN AGEN: <nama dari roster dan tugas yang disarankan, bukan klaim selesai>; OWNER: ... .',
+      'Anda adalah CEO yang berpikir mandiri dan bertanggung jawab atas pertumbuhan Cyber Wealth. Jangan memakai urutan kerja baku; analisis situasi, cari peluang, bandingkan strategi, dan pilih tindakan dengan potensi pertumbuhan tertinggi berdasarkan bukti yang tersedia.',
+      'Anda boleh mengubah prioritas dan urutan kerja setiap siklus. Delegasikan pekerjaan kepada agen yang paling tepat dari roster. Buat rencana konkret, terukur, dan dapat dieksekusi sekarang; jangan hanya memberi slogan atau laporan.',
+      'Bedakan fakta, hipotesis, dan target. Jangan mengarang angka, pelanggan, pembayaran, atau hasil. Jangan menyatakan tindakan sudah selesai sebelum runner mengonfirmasinya.',
+      'Agen boleh berpikir kreatif dan menjalankan pekerjaan internal yang aman secara mandiri. Tindakan yang memindahkan uang, membuat utang, investasi, pembelian berbayar, kontrak, perubahan harga publik, atau komitmen eksternal tetap memerlukan persetujuan Owner.',
+      'Keluarkan JSON valid saja dengan bentuk: {"condition":"...","priorities":["..."],"dispatch":["research","product","marketing","sales","finance","intelligence"],"reasoning":"...","owner_attention":"..."}. dispatch harus berisi urutan kerja pilihan Anda, tanpa duplikasi, hanya task yang ada di daftar.',
     ].join(' '),
     prompt: [
       `Pemicu: ${trigger}`,
-      'Fakta perusahaan:',
-      facts,
-      'Hambatan:',
-      blockers.length ? blockers.join('; ') : 'Tidak ada hambatan dasar yang tercatat.',
-      'Pilih langkah berikutnya yang paling mungkin menghasilkan produk siap jual, prospek nyata, layanan klien, atau pemasukan terkonfirmasi. Sebutkan hanya agen dari roster yang tersedia dan hasil yang perlu dicatat. Jangan mengklaim tugas telah dilakukan oleh agen lain.',
+      'Fakta perusahaan:', facts,
+      'Hambatan:', blockers.length ? blockers.join('; ') : 'Tidak ada hambatan dasar yang tercatat.',
+      `Roster agen: ${TASKS.filter((task) => task.task !== 'ceo').map((task) => task.task + ' = ' + task.agentRole).join('; ')}.`,
+      'Tentukan sendiri strategi dan urutan kerja terbaik untuk meningkatkan pelanggan, produk siap jual, layanan, distribusi, dan pendapatan. Pilih agen sesuai kebutuhan nyata; boleh tidak memilih agen yang tidak relevan. Prioritaskan peluang dengan dampak terbesar dan biaya terendah.',
     ].join('\\n'),
-    maxTokens: 1000,
+    maxTokens: 1800,
   })
 
   if (!outcome.ok) {
     const summary = factualSummary + ' Arahan operasional disusun dari data database; model AI belum tersedia.'
     await finishRun(run.id, 'ok', summary, offlineCeoAnalysis + `\\n\\nAlasan mode offline: ${outcome.reason}`, 0)
     await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
-    return { summary }
+    return { summary, dispatch: [] as Exclude<AutopilotTask, 'ceo'>[] }
   }
 
   // The model may recommend actions, but it is not an accounting system.
   // Keep all numeric/status claims in the summary strictly database-derived.
   const summary = factualSummary + ' Analisis dan rekomendasi AI CEO tersimpan di detail laporan.'
-  await finishRun(run.id, 'ok', summary, `${facts}\n\nAnalisis model ${outcome.model}:\n${outcome.text}`, 0)
-  await noteAgent('AI CEO', 'Analisis dan arahan kerja CEO diperbarui', summary)
-  return { summary }
+  let dispatch: Exclude<AutopilotTask, 'ceo'>[] = []
+  try {
+    const raw = outcome.text.match(/\{[\s\S]*\}/)?.[0]
+    const parsed = raw ? JSON.parse(raw) as { dispatch?: unknown } : null
+    const allowed = new Set(TASKS.map((task) => task.task).filter((task) => task !== 'ceo'))
+    if (Array.isArray(parsed?.dispatch)) {
+      dispatch = [...new Set(parsed.dispatch.filter((task): task is Exclude<AutopilotTask, 'ceo'> => typeof task === 'string' && task !== 'ceo' && allowed.has(task as Exclude<AutopilotTask, 'ceo'>)))]
+    }
+  } catch { dispatch = [] }
+  const detail = `${facts}\\n\\nAnalisis model ${outcome.model}:\\n${outcome.text}\\n\\nUrutan delegasi AI: ${dispatch.join(' → ') || 'AI tidak menghasilkan dispatch valid'}`
+  await finishRun(run.id, 'ok', summary, detail, 0)
+  await noteAgent('AI CEO', 'Strategi mandiri dan delegasi AI diperbarui', summary)
+  return { summary, dispatch }
 }
 
 async function runResearch(trigger: string) {
@@ -892,20 +901,25 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
   }
 
   const outcomes: AutopilotResult['results'] = []
+  let ceoResult: Awaited<ReturnType<typeof runCeo>>
   try {
-    const ceo = await runCeo(trigger)
-    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: ceo.summary })
+    ceoResult = await runCeo(trigger)
+    outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: ceoResult.summary })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui'
     outcomes.push({ task: 'ceo', label: 'Arahan AI CEO', summary: `Tugas gagal: ${message}. Agen lain tidak dijalankan agar keputusan tanpa arahan CEO tidak diteruskan.` })
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
-  const plan = await buildCeoDispatchPlan()
+  const plan: Exclude<AutopilotTask, 'ceo'>[] = ceoResult.dispatch
+  if (plan.length === 0) {
+    outcomes.push({ task: 'intelligence', label: 'Intelijen bisnis', summary: 'CEO AI tidak menghasilkan rencana delegasi yang valid; agen lain tidak dijalankan agar tidak kembali memakai urutan kerja tetap.' })
+    return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
+  }
   const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis' }
-  await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Mode delegasi deterministik; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
-  const runners: Record<AutopilotTask, () => Promise<{ summary: string }>> = {
+  await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Urutan dipilih AI CEO berdasarkan analisis siklus ini; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
+  const runners: Record<Exclude<AutopilotTask, 'ceo'>, () => Promise<{ summary: string }>> = {
     research: () => runResearch(trigger), sales: () => runSales(trigger), product: () => runProduct(trigger),
-    marketing: () => runMarketing(trigger), finance: () => runFinance(trigger), ceo: () => runCeo(trigger),
+    marketing: () => runMarketing(trigger), finance: () => runFinance(trigger),
     intelligence: () => runIntelligence(trigger),
   }
   const sequence = plan.map((task) => [task, labels[task], runners[task]] as const)

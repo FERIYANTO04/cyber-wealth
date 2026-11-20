@@ -96,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       buyerEmail: parsed.data.email,
       amountIdr: amount,
       status: 'pending',
-      provider: amount === 0 ? 'free' : 'paddle',
+      provider: amount === 0 ? 'free' : 'manual_transfer',
       refCode: parsed.data.ref ?? refFromCookie(req) ?? null,
       dataSource: 'live',
     })
@@ -120,107 +120,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({ ok: true, token: accessToken, free: true })
   }
 
-  const paddleApiKey = process.env.PADDLE_API_KEY ?? ''
-  if (!paddleApiKey) {
-    await failCheckout(order.id, code, 'Paddle API key belum tersedia')
-    return res.status(503).json({ error: 'Checkout Paddle belum aktif. Pesanan ditutup dan belum dibayar.' })
-  }
-  let paddlePriceId: string | undefined
-  if (paddleApiKey) {
-    try {
-      const priceMap = JSON.parse(process.env.PADDLE_PRICE_IDS ?? '{}') as Record<string, string>
-      paddlePriceId = priceMap[product.slug] || process.env.PADDLE_DEFAULT_PRICE_ID
-    } catch {
-      await failCheckout(order.id, code, 'PADDLE_PRICE_IDS bukan JSON yang valid')
-      return res.status(503).json({ error: 'Konfigurasi katalog pembayaran belum valid. Pesanan ditutup dan belum dibayar.' })
-    }
-    const apiBase = process.env.PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
-    let transactionItem: Record<string, unknown>
-
-    if (paddlePriceId && /^pri_[a-z0-9]{26}$/i.test(paddlePriceId)) {
-      transactionItem = { price_id: paddlePriceId, quantity: 1 }
-    } else {
-      // Paddle does not list IDR as a supported payment currency. Convert the
-      // catalog's IDR price using a live FX quote, then send a one-off non-catalog
-      // USD price. No hard-coded exchange rate and no silent fallback.
-      const fxResponse = await fetch('https://open.er-api.com/v6/latest/IDR', { cache: 'no-store' }).catch(() => null)
-      const fxPayload = await fxResponse?.json().catch(() => null) as {
-        result?: string
-        rates?: { USD?: number }
-      } | null
-      const usdPerIdr = fxPayload?.result === 'success' ? Number(fxPayload.rates?.USD) : 0
-      if (!Number.isFinite(usdPerIdr) || usdPerIdr <= 0) {
-        await db.insert(activity).values({
-          actor: 'system', action: 'Konversi harga Paddle gagal',
-          detail: code + ': kurs IDR/USD tidak tersedia. Tidak ada pembayaran yang dibuat.',
-          dataSource: 'live',
-        })
-        await failCheckout(order.id, code, 'kurs IDR/USD tidak tersedia')
-        return res.status(503).json({ error: 'Kurs pembayaran sedang tidak tersedia. Pesanan ditutup dan belum dibayar; coba lagi.' })
-      }
-
-      const usdCents = Math.round(amount * usdPerIdr * 100)
-      if (usdCents < 70) {
-        await failCheckout(order.id, code, 'harga di bawah minimum Paddle USD 0,70')
-        return res.status(409).json({ error: 'Harga produk berada di bawah minimum pembayaran Paddle (USD 0,70). Pesanan ditutup dan belum dibayar.' })
-      }
-
-      transactionItem = {
-        quantity: 1,
-        price: {
-          description: 'One-time digital product purchase ' + code,
-          name: product.name.slice(0, 150),
-          billing_cycle: null,
-          tax_mode: 'account_setting',
-          unit_price: { amount: String(usdCents), currency_code: 'USD' },
-          product: {
-            name: product.name.slice(0, 200),
-            description: product.summary.slice(0, 2048),
-            tax_category: 'digital-goods',
-          },
-        },
-      }
-    }
-
-    let response: Response
-    try {
-      response = await fetch(apiBase + '/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + paddleApiKey },
-      body: JSON.stringify({
-        items: [transactionItem],
-        custom_data: { order_code: code, access_token: accessToken, product_slug: product.slug, amount_idr: amount },
-      }),
-      cache: 'no-store',
-      })
-    } catch (error) {
-      await failCheckout(order.id, code, error instanceof Error ? error.message : 'koneksi ke Paddle gagal')
-      return res.status(502).json({ error: 'Koneksi ke Paddle gagal. Pesanan ditutup dan belum dibayar; coba lagi.' })
-    }
-    const payload = await response.json().catch(() => null) as {
-      data?: { id?: string; status?: string; checkout?: { url?: string | null } }
-      error?: { detail?: string; code?: string }
-    } | null
-
-    if (!response.ok || !payload?.data?.id || !payload.data.checkout?.url) {
-      await db.insert(activity).values({
-        actor: 'system', action: 'Pembuatan checkout Paddle gagal',
-        detail: code + ': ' + String(payload?.error?.detail ?? payload?.error?.code ?? response.status).slice(0, 300),
-        dataSource: 'live',
-      })
-      await failCheckout(order.id, code, String(payload?.error?.detail ?? payload?.error?.code ?? response.status))
-      return res.status(502).json({ error: 'Paddle belum dapat membuat checkout. Pesanan ditutup dan belum dibayar; coba lagi.' })
-    }
-
-    await db.update(orders).set({ provider: 'paddle', invoiceId: payload.data.id, invoiceUrl: payload.data.checkout.url }).where(eq(orders.id, order.id))
-    await db.insert(activity).values({
-      actor: 'system', action: 'Checkout Paddle dibuat',
-      detail: product.name + ' — ' + code + '. Menunggu konfirmasi pembayaran resmi dari Paddle.',
-      dataSource: 'live',
-    })
-    return res.status(201).json({ ok: true, token: accessToken, paymentUrl: payload.data.checkout.url, provider: 'paddle' })
+  const bankName = process.env.BANK_NAME?.trim() ?? ''
+  const accountName = process.env.BANK_ACCOUNT_NAME?.trim() ?? ''
+  const accountNumber = process.env.BANK_ACCOUNT_NUMBER?.trim() ?? ''
+  const transferInstructions = process.env.BANK_TRANSFER_INSTRUCTIONS?.trim() ?? ''
+  if (!bankName || !accountName || !accountNumber) {
+    await failCheckout(order.id, code, 'detail rekening transfer belum dikonfigurasi')
+    return res.status(503).json({ error: 'Pembayaran transfer belum tersedia. Pesanan belum dibuat; silakan coba kembali nanti.' })
   }
 
-  await failCheckout(order.id, code, 'Tidak ada metode pembayaran selain Paddle yang diizinkan')
-  return res.status(503).json({ error: 'Metode pembayaran tidak tersedia. Pesanan ditutup dan belum dibayar.' })
+  await sendOrderRecordedEmail({
+    code,
+    productName: product.name,
+    buyerName: parsed.data.name,
+    buyerEmail: parsed.data.email,
+    amountIdr: amount,
+    accessToken,
+  })
+  await db.insert(activity).values({
+    actor: 'system',
+    action: 'Instruksi transfer bank diterbitkan',
+    detail: product.name + ' — ' + code + '. Menunggu verifikasi mutasi oleh owner; belum dihitung sebagai pendapatan.',
+    dataSource: 'live',
+  })
+  return res.status(201).json({ ok: true, token: accessToken, provider: 'manual_transfer' })
 }
