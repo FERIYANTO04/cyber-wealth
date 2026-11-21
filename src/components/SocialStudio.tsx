@@ -57,6 +57,7 @@ export function SocialStudio({
   markets,
   aiReady,
   telegramReady,
+  socialConnections,
 }: {
   initialPosts: PostItem[]
   totals: StudioTotals
@@ -64,6 +65,7 @@ export function SocialStudio({
   markets: MarketOption[]
   aiReady: boolean
   telegramReady: boolean
+  socialConnections: { channel: string; name: string; status: string }[]
 }) {
   const [posts, setPosts] = useState(initialPosts)
   // Counts come from the list on screen, so a freshly generated draft moves them at
@@ -142,7 +144,7 @@ export function SocialStudio({
       setNote(
         data.created === 0
           ? 'Semua kombinasi kanal dan pasar sudah punya konten. Ubah kanal atau pasar untuk membuat variasi baru.'
-          : `${data.created} konten baru dibuat. Konten untuk kanal yang diotorisasi dijadwalkan untuk diterbitkan otomatis.`
+          : `${data.created} draf konten baru dibuat. Draf belum terbit sampai disetujui dan kanal siap.`
       )
       if (data.reason) setNote((old) => `${old} Sebagian draf disusun tanpa AI: ${data.reason}`)
     } catch {
@@ -204,6 +206,29 @@ export function SocialStudio({
             : 'Telegram belum terhubung. Sistem penerbitan sudah disiapkan, tetapi bot dan kanal Telegram perlu diotorisasi melalui TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID pada pengaturan layanan. Agen tidak akan mengaku konten terbit sebelum Telegram mengonfirmasi.'}
         </p>
       </Notice>
+
+      <Panel>
+        <PanelHead label="Akun publikasi YouTube dan TikTok" />
+        <PanelBody>
+          <p className="list-lead">Hubungkan akun resmi agar studio dapat mengirim konten melalui API platform. Token disimpan terenkripsi di server.</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {(['youtube', 'tiktok'] as const).map((platform) => {
+              const account = socialConnections.find((item) => item.channel === platform && item.status === 'connected')
+              return (
+                <div key={platform} className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-line p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">{platform === 'youtube' ? 'YouTube' : 'TikTok'}</span>
+                    <Badge tone={account ? 'signal' : 'hold'}>{account ? 'Terhubung' : 'Belum terhubung'}</Badge>
+                  </div>
+                  {account ? <p className="text-xs text-ink-quiet">{account.name}</p> : <p className="text-xs text-ink-quiet">Perlu otorisasi owner.</p>}
+                  {!account && <a className="inline-flex min-h-9 items-center justify-center rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-surface" href={'/api/integrations/social/' + platform}>Hubungkan {platform === 'youtube' ? 'YouTube' : 'TikTok'}</a>}
+                </div>
+              )
+            })}
+          </div>
+          <p className="list-lead">Catatan: TikTok mewajibkan persetujuan eksplisit sebelum setiap video dikirim. Publikasi publik juga memerlukan audit aplikasi TikTok.</p>
+        </PanelBody>
+      </Panel>
 
       <Panel>
         <PanelBody>
