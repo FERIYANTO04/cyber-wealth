@@ -12,8 +12,8 @@ import { CHANNELS, MARKETS, MARKET_CHANNELS, channelLabel, channelLimit, type Ch
  * The social content studio.
  *
  * Three rules hold the whole file together:
- * 1. AI Marketing may approve and schedule its own factual drafts from the live catalog.
- *    The owner retains control of money, account connections and consequential actions.
+ * 1. AI Marketing may schedule factual text posts from the live catalog.
+ *    Video concepts remain drafts until a rendered video is attached and reviewed.
  * 2. "Published" is a claim only a channel API can make. Until one returns an id, a
  *    post stays `not_connected` or `failed`, with the provider's reason on it.
  * 3. Content is written from the owner's real catalog rows. No invented product,
@@ -201,8 +201,8 @@ function templateBody(material: Material, channel: ChannelKey, market: string): 
 
 /**
  * Writes one post per material per market and channel, skipping anything that already
- * exists. AI-generated factual posts are approved and scheduled 24 hours ahead; publishing
- * still requires a connected channel and a successful provider API response.
+ * exists. Text posts may be scheduled 24 hours ahead; video production briefs stay as drafts
+ * until a rendered media file is attached and reviewed.
  */
 export async function generatePosts(args: { markets?: string[]; channels?: ChannelKey[]; limit?: number } = {}) {
   const markets = args.markets?.length ? args.markets : MARKETS.map((m) => m.key)
@@ -234,6 +234,8 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
     : [...new Set(markets.flatMap((market) => MARKET_CHANNELS[market] ?? []))]
 
   let created = 0
+  let videoDrafts = 0
+  let scheduledPosts = 0
   const notes: string[] = []
   const cap = args.limit ?? 12
 
@@ -250,7 +252,7 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
           // Reconcile legacy drafts created before agent self-approval was enabled.
           // Only unsent drafts from the current live catalog are promoted; published,
           // rejected, failed-review, or already-approved posts are left untouched.
-          if (prior.status === 'draft' && prior.publishState === 'not_connected') {
+          if (prior.status === 'draft' && prior.publishState === 'not_connected' && channel !== 'youtube' && channel !== 'tiktok') {
             const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
             await db.update(socialPosts).set({
               status: 'approved',
@@ -325,6 +327,8 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
         })
         taken.add(key)
         created += 1
+        if (videoChannel) videoDrafts += 1
+        else scheduledPosts += 1
       }
     }
   }
@@ -335,13 +339,15 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
     action: created > 0 ? 'Draf konten sosial dibuat' : 'Tugas pemasaran dilewati',
     detail:
       created > 0
-        ? `${created} konten untuk ${markets.join(' dan ')} disetujui dan dijadwalkan otomatis 24 jam ke depan. Publikasi menunggu kanal resmi terhubung.`
+        ? `${created} konten untuk ${markets.join(' dan ')} dibuat. ${scheduledPosts} konten teks dijadwalkan otomatis 24 jam ke depan; ${videoDrafts} paket video disimpan sebagai draf sampai MP4 final dilampirkan dan ditinjau. Publikasi hanya berjalan melalui kanal resmi yang terhubung.`
         : 'Setiap produk dan layanan sudah punya draf di kanal yang dipilih.',
     dataSource: 'live',
   })
 
   return {
     created,
+    videoDrafts,
+    scheduledPosts,
     skipped: false as const,
     reason: notes[0] ?? null,
     markets,
