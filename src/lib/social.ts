@@ -548,7 +548,6 @@ export async function publishDuePosts(): Promise<{
     if (post.channel === 'telegram') {
       const result = await publishToTelegram(post.body)
       if (result.ok) {
-        const track = await createPostTrack(post)
         await db.update(socialPosts).set({
           publishState: 'published',
           externalId: result.messageId,
@@ -589,7 +588,7 @@ export async function publishDuePosts(): Promise<{
           externalId: result.videoId,
           externalUrl: result.url,
           publishedAt: new Date(),
-          publishNote: 'Video berhasil diunggah dan dikonfirmasi YouTube API. Status privasi mengikuti YOUTUBE_DEFAULT_PRIVACY_STATUS (default: unlisted).' + (track ? ' Tautan pelacak disiapkan.' : ''),
+          publishNote: 'Video berhasil diunggah dan dikonfirmasi YouTube API. Tautan katalog perusahaan dimasukkan ke deskripsi; privasi default unlisted.',
         }).where(eq(socialPosts.id, post.id))
         await db.insert(activity).values({
           actor: 'system',
