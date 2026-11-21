@@ -5,6 +5,7 @@ import { askAi, aiConfigured } from './ai'
 import { publishToTelegram } from './telegram'
 import { xReady, publishToX } from './x'
 import { fileUrl } from './storage'
+import { publishToYouTube } from './youtube-publisher'
 import { CHANNELS, MARKETS, MARKET_CHANNELS, channelLabel, channelLimit, type ChannelKey } from './labels'
 
 /**
@@ -576,6 +577,50 @@ export async function publishDuePosts(): Promise<{
       })
       notes.push(result.reason)
       failed += 1
+      continue
+    }
+
+    if (post.channel === 'youtube') {
+      const result = await publishToYouTube(post)
+      if (result.ok) {
+        const track = await createPostTrack(post)
+        await db.update(socialPosts).set({
+          publishState: 'published',
+          externalId: result.videoId,
+          externalUrl: result.url,
+          publishedAt: new Date(),
+          publishNote: 'Video berhasil diunggah dan dikonfirmasi YouTube API. Status privasi mengikuti YOUTUBE_DEFAULT_PRIVACY_STATUS (default: unlisted).' + (track ? ' Tautan pelacak disiapkan.' : ''),
+        }).where(eq(socialPosts.id, post.id))
+        await db.insert(activity).values({
+          actor: 'system',
+          action: 'Video terbit di YouTube',
+          detail: post.headline + ' — ' + result.url + '. Dikonfirmasi YouTube Data API.',
+          dataSource: 'live',
+        })
+        published += 1
+        continue
+      }
+      await db.update(socialPosts).set({
+        publishState: 'failed',
+        publishNote: 'YouTube menolak publikasi: ' + result.reason,
+      }).where(eq(socialPosts.id, post.id))
+      await db.insert(activity).values({
+        actor: 'system',
+        action: 'Publikasi YouTube gagal',
+        detail: post.headline + ' — ' + result.reason,
+        dataSource: 'live',
+      })
+      notes.push(result.reason)
+      failed += 1
+      continue
+    }
+
+    if (post.channel === 'tiktok') {
+      await db.update(socialPosts).set({
+        publishState: 'not_connected',
+        publishNote: 'Akun TikTok terhubung, tetapi pengiriman video menunggu persetujuan eksplisit owner pada setiap posting sesuai aturan Content Posting API. Tidak ada video yang dikirim.',
+      }).where(eq(socialPosts.id, post.id))
+      blocked += 1
       continue
     }
 
