@@ -144,7 +144,7 @@ export function SocialStudio({
       setNote(
         data.created === 0
           ? 'Semua kombinasi kanal dan pasar sudah punya konten. Ubah kanal atau pasar untuk membuat variasi baru.'
-          : `${data.created} draf konten baru dibuat. Draf belum terbit sampai disetujui dan kanal siap.`
+          : `${data.created} konten baru dibuat dan dijadwalkan. Publikasi menunggu kanal terhubung; YouTube juga membutuhkan lampiran video.`
       )
       if (data.reason) setNote((old) => `${old} Sebagian draf disusun tanpa AI: ${data.reason}`)
     } catch {
@@ -356,7 +356,7 @@ export function SocialStudio({
                 title={posts.length === 0 ? 'Belum ada konten' : 'Tidak ada konten di saringan ini'}
                 body={
                   posts.length === 0
-                    ? 'Buat draf pertama dari produk dan layanan Anda. Semuanya menunggu persetujuan Anda sebelum dijadwalkan.'
+                    ? 'Buat konten pertama dari produk dan layanan yang sudah terbit. Konten aman dapat dijadwalkan agen; publikasi menunggu kanal resmi terhubung dan materi media tersedia.'
                     : 'Ubah pasar, kanal, atau status untuk melihat konten lain.'
                 }
               />
