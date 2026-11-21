@@ -553,7 +553,7 @@ export async function publishDuePosts(): Promise<{
           externalId: result.messageId,
           externalUrl: result.url,
           publishedAt: new Date(),
-          publishNote: `Dikirim ke Telegram pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.${track ? ' Tautan pelacak disiapkan.' : ''}`,
+          publishNote: `Dikirim ke Telegram pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.`,
         }).where(eq(socialPosts.id, post.id))
         await db.insert(activity).values({
           actor: 'system',
