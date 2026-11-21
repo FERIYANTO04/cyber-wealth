@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from './db'
-import { socialAccounts, socialPosts } from './db/schema'
+import { products, services, socialAccounts, socialPosts } from './db/schema'
 import { getFile } from './storage'
 import { openSocialToken, sealSocialToken } from './social-token-vault'
 
@@ -47,7 +47,7 @@ async function refreshYouTubeToken(account: typeof socialAccounts.$inferSelect, 
 }
 
 export async function publishToYouTube(post: typeof socialPosts.$inferSelect): Promise<PublishResult> {
-  if (!post.mediaKey || !post.mediaType?.startsWith('video/')) {
+  if (!post.mediaKey || post.mediaType !== 'video') {
     return { ok: false, reason: 'YouTube membutuhkan berkas video yang dilampirkan ke draf.' }
   }
   const [account] = await db.select().from(socialAccounts).where(and(
@@ -70,9 +70,22 @@ export async function publishToYouTube(post: typeof socialPosts.$inferSelect): P
 
     const origin = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN.replace(/^https?:\/\//, '').split('/')[0] : '')
-    const productPath = post.sourceType === 'product' ? '/toko' : post.sourceType === 'service' ? '/jasa' : '/'
+    let productPath = '/'
+    if (post.sourceType === 'product' && post.sourceId) {
+      const [product] = await db.select({ slug: products.slug }).from(products).where(and(
+        eq(products.id, post.sourceId),
+        eq(products.status, 'published')
+      )).limit(1)
+      if (product?.slug) productPath = '/toko/' + product.slug
+    } else if (post.sourceType === 'service' && post.sourceId) {
+      const [service] = await db.select({ slug: services.slug }).from(services).where(and(
+        eq(services.id, post.sourceId),
+        eq(services.status, 'published')
+      )).limit(1)
+      if (service?.slug) productPath = '/jasa/' + service.slug
+    }
     const productLink = origin ? new URL(productPath, origin).toString() : ''
-    const description = [post.body.trim(), productLink ? 'Lihat katalog dan layanan perusahaan: ' + productLink : ''].filter(Boolean).join('\n\n').slice(0, 5000)
+    const description = [post.body.trim(), productLink ? 'Lihat produk atau layanan ini: ' + productLink : ''].filter(Boolean).join('\n\n').slice(0, 5000)
     const privacyStatus = process.env.YOUTUBE_DEFAULT_PRIVACY_STATUS === 'public' || process.env.YOUTUBE_DEFAULT_PRIVACY_STATUS === 'private'
       ? process.env.YOUTUBE_DEFAULT_PRIVACY_STATUS
       : 'unlisted'
