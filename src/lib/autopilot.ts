@@ -162,7 +162,7 @@ async function runCeo(trigger: string) {
     const summary = factualSummary + ' Arahan operasional disusun dari data database tanpa model AI.'
     await finishRun(run.id, 'ok', summary, offlineCeoAnalysis, 0)
     await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
-    return { summary, dispatch: [] as Exclude<AutopilotTask, 'ceo'>[] }
+    return { summary, dispatch: await buildCeoDispatchPlan() }
   }
 
   const outcome = await askAi({
@@ -184,10 +184,11 @@ async function runCeo(trigger: string) {
   })
 
   if (!outcome.ok) {
-    const summary = factualSummary + ' Arahan operasional disusun dari data database; model AI belum tersedia.'
-    await finishRun(run.id, 'ok', summary, offlineCeoAnalysis + `\\n\\nAlasan mode offline: ${outcome.reason}`, 0)
-    await noteAgent('AI CEO', 'Arahan operasional offline diperbarui', summary)
-    return { summary, dispatch: [] as Exclude<AutopilotTask, 'ceo'>[] }
+    const summary = factualSummary + ' Model AI belum menjawab; CEO memakai rencana kerja cadangan berbasis data operasional.'
+    const dispatch = await buildCeoDispatchPlan()
+    await finishRun(run.id, 'ok', summary, offlineCeoAnalysis + `\\n\\nAlasan mode offline: ${outcome.reason}\\nDelegasi cadangan: ${dispatch.join(' → ') || 'tidak ada tugas yang relevan'}`, 0)
+    await noteAgent('AI CEO', 'Rencana delegasi cadangan dijalankan', summary)
+    return { summary, dispatch }
   }
 
   // The model may recommend actions, but it is not an accounting system.
@@ -202,7 +203,9 @@ async function runCeo(trigger: string) {
       dispatch = [...new Set(parsed.dispatch.filter((task): task is Exclude<AutopilotTask, 'ceo'> => typeof task === 'string' && task !== 'ceo' && allowed.has(task as Exclude<AutopilotTask, 'ceo'>)))]
     }
   } catch { dispatch = [] }
-  const detail = `${facts}\\n\\nAnalisis model ${outcome.model}:\\n${outcome.text}\\n\\nUrutan delegasi AI: ${dispatch.join(' → ') || 'AI tidak menghasilkan dispatch valid'}`
+  const aiDispatchValid = dispatch.length > 0
+  if (!aiDispatchValid) dispatch = await buildCeoDispatchPlan()
+  const detail = `${facts}\\n\\nAnalisis model ${outcome.model}:\\n${outcome.text}\\n\\nUrutan delegasi: ${dispatch.join(' → ') || 'tidak ada tugas yang relevan'}${aiDispatchValid ? ' (dipilih AI CEO)' : ' (rencana cadangan berbasis data; keluaran AI kosong/tidak valid)'}`
   await finishRun(run.id, 'ok', summary, detail, 0)
   await noteAgent('AI CEO', 'Strategi mandiri dan delegasi AI diperbarui', summary)
   return { summary, dispatch }
