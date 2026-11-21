@@ -463,7 +463,7 @@ export async function setPostSchedule(postId: string, iso: string | null) {
 /**
  * Publishes approved posts whose scheduled time has come.
  *
- * Connected channels publish through their official APIs. A post becomes `published` only when Meta
+ * Connected channels publish through their official APIs. A post becomes `published` only when the selected provider
  * returns a post id, and that id and the publish time are stored with it. Anything
  * else is recorded as `failed` with the provider's own reason, and the content stays unpublished.
  * Channels without an integration yet are recorded as `not_connected`, never as done.
