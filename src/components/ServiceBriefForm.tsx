@@ -13,6 +13,7 @@ export function ServiceBriefForm({ slug }: { slug: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sentCode, setSentCode] = useState<string | null>(null)
+  const [receiptSent, setReceiptSent] = useState(false)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -37,6 +38,7 @@ export function ServiceBriefForm({ slug }: { slug: string }) {
         setError(data.error ?? 'Permintaan tidak terkirim. Coba lagi.')
         return
       }
+      setReceiptSent(data.receiptSent === true)
       setSentCode(data.code)
     } catch {
       setError('Koneksi terputus. Coba lagi.')
@@ -50,8 +52,12 @@ export function ServiceBriefForm({ slug }: { slug: string }) {
       <div className="flex flex-col gap-1.5">
         <p className="text-[0.8125rem] font-medium text-signal">Brief Anda sudah diterima.</p>
         <p className="text-xs leading-relaxed text-ink-quiet">
-          Nomor permintaan <span className="font-mono">{sentCode}</span>. Penjual meninjau brief ini lebih dulu dan akan
-          menghubungi Anda lewat email yang Anda isi.
+          Nomor permintaan <span className="font-mono">{sentCode}</span>. Simpan nomor ini untuk referensi.
+        </p>
+        <p className="text-xs leading-relaxed text-ink-quiet">
+          {receiptSent
+            ? 'Konfirmasi penerimaan juga sudah dikirim ke email Anda. Tim akan meninjau kebutuhan dan mengirimkan rincian harga serta pembayaran sebelum pekerjaan dimulai.'
+            : 'Permintaan sudah tersimpan, tetapi email konfirmasi otomatis belum tersedia. Belum ada biaya yang dikenakan; tim perlu menghubungi Anda setelah meninjau brief.'}
         </p>
       </div>
     )
