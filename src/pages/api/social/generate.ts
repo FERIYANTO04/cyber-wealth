@@ -13,7 +13,7 @@ const Body = z.object({
   limit: z.coerce.number().int().min(1).max(20).optional(),
 })
 
-/** Writes drafts. Every one of them waits for the owner; nothing is scheduled or sent. */
+/** Creates catalog-grounded posts; safe drafts are approved and scheduled, while publishing waits for connected channels. */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
 
