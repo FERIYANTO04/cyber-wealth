@@ -87,7 +87,7 @@ export function SocialStudio({
   const [openId, setOpenId] = useState<string | null>(null)
 
   const [genMarkets, setGenMarkets] = useState<string[]>(markets.map((m) => m.key))
-  const [genChannels, setGenChannels] = useState<string[]>(['telegram', 'tiktok'])
+  const [genChannels, setGenChannels] = useState<string[]>(['telegram', 'tiktok', 'youtube'])
 
   const filtered = useMemo(() => {
     return posts.filter((post) => {
