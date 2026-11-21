@@ -283,9 +283,9 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
               `Produk/layanan: ${material.title}. Ringkasan resmi: ${material.summary}. Harga resmi: ${material.priceLabel}.`,
               `Batas maksimal ${limit} karakter. Hitung panjang keluaran dengan cermat.`,
               channel === 'youtube'
-                ? 'Buat judul yang jelas dan deskripsi video yang membantu penonton memahami manfaat; jangan mengaku sudah ada video atau demonstrasi jika belum ada.'
+                ? 'Buat paket produksi video YouTube Shorts 9:16 berdurasi 30–45 detik: judul yang memancing rasa ingin tahu tanpa clickbait, hook 0–2 detik, naskah narasi lengkap, storyboard per adegan dengan timestamp, visual/B-roll yang harus direkam atau dibuat, teks layar, arahan musik/suara tanpa memakai lagu berhak cipta yang tidak berlisensi, CTA, deskripsi, dan 3–5 kata kunci. Pastikan video tetap bernilai walau penonton belum mengenal merek. Jangan mengklaim video sudah dibuat.'
                 : channel === 'tiktok'
-                  ? 'Buat naskah video vertikal 20–30 detik dengan hook 2 detik pertama, arahan visual sederhana, narasi singkat, teks layar, dan CTA. Sertakan caption terpisah dalam satu keluaran ringkas.'
+                  ? 'Buat paket produksi TikTok vertikal 9:16 berdurasi 20–35 detik: 3 alternatif hook 0–2 detik, pilih hook terbaik, naskah narasi lengkap, storyboard per adegan dengan timestamp, visual/B-roll spesifik, teks layar singkat yang sinkron, ritme potongan, arahan suara/musik bebas lisensi, CTA natural, caption terpisah, dan 3–5 hashtag relevan. Utamakan retensi, kejelasan, dan nilai tontonan; jangan membuat klaim bahwa video sudah dirender.'
                   : channel === 'telegram'
                     ? 'Buat pesan kanal yang informatif, mudah dipindai, dengan paragraf pendek dan CTA.'
                     : channel === 'x'
@@ -304,6 +304,7 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
           }
         }
 
+        const videoChannel = channel === 'youtube' || channel === 'tiktok'
         await db.insert(socialPosts).values({
           channel,
           market,
@@ -313,11 +314,13 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
           sourceId: material.sourceId,
           sourceName: material.sourceName,
           source,
-          status: 'approved',
-          approvedAt: new Date(),
-          scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          status: videoChannel ? 'draft' : 'approved',
+          approvedAt: videoChannel ? null : new Date(),
+          scheduledAt: videoChannel ? null : new Date(Date.now() + 24 * 60 * 60 * 1000),
           publishState: 'not_connected',
-          publishNote: 'Dijadwalkan otomatis oleh AI Marketing 24 jam setelah dibuat. Publikasi hanya berjalan jika kanal resmi terhubung dan API mengonfirmasi.',
+          publishNote: videoChannel
+            ? 'Paket produksi video dibuat AI Marketing. Belum ada berkas MP4 final; video harus dirender dan dilampirkan sebelum persetujuan serta publikasi.'
+            : 'Dijadwalkan otomatis oleh AI Marketing 24 jam setelah dibuat. Publikasi hanya berjalan jika kanal resmi terhubung dan API mengonfirmasi.',
           dataSource: 'live',
         })
         taken.add(key)
