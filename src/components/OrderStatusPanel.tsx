@@ -128,13 +128,13 @@ export function OrderStatusPanel({
             </div>
           </>
         )}
-        {order.status === 'pending' && order.provider === 'paddle' && order.invoiceUrl && (
+        {order.status === 'pending' && ['paddle', 'midtrans'].includes(order.provider) && order.invoiceUrl && (
           <>
             <StatusNote
               icon="wait"
               tone="hold"
               title="Menunggu pembayaran"
-              body="Produk dikirim setelah pembayaran dikonfirmasi."
+              body="Selesaikan pembayaran melalui halaman resmi penyedia. Produk dikirim setelah pembayaran dikonfirmasi."
             />
             <a href={order.invoiceUrl} className="w-fit">
               <Button size="sm">Lanjutkan pembayaran</Button>
