@@ -144,7 +144,7 @@ export function SocialStudio({
       setNote(
         data.created === 0
           ? 'Semua kombinasi kanal dan pasar sudah punya konten. Ubah kanal atau pasar untuk membuat variasi baru.'
-          : `${data.created} konten baru dibuat dan dijadwalkan. Publikasi menunggu kanal terhubung; YouTube juga membutuhkan lampiran video.`
+          : `${data.created} konten baru dibuat. ${data.scheduledPosts ?? 0} konten teks dijadwalkan; ${data.videoDrafts ?? 0} paket video tetap menjadi draf sampai MP4 final dilampirkan dan ditinjau. Publikasi menunggu kanal resmi terhubung.`
       )
       if (data.reason) setNote((old) => `${old} Sebagian draf disusun tanpa AI: ${data.reason}`)
     } catch {
