@@ -55,12 +55,12 @@ async function gmailSmtp(input?: EmailInput): Promise<void> {
   const waiters: Array<(reply: string) => void> = []
   socket.on('data', (chunk: Buffer) => {
     buffer += chunk.toString('utf8')
-    const lines = buffer.split(/\\r?\\n/)
+    const lines = buffer.split(/\r?\n/)
     buffer = lines.pop() ?? ''
     let current = ''
     for (const line of lines) {
-      current += (current ? '\\n' : '') + line
-      if (/^\\d{3} /.test(line)) {
+      current += (current ? '\n' : '') + line
+      if (/^\d{3} /.test(line)) {
         const waiter = waiters.shift()
         if (waiter) waiter(current)
         else replies.push(current)
@@ -76,7 +76,7 @@ async function gmailSmtp(input?: EmailInput): Promise<void> {
         socket.once('close', () => reject(new Error('Koneksi SMTP terputus.')))
       })
   const command = async (value: string, accepted: number[]) => {
-    socket.write(value + '\\r\\n')
+    socket.write(value + '\r\n')
     const reply = await readReply()
     const code = Number(reply.slice(0, 3))
     if (!accepted.includes(code)) throw new Error('SMTP ' + code + ': ' + reply.slice(0, 300))
@@ -99,11 +99,11 @@ async function gmailSmtp(input?: EmailInput): Promise<void> {
     }
     const from = c.smtpUser
     const to = input.to.trim().toLowerCase()
-    const safeSubject = input.subject.replace(/[\\r\\n]+/g, ' ').trim()
+    const safeSubject = input.subject.replace(/[\r\n]+/g, ' ').trim()
     await command(`MAIL FROM:<${from}> `, [250])
     await command(`RCPT TO:<${to}>`, [250, 251])
     await command('DATA', [354])
-    const encodedBody = Buffer.from(input.body, 'utf8').toString('base64').match(/.{1,76}/g)?.join('\\r\\n') ?? ''
+    const encodedBody = Buffer.from(input.body, 'utf8').toString('base64').match(/.{1,76}/g)?.join('\r\n') ?? ''
     const message = [
       `From: Cyber Wealth <${from}>`,
       `To: <${to}>`,
@@ -115,7 +115,7 @@ async function gmailSmtp(input?: EmailInput): Promise<void> {
       encodedBody,
       '.',
       '',
-    ].join('\\r\\n')
+    ].join('\r\n')
     socket.write(message)
     const sent = await readReply()
     if (!sent.startsWith('250')) throw new Error('Gmail menolak pesan: ' + sent.slice(0, 300))
@@ -131,7 +131,7 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
   let status = 'queued'
   let detail = 'Email tersimpan di antrean. Penyedia email belum terhubung, jadi belum ada yang terkirim.'
 
-  if (!to || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(to)) {
+  if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
     status = 'failed'
     detail = 'Alamat email penerima tidak valid.'
   } else if (!emailConfigured()) {
@@ -182,7 +182,7 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
 
 /** Tells the owner about money moving. Owner addresses come from the app's own accounts. */
 export async function notifyOwner(input: { subject: string; lines: string[]; kind: string; relatedId?: string }) {
-  const body = ['Ringkasan dari Cyber Wealth Autopilot:', '', ...input.lines].join('\\n')
+  const body = ['Ringkasan dari Cyber Wealth Autopilot:', '', ...input.lines].join('\n')
   const owners = await db.select({ email: ownerAccount.email }).from(ownerAccount)
   for (const owner of owners) {
     await sendEmail({ to: owner.email, subject: input.subject, body, kind: input.kind, relatedType: 'owner', relatedId: input.relatedId })
