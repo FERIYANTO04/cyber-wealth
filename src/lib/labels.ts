@@ -59,13 +59,14 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
 // ── Social studio vocabulary ──────────────────────────────────────────────
 // Client-safe: components show channel names and limits without importing the
 // database module.
-export type ChannelKey = 'telegram' | 'x' | 'linkedin' | 'tiktok'
+export type ChannelKey = 'telegram' | 'x' | 'linkedin' | 'tiktok' | 'youtube'
 
 export const CHANNELS: { key: ChannelKey; label: string; limit: number; note: string }[] = [
   { key: 'telegram', label: 'Telegram Channel', limit: 4000, note: 'Distribusi langsung ke kanal Telegram milik bisnis.' },
   { key: 'x', label: 'X (Twitter)', limit: 280, note: 'Paling ringkas — satu gagasan per kiriman.' },
   { key: 'linkedin', label: 'LinkedIn', limit: 3000, note: 'Untuk pembeli perusahaan dan profesional.' },
   { key: 'tiktok', label: 'TikTok', limit: 2200, note: 'Naskah video pendek, kalimat pembuka yang menahan.' },
+  { key: 'youtube', label: 'YouTube', limit: 5000, note: 'Judul, deskripsi, tautan produk, dan metadata video YouTube.' },
 ]
 
 export function channelLabel(key: string): string {
@@ -87,6 +88,6 @@ export const MARKETS = [
 ] as const
 
 export const MARKET_CHANNELS: Record<string, ChannelKey[]> = {
-  Indonesia: ['telegram', 'tiktok'],
-  International: ['linkedin', 'x'],
+  Indonesia: ['telegram', 'tiktok', 'youtube'],
+  International: ['linkedin', 'x', 'youtube'],
 }

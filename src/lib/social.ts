@@ -5,14 +5,15 @@ import { askAi, aiConfigured } from './ai'
 import { publishToTelegram } from './telegram'
 import { xReady, publishToX } from './x'
 import { fileUrl } from './storage'
+import { publishToYouTube } from './youtube-publisher'
 import { CHANNELS, MARKETS, MARKET_CHANNELS, channelLabel, channelLimit, type ChannelKey } from './labels'
 
 /**
  * The social content studio.
  *
  * Three rules hold the whole file together:
- * 1. AI Marketing may approve and schedule its own factual drafts from the live catalog.
- *    The owner retains control of money, account connections and consequential actions.
+ * 1. AI Marketing may schedule factual text posts from the live catalog.
+ *    Video concepts remain drafts until a rendered video is attached and reviewed.
  * 2. "Published" is a claim only a channel API can make. Until one returns an id, a
  *    post stays `not_connected` or `failed`, with the provider's reason on it.
  * 3. Content is written from the owner's real catalog rows. No invented product,
@@ -148,7 +149,7 @@ type Material = {
 async function catalogMaterials(): Promise<Material[]> {
   const [productRows, serviceRows] = await Promise.all([
     db.select().from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live'), sql`${products.fileKey} is not null and ${products.fileKey} !~* '^https?://' and coalesce(${products.fileName}, '') !~* '(draft|draf)'`)).limit(8),
-    db.select().from(services).where(eq(services.status, 'published')).limit(8),
+    db.select().from(services).where(and(eq(services.status, 'published'), eq(services.dataSource, 'live'))).limit(8),
   ])
 
   return [
@@ -200,8 +201,8 @@ function templateBody(material: Material, channel: ChannelKey, market: string): 
 
 /**
  * Writes one post per material per market and channel, skipping anything that already
- * exists. AI-generated factual posts are approved and scheduled 24 hours ahead; publishing
- * still requires a connected channel and a successful provider API response.
+ * exists. Text posts may be scheduled 24 hours ahead; video production briefs stay as drafts
+ * until a rendered media file is attached and reviewed.
  */
 export async function generatePosts(args: { markets?: string[]; channels?: ChannelKey[]; limit?: number } = {}) {
   const markets = args.markets?.length ? args.markets : MARKETS.map((m) => m.key)
@@ -233,6 +234,8 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
     : [...new Set(markets.flatMap((market) => MARKET_CHANNELS[market] ?? []))]
 
   let created = 0
+  let videoDrafts = 0
+  let scheduledPosts = 0
   const notes: string[] = []
   const cap = args.limit ?? 12
 
@@ -249,7 +252,7 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
           // Reconcile legacy drafts created before agent self-approval was enabled.
           // Only unsent drafts from the current live catalog are promoted; published,
           // rejected, failed-review, or already-approved posts are left untouched.
-          if (prior.status === 'draft' && prior.publishState === 'not_connected') {
+          if (prior.status === 'draft' && prior.publishState === 'not_connected' && channel !== 'youtube' && channel !== 'tiktok') {
             const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
             await db.update(socialPosts).set({
               status: 'approved',
@@ -269,12 +272,27 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
         if (aiConfigured()) {
           const outcome = await askAi({
             system:
-              'Anda penulis konten media sosial untuk pemilik usaha kecil. Tulis dalam bahasa yang diminta, jujur, tanpa janji hasil, tanpa mengarang testimoni, jumlah pembeli, atau angka penjualan. Jangan memakai tanda kutip atau emoji berlebihan. Satu ajakan bertindak di akhir.',
+              [
+                'Anda adalah direktur kreatif dan editor senior untuk merek perusahaan yang profesional.',
+                'Hasil harus spesifik, bernilai bagi audiens, enak dibaca, dan sesuai budaya pasar serta bahasa yang diminta.',
+                'Gunakan hanya fakta yang diberikan tentang produk atau layanan. Jangan mengarang fitur, hasil, diskon, stok, garansi, testimoni, pelanggan, sertifikasi, atau angka.',
+                'Hindari klaim mutlak, clickbait menipu, spam, pengulangan, pembukaan generik, dan emoji berlebihan.',
+                'Buat satu ide utama yang jelas, pembuka kuat, manfaat konkret yang benar-benar didukung ringkasan, lalu satu ajakan bertindak yang wajar.',
+                'Jangan menyebut harga jika tidak tersedia. Jangan membuat tagar yang tidak relevan. Keluarkan hanya materi final tanpa penjelasan proses.'
+              ].join(' '),
             prompt: [
-              `Kanal: ${channelLabel(channel)}. Bahasa: ${language}.`,
-              `Produk/layanan: ${material.title}. Ringkasan: ${material.summary}. Harga: ${material.priceLabel}.`,
-              `Tulis satu kiriman maksimal ${limit} karakter. Tanpa tagar lebih dari tiga.`,
-              channel === 'x' ? 'Sangat ringkas.' : channel === 'tiktok' ? 'Naskah video 30 detik: bagian pembuka, isi, ajakan.' : '',
+              `Kanal: ${channelLabel(channel)}. Bahasa dan pasar: ${language} / ${market}.`,
+              `Produk/layanan: ${material.title}. Ringkasan resmi: ${material.summary}. Harga resmi: ${material.priceLabel}.`,
+              `Batas maksimal ${limit} karakter. Hitung panjang keluaran dengan cermat.`,
+              channel === 'youtube'
+                ? 'Buat paket produksi video YouTube Shorts 9:16 berdurasi 30–45 detik: judul yang memancing rasa ingin tahu tanpa clickbait, hook 0–2 detik, naskah narasi lengkap, storyboard per adegan dengan timestamp, visual/B-roll yang harus direkam atau dibuat, teks layar, arahan musik/suara tanpa memakai lagu berhak cipta yang tidak berlisensi, CTA, deskripsi, dan 3–5 kata kunci. Pastikan video tetap bernilai walau penonton belum mengenal merek. Jangan mengklaim video sudah dibuat.'
+                : channel === 'tiktok'
+                  ? 'Buat paket produksi TikTok vertikal 9:16 berdurasi 20–35 detik: 3 alternatif hook 0–2 detik, pilih hook terbaik, naskah narasi lengkap, storyboard per adegan dengan timestamp, visual/B-roll spesifik, teks layar singkat yang sinkron, ritme potongan, arahan suara/musik bebas lisensi, CTA natural, caption terpisah, dan 3–5 hashtag relevan. Utamakan retensi, kejelasan, dan nilai tontonan; jangan membuat klaim bahwa video sudah dirender.'
+                  : channel === 'telegram'
+                    ? 'Buat pesan kanal yang informatif, mudah dipindai, dengan paragraf pendek dan CTA.'
+                    : channel === 'x'
+                      ? 'Buat satu gagasan tajam, sangat ringkas, tanpa basa-basi.'
+                      : 'Sesuaikan gaya dan struktur dengan kebiasaan audiens kanal; jangan menulis seperti iklan generik.',
             ]
               .filter(Boolean)
               .join(' '),
@@ -288,6 +306,7 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
           }
         }
 
+        const videoChannel = channel === 'youtube' || channel === 'tiktok'
         await db.insert(socialPosts).values({
           channel,
           market,
@@ -297,15 +316,19 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
           sourceId: material.sourceId,
           sourceName: material.sourceName,
           source,
-          status: 'approved',
-          approvedAt: new Date(),
-          scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          status: videoChannel ? 'draft' : 'approved',
+          approvedAt: videoChannel ? null : new Date(),
+          scheduledAt: videoChannel ? null : new Date(Date.now() + 24 * 60 * 60 * 1000),
           publishState: 'not_connected',
-          publishNote: 'Dijadwalkan otomatis oleh AI Marketing 24 jam setelah dibuat. Publikasi hanya berjalan jika kanal resmi terhubung dan API mengonfirmasi.',
+          publishNote: videoChannel
+            ? 'Paket produksi video dibuat AI Marketing. Belum ada berkas MP4 final; video harus dirender dan dilampirkan sebelum persetujuan serta publikasi.'
+            : 'Dijadwalkan otomatis oleh AI Marketing 24 jam setelah dibuat. Publikasi hanya berjalan jika kanal resmi terhubung dan API mengonfirmasi.',
           dataSource: 'live',
         })
         taken.add(key)
         created += 1
+        if (videoChannel) videoDrafts += 1
+        else scheduledPosts += 1
       }
     }
   }
@@ -316,13 +339,15 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
     action: created > 0 ? 'Draf konten sosial dibuat' : 'Tugas pemasaran dilewati',
     detail:
       created > 0
-        ? `${created} konten untuk ${markets.join(' dan ')} disetujui dan dijadwalkan otomatis 24 jam ke depan. Publikasi menunggu kanal resmi terhubung.`
+        ? `${created} konten untuk ${markets.join(' dan ')} dibuat. ${scheduledPosts} konten teks dijadwalkan otomatis 24 jam ke depan; ${videoDrafts} paket video disimpan sebagai draf sampai MP4 final dilampirkan dan ditinjau. Publikasi hanya berjalan melalui kanal resmi yang terhubung.`
         : 'Setiap produk dan layanan sudah punya draf di kanal yang dipilih.',
     dataSource: 'live',
   })
 
   return {
     created,
+    videoDrafts,
+    scheduledPosts,
     skipped: false as const,
     reason: notes[0] ?? null,
     markets,
@@ -462,7 +487,7 @@ export async function setPostSchedule(postId: string, iso: string | null) {
 /**
  * Publishes approved posts whose scheduled time has come.
  *
- * Connected channels publish through their official APIs. A post becomes `published` only when Meta
+ * Connected channels publish through their official APIs. A post becomes `published` only when the selected provider
  * returns a post id, and that id and the publish time are stored with it. Anything
  * else is recorded as `failed` with the provider's own reason, and the content stays unpublished.
  * Channels without an integration yet are recorded as `not_connected`, never as done.
@@ -547,13 +572,12 @@ export async function publishDuePosts(): Promise<{
     if (post.channel === 'telegram') {
       const result = await publishToTelegram(post.body)
       if (result.ok) {
-        const track = await createPostTrack(post)
         await db.update(socialPosts).set({
           publishState: 'published',
           externalId: result.messageId,
           externalUrl: result.url,
           publishedAt: new Date(),
-          publishNote: `Dikirim ke Telegram pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.${track ? ' Tautan pelacak disiapkan.' : ''}`,
+          publishNote: `Dikirim ke Telegram pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.`,
         }).where(eq(socialPosts.id, post.id))
         await db.insert(activity).values({
           actor: 'system',
@@ -576,6 +600,50 @@ export async function publishDuePosts(): Promise<{
       })
       notes.push(result.reason)
       failed += 1
+      continue
+    }
+
+    if (post.channel === 'youtube') {
+      const result = await publishToYouTube(post)
+      if (result.ok) {
+        const track = await createPostTrack(post)
+        await db.update(socialPosts).set({
+          publishState: 'published',
+          externalId: result.videoId,
+          externalUrl: result.url,
+          publishedAt: new Date(),
+          publishNote: 'Video berhasil diunggah dan dikonfirmasi YouTube API. Tautan katalog perusahaan dimasukkan ke deskripsi; privasi default unlisted.',
+        }).where(eq(socialPosts.id, post.id))
+        await db.insert(activity).values({
+          actor: 'system',
+          action: 'Video terbit di YouTube',
+          detail: post.headline + ' — ' + result.url + '. Dikonfirmasi YouTube Data API.',
+          dataSource: 'live',
+        })
+        published += 1
+        continue
+      }
+      await db.update(socialPosts).set({
+        publishState: 'failed',
+        publishNote: 'YouTube menolak publikasi: ' + result.reason,
+      }).where(eq(socialPosts.id, post.id))
+      await db.insert(activity).values({
+        actor: 'system',
+        action: 'Publikasi YouTube gagal',
+        detail: post.headline + ' — ' + result.reason,
+        dataSource: 'live',
+      })
+      notes.push(result.reason)
+      failed += 1
+      continue
+    }
+
+    if (post.channel === 'tiktok') {
+      await db.update(socialPosts).set({
+        publishState: 'not_connected',
+        publishNote: 'Akun TikTok terhubung, tetapi pengiriman video menunggu persetujuan eksplisit owner pada setiap posting sesuai aturan Content Posting API. Tidak ada video yang dikirim.',
+      }).where(eq(socialPosts.id, post.id))
+      blocked += 1
       continue
     }
 
