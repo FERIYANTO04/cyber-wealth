@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { and, eq } from 'drizzle-orm'
 import { jwtVerify } from 'jose'
-import { requireOwnerSession } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { socialAccounts } from '@/lib/db/schema'
+import { ownerAccount, socialAccounts } from '@/lib/db/schema'
 import { sealSocialToken } from '@/lib/social-token-vault'
 
 const CALLBACK_PATH = '/api/integrations/social/callback'
@@ -41,9 +40,6 @@ async function providerJson(url: string, init: RequestInit) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Metode tidak diizinkan.' })
-  const session = await requireOwnerSession(req)
-  if (!session) return res.status(401).json({ error: 'Sesi owner tidak ditemukan. Masuk kembali lalu ulangi koneksi.' })
-
   const code = typeof req.query.code === 'string' ? req.query.code : ''
   const state = typeof req.query.state === 'string' ? req.query.state : ''
   if (!code || !state) return res.redirect(302, '/social?connection=cancelled')
@@ -54,9 +50,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       issuer: 'cyber-wealth-social-oauth',
     })
     const platform = String(verified.payload.platform || '')
-    if (verified.payload.sub !== session.ownerId || (platform !== 'youtube' && platform !== 'tiktok')) {
-      return res.status(403).send('State OAuth tidak cocok dengan sesi owner.')
+    const ownerId = String(verified.payload.sub || '')
+    if (!ownerId || !verified.payload.nonce || (platform !== 'youtube' && platform !== 'tiktok')) {
+      return res.status(403).send('State OAuth tidak valid.')
     }
+    const [owner] = await db.select({ id: ownerAccount.id }).from(ownerAccount).where(eq(ownerAccount.id, ownerId)).limit(1)
+    if (!owner) return res.status(403).send('Pemilik sesi OAuth tidak ditemukan.')
 
     const redirectUri = appOrigin() + CALLBACK_PATH
     let token: TokenPayload
@@ -111,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       accessToken: token.access_token,
       refreshToken: token.refresh_token || null,
       tokenType: token.token_type || 'Bearer',
-      refreshExpiresAt: token.refresh_token_expires_in ? Date.now() + token.refresh_token_expires_in * 1000 : null,
+      refreshExpiresAt: (token as TokenPayload & { refresh_expires_in?: number }).refresh_expires_in ? Date.now() + (token as TokenPayload & { refresh_expires_in?: number }).refresh_expires_in! * 1000 : null,
     })
     await db.delete(socialAccounts).where(and(
       eq(socialAccounts.channel, platform),
