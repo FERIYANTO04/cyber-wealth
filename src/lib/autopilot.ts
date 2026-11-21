@@ -20,6 +20,7 @@ import { SETTINGS_ID, getFinance, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
 import { generatePosts } from './social'
+import { emailConfigured, sendEmail } from './email'
 
 /**
  * The autopilot runs as request-driven work, never as a background timer: a
@@ -618,8 +619,8 @@ async function runMarketing(trigger: string) {
 async function runSales(trigger: string) {
   const run = await startRun('AI Sales', 'sales', trigger)
 
-  // Track every uncontacted lead, including those whose outreach draft already exists.
-  // Existing drafts are preserved; the agent must never mistake "drafted" for "contacted".
+  // Work every open lead, preserve existing copy, and distinguish a real send
+  // from a CRM draft. Never mark a lead contacted unless the provider accepts it.
   const openLeads = await db
     .select()
     .from(revenueLeads)
@@ -638,61 +639,89 @@ async function runSales(trigger: string) {
 
   let drafted = 0
   let existingDrafts = 0
+  let sent = 0
+  let queued = 0
+  const canSend = emailConfigured()
+
   for (const lead of openLeads) {
-    if (lead.outreachBody) {
+    let body = lead.outreachBody ?? ''
+    if (body) {
       existingDrafts += 1
-      continue
+    } else {
+      const outcome = aiConfigured()
+        ? await askAi({
+            system:
+              'Anda penulis pesan pendekatan penjualan B2B yang sopan dan jujur. Tulis dalam bahasa yang sama dengan minat calon pelanggan. Jangan mengarang portofolio, klien, harga, atau janji hasil. Maksimal 110 kata, mudah dibaca di ponsel.',
+            prompt: [
+              `Calon pelanggan: ${lead.name} (${lead.email})`,
+              `Pasar: ${lead.market}`,
+              `Kebutuhan yang dicatat: ${lead.interest}`,
+              'Tulis satu pesan pembuka yang menyebut kebutuhannya, menawarkan satu langkah kecil yang jelas, dan menutup dengan pertanyaan sederhana. Jangan menyertakan tautan yang tidak diketahui.',
+            ].join('\\n'),
+            maxTokens: 400,
+          })
+        : null
+
+      body = outcome?.ok
+        ? outcome.text
+        : [
+            `Halo ${lead.name},`,
+            '',
+            `Saya mencatat kebutuhan Anda soal: ${lead.interest}. Saya bisa bantu menyiapkan langkah awalnya dan mengirim rincian singkat bila Anda berminat.`,
+            '',
+            'Apakah minggu ini waktu yang baik untuk membahasnya sebentar?',
+          ].join('\\n')
+
+      await db
+        .update(revenueLeads)
+        .set({ outreachBody: body, outreachSource: outcome?.ok ? `ai:${outcome.model}` : 'template' })
+        .where(eq(revenueLeads.id, lead.id))
+      drafted += 1
     }
-    const outcome = aiConfigured()
-      ? await askAi({
-          system:
-            'Anda penulis pesan pendekatan penjualan B2B yang sopan dan jujur. Tulis dalam bahasa yang sama dengan minat calon pelanggan. Jangan mengarang portofolio, klien, harga, atau janji hasil. Maksimal 110 kata, mudah dibaca di ponsel.',
-          prompt: [
-            `Calon pelanggan: ${lead.name} (${lead.email})`,
-            `Pasar: ${lead.market}`,
-            `Kebutuhan yang dicatat: ${lead.interest}`,
-            'Tulis satu pesan pembuka yang menyebut kebutuhannya, menawarkan satu langkah kecil yang jelas, dan menutup dengan pertanyaan sederhana. Jangan menyertakan tautan yang tidak diketahui.',
-          ].join('\n'),
-          maxTokens: 400,
-        })
-      : null
 
-    const body = outcome?.ok
-      ? outcome.text
-      : [
-          `Halo ${lead.name},`,
-          '',
-          `Saya mencatat kebutuhan Anda soal: ${lead.interest}. Saya bisa bantu menyiapkan langkah awalnya dan mengirim rincian singkat bila Anda berminat.`,
-          '',
-          'Apakah minggu ini waktu yang baik untuk membahasnya sebentar?',
-          '',
-          outcome && !outcome.ok ? `(Draf ini disusun dari data prospek; model AI belum menjawab: ${outcome.reason})` : '(Draf ini disusun dari data prospek. Model AI belum terhubung, jadi silakan rapikan gayanya.)',
-        ].join('\n')
-
-    await db
-      .update(revenueLeads)
-      .set({ outreachBody: body, outreachSource: outcome?.ok ? `ai:${outcome.model}` : 'template' })
-      .where(eq(revenueLeads.id, lead.id))
-    drafted += 1
+    // Conservative daily-pass cap. External messages are sent only through the
+    // configured, verified sender; queued messages are never counted as contact.
+    if (canSend && sent < 3) {
+      const firstLine = body.split(/\\r?\\n/).find((line) => line.trim()) ?? ''
+      const subjectMatch = firstLine.match(/^Subjek\\s*:\\s*(.+)$/i)
+      const emailBody = subjectMatch ? body.slice(body.indexOf(firstLine) + firstLine.length).trim() : body
+      const result = await sendEmail({
+        to: lead.email,
+        subject: subjectMatch?.[1]?.trim() || `Penjajakan kerja sama — ${lead.name}`,
+        body: emailBody,
+        kind: 'sales-outreach',
+        relatedType: 'revenue-lead',
+        relatedId: lead.id,
+        dataSource: 'live',
+      })
+      if (result.sent) {
+        await db
+          .update(revenueLeads)
+          .set({ status: 'contacted', lastContactedAt: new Date() })
+          .where(eq(revenueLeads.id, lead.id))
+        sent += 1
+      } else {
+        queued += 1
+      }
+    }
   }
 
   const leadCount = newJobs[0]?.n ?? 0
   const orderCount = waitingOrders[0]?.n ?? 0
-
   const summary =
-    drafted + existingDrafts + leadCount + orderCount === 0
-      ? 'Tidak ada prospek atau pesanan yang menunggu tindak lanjut.'
-      : `${drafted} draf pendekatan baru dibuat, ${existingDrafts} draf lama dipertahankan, ${leadCount} prospek belum dihubungi, ${orderCount} pesanan menunggu pembayaran.`
+    `${sent} email penawaran diterima penyedia, ${drafted} draf baru dibuat, ${existingDrafts} draf lama dipertahankan, ${queued} email belum terkirim, ${leadCount} permintaan jasa baru, ${orderCount} pesanan menunggu pembayaran.`
 
   await finishRun(
     run.id,
-    drafted + existingDrafts + leadCount + orderCount > 0 ? 'ok' : 'skipped',
+    sent + drafted + existingDrafts + leadCount + orderCount > 0 ? 'ok' : 'skipped',
     summary,
-    'Draf pendekatan disimpan di CRM. Draf tidak dihitung sebagai kontak: last_contacted_at hanya boleh diisi setelah pesan benar-benar dikirim dan diterima penyedia. Email keluar belum diotomatisasi; tidak ada pesan eksternal yang dikirim oleh tugas ini.',
-    drafted
+    canSend
+      ? 'Email penjualan dikirim maksimal 3 prospek per siklus. Status kontak diperbarui hanya setelah penyedia email menerima pesan; penerimaan penyedia bukan bukti email dibaca atau penjualan terjadi.'
+      : 'Draf pendekatan disimpan di CRM. Pengiriman otomatis menunggu EMAIL_API_KEY dan EMAIL_FROM dari domain pengirim yang sudah diverifikasi. Tidak ada pesan eksternal yang dikirim selama konfigurasi pengirim belum siap.',
+    drafted + sent
   )
-  await noteAgent('AI Sales', 'CRM dan prospek ditinjau', summary)
-  return { summary, created: drafted }
+  await noteAgent('AI Sales', sent > 0 ? 'Penawaran email dikirim ke penyedia' : 'CRM dan prospek ditinjau', summary)
+  return { summary, created: drafted + sent }
 }
 
 async function runFinance(trigger: string) {
