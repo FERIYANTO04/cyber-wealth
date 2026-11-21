@@ -881,7 +881,7 @@ export type AutopilotResult = {
  * CEO dispatch fallback: build a work queue from live operating facts.
  * This is deterministic orchestration, not a claim that a model made a decision.
  */
-async function buildCeoDispatchPlan(): Promise<AutopilotTask[]> {
+async function buildCeoDispatchPlan(): Promise<Exclude<AutopilotTask, 'ceo'>[]> {
   const [publishedProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
   const [publishedServices] = await db.select({ n: sql<number>`count(*)::int` }).from(services).where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
   const [draftProducts] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.status, 'draft'), eq(products.dataSource, 'live')))
@@ -889,7 +889,7 @@ async function buildCeoDispatchPlan(): Promise<AutopilotTask[]> {
   const [openLeads] = await db.select({ n: sql<number>`count(*)::int` }).from(revenueLeads).where(inArray(revenueLeads.status, ['new', 'contacted', 'qualified']))
   const [newServiceRequests] = await db.select({ n: sql<number>`count(*)::int` }).from(serviceRequests).where(eq(serviceRequests.status, 'new'))
   const [pendingOrders] = await db.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.status, 'pending'), eq(orders.dataSource, 'live')))
-  const plan: AutopilotTask[] = []
+  const plan: Exclude<AutopilotTask, 'ceo'>[] = []
   if ((openLeads?.n ?? 0) + (newServiceRequests?.n ?? 0) + (pendingOrders?.n ?? 0) > 0) plan.push('sales')
   if ((publishedProducts?.n ?? 0) === 0 || (draftProducts?.n ?? 0) > 0 || (publishedNeedsReview?.n ?? 0) > 0) plan.push('product')
   plan.push('research')
