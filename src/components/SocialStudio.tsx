@@ -226,7 +226,18 @@ export function SocialStudio({
               )
             })}
           </div>
-          <p className="list-lead">Catatan: TikTok mewajibkan persetujuan eksplisit sebelum setiap video dikirim. Publikasi publik juga memerlukan audit aplikasi TikTok.</p>
+          <div className="rounded-lg border border-line p-3">
+            <p className="eyebrow mb-1">Pengaturan OAuth di Railway</p>
+            <p className="text-xs leading-relaxed text-ink-quiet">Isi variabel berikut pada layanan cyber-wealth-web. Jangan kirim nilai rahasia ke chat.</p>
+            <ul className="mt-2 flex flex-col gap-1 text-xs text-ink">
+              <li><code>APP_URL</code> = <code>https://cyber-wealth-web-production.up.railway.app</code></li>
+              <li><code>SOCIAL_TOKEN_ENCRYPTION_KEY</code> = rahasia acak minimal 32 karakter</li>
+              <li><code>YOUTUBE_CLIENT_ID</code> dan <code>YOUTUBE_CLIENT_SECRET</code></li>
+              <li><code>TIKTOK_CLIENT_KEY</code> dan <code>TIKTOK_CLIENT_SECRET</code></li>
+            </ul>
+            <p className="mt-2 text-xs leading-relaxed text-ink-quiet">Redirect URI untuk Google Cloud dan TikTok Developer: <code>https://cyber-wealth-web-production.up.railway.app/api/integrations/social/callback</code></p>
+          </div>
+          <p className="list-lead">TikTok mewajibkan persetujuan eksplisit sebelum setiap video dikirim. Aplikasi yang belum lolos audit hanya dapat menerbitkan konten secara privat. YouTube memakai status unlisted secara default sampai owner mengatur privasi lain.</p>
         </PanelBody>
       </Panel>
 
