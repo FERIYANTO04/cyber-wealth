@@ -270,12 +270,27 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
         if (aiConfigured()) {
           const outcome = await askAi({
             system:
-              'Anda penulis konten media sosial untuk pemilik usaha kecil. Tulis dalam bahasa yang diminta, jujur, tanpa janji hasil, tanpa mengarang testimoni, jumlah pembeli, atau angka penjualan. Jangan memakai tanda kutip atau emoji berlebihan. Satu ajakan bertindak di akhir.',
+              [
+                'Anda adalah direktur kreatif dan editor senior untuk merek perusahaan yang profesional.',
+                'Hasil harus spesifik, bernilai bagi audiens, enak dibaca, dan sesuai budaya pasar serta bahasa yang diminta.',
+                'Gunakan hanya fakta yang diberikan tentang produk atau layanan. Jangan mengarang fitur, hasil, diskon, stok, garansi, testimoni, pelanggan, sertifikasi, atau angka.',
+                'Hindari klaim mutlak, clickbait menipu, spam, pengulangan, pembukaan generik, dan emoji berlebihan.',
+                'Buat satu ide utama yang jelas, pembuka kuat, manfaat konkret yang benar-benar didukung ringkasan, lalu satu ajakan bertindak yang wajar.',
+                'Jangan menyebut harga jika tidak tersedia. Jangan membuat tagar yang tidak relevan. Keluarkan hanya materi final tanpa penjelasan proses.'
+              ].join(' '),
             prompt: [
-              `Kanal: ${channelLabel(channel)}. Bahasa: ${language}.`,
-              `Produk/layanan: ${material.title}. Ringkasan: ${material.summary}. Harga: ${material.priceLabel}.`,
-              `Tulis satu kiriman maksimal ${limit} karakter. Tanpa tagar lebih dari tiga.`,
-              channel === 'x' ? 'Sangat ringkas.' : channel === 'tiktok' ? 'Naskah video 30 detik: bagian pembuka, isi, ajakan.' : '',
+              `Kanal: ${channelLabel(channel)}. Bahasa dan pasar: ${language} / ${market}.`,
+              `Produk/layanan: ${material.title}. Ringkasan resmi: ${material.summary}. Harga resmi: ${material.priceLabel}.`,
+              `Batas maksimal ${limit} karakter. Hitung panjang keluaran dengan cermat.`,
+              channel === 'youtube'
+                ? 'Buat judul yang jelas dan deskripsi video yang membantu penonton memahami manfaat; jangan mengaku sudah ada video atau demonstrasi jika belum ada.'
+                : channel === 'tiktok'
+                  ? 'Buat naskah video vertikal 20–30 detik dengan hook 2 detik pertama, arahan visual sederhana, narasi singkat, teks layar, dan CTA. Sertakan caption terpisah dalam satu keluaran ringkas.'
+                  : channel === 'telegram'
+                    ? 'Buat pesan kanal yang informatif, mudah dipindai, dengan paragraf pendek dan CTA.'
+                    : channel === 'x'
+                      ? 'Buat satu gagasan tajam, sangat ringkas, tanpa basa-basi.'
+                      : 'Sesuaikan gaya dan struktur dengan kebiasaan audiens kanal; jangan menulis seperti iklan generik.',
             ]
               .filter(Boolean)
               .join(' '),
