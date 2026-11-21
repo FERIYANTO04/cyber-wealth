@@ -95,12 +95,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body,
       })
-      if (response?.error) throw new Error(String(response.error_description || response.error))
-      token = response as TokenPayload
-      externalId = String(response?.open_id || '')
+      // TikTok wraps token fields in { data: { access_token, open_id, ... }, error }.
+      // Treat both HTTP errors and provider-level errors as failed authorization.
+      if (response?.error?.code && response.error.code !== 'ok') {
+        throw new Error(String(response.error.description || response.error.code))
+      }
+      const tokenData = response?.data
+      if (!tokenData?.access_token || !tokenData?.open_id) {
+        throw new Error('TikTok tidak mengembalikan token dan identitas akun yang valid.')
+      }
+      token = {
+        access_token: String(tokenData.access_token),
+        refresh_token: tokenData.refresh_token ? String(tokenData.refresh_token) : undefined,
+        expires_in: Number(tokenData.expires_in) || undefined,
+        refresh_token_expires_in: Number(tokenData.refresh_expires_in) || undefined,
+        scope: typeof tokenData.scope === 'string' ? tokenData.scope : undefined,
+        token_type: typeof tokenData.token_type === 'string' ? tokenData.token_type : undefined,
+      }
+      externalId = String(tokenData.open_id)
       const profile = await providerJson('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name', {
         headers: { Authorization: 'Bearer ' + token.access_token },
       })
+      if (profile?.error?.code && profile.error.code !== 'ok') {
+        throw new Error(String(profile.error.description || profile.error.code))
+      }
       displayName = String(profile?.data?.user?.display_name || '')
       if (!externalId) throw new Error('TikTok tidak mengembalikan open_id.')
     }
