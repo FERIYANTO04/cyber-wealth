@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { activity, orders } from '@/lib/db/schema'
+import { activity, orders, products } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { products } from '@/lib/db/schema'
 import { orderCode } from '@/lib/revenue'
 import { sendOrderRecordedEmail } from '@/lib/saas'
 
@@ -14,14 +13,11 @@ const Body = z.object({
   email: z.string().trim().toLowerCase().email('Alamat email tidak valid').max(200),
 })
 
-/** The tracked link the buyer arrived through, if the redirect set one. */
 function refFromCookie(req: NextApiRequest): string | null {
   const cookie = req.cookies.cwa_ref
   return typeof cookie === 'string' && cookie.length > 0 && cookie.length <= 40 ? cookie : null
 }
 
-// The published app may run several instances, so this is a best-effort brake, not a
-// guarantee: it stops one instance being hammered by a single buyer.
 const recent = new Map<string, { hits: number; since: number }>()
 const WINDOW_MS = 60_000
 const MAX_PER_WINDOW = 6
@@ -48,100 +44,99 @@ function rateLimited(ip: string): boolean {
   return entry.hits > MAX_PER_WINDOW
 }
 
-/**
- * Starts a purchase through Paddle only. The order is settled exclusively by a verified Paddle webhook.
- */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
 
   const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? 'unknown').split(',')[0]
-  if (rateLimited(ip)) {
-    return res.status(429).json({ error: 'Terlalu banyak percobaan. Tunggu sebentar, lalu coba lagi.' })
-  }
+  if (rateLimited(ip)) return res.status(429).json({ error: 'Terlalu banyak percobaan. Tunggu sebentar, lalu coba lagi.' })
 
   const parsed = Body.safeParse(req.body)
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Data pembelian tidak valid.' })
-  }
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Data pembelian tidak valid.' })
 
-  const rows = await db
-    .select()
-    .from(products)
-    .where(and(eq(products.slug, parsed.data.slug), eq(products.status, 'published'), eq(products.dataSource, 'live')))
-    .limit(1)
+  const rows = await db.select().from(products).where(and(
+    eq(products.slug, parsed.data.slug),
+    eq(products.status, 'published'),
+    eq(products.dataSource, 'live')
+  )).limit(1)
   const product = rows[0]
   if (!product) return res.status(404).json({ error: 'Produk tidak ditemukan atau belum dijual.' })
 
-  // Never accept money for a missing or explicitly draft-labelled deliverable.
-  // Storefront filtering is the first guard; this server-side check protects direct API calls too.
   if (!product.fileKey || /^https?:\/\//i.test(product.fileKey) || /(?:draft|draf)/i.test(product.fileName ?? '')) {
-    return res.status(409).json({
-      error: 'Berkas produk belum tersimpan secara privat atau masih dalam pemeriksaan. Owner harus mengamankan berkas sebelum produk dijual.',
-    })
+    return res.status(409).json({ error: 'Berkas produk belum tersimpan secara privat atau masih dalam pemeriksaan.' })
   }
 
   const code = orderCode()
   const accessToken = crypto.randomUUID().replace(/-/g, '')
   const amount = Number(product.priceIdr)
+  const isFree = amount === 0
+  const serverKey = process.env.MIDTRANS_SERVER_KEY?.trim() ?? ''
+  const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
 
-  const [order] = await db
-    .insert(orders)
-    .values({
-      code,
-      accessToken,
-      productId: product.id,
-      productSlug: product.slug,
-      productName: product.name,
-      buyerName: parsed.data.name,
-      buyerEmail: parsed.data.email,
-      amountIdr: amount,
-      status: 'pending',
-      provider: amount === 0 ? 'free' : 'manual_transfer',
-      refCode: parsed.data.ref ?? refFromCookie(req) ?? null,
-      dataSource: 'live',
-    })
-    .returning()
-
-  if (amount === 0) {
-    await sendOrderRecordedEmail({
-      code,
-      productName: product.name,
-      buyerName: parsed.data.name,
-      buyerEmail: parsed.data.email,
-      amountIdr: amount,
-      accessToken,
-    })
-    await db.insert(activity).values({
-      actor: 'system',
-      action: 'Pesanan gratis dibuat',
-      detail: `${product.name} — ${code}. Tidak ada pembayaran yang perlu dikonfirmasi.`,
-      dataSource: 'live',
-    })
-    return res.status(201).json({ ok: true, token: accessToken, free: true })
-  }
-
-  const bankName = process.env.BANK_NAME?.trim() ?? ''
-  const accountName = process.env.BANK_ACCOUNT_NAME?.trim() ?? ''
-  const accountNumber = process.env.BANK_ACCOUNT_NUMBER?.trim() ?? ''
-  const transferInstructions = process.env.BANK_TRANSFER_INSTRUCTIONS?.trim() ?? ''
-  if (!bankName || !accountName || !accountNumber) {
-    await failCheckout(order.id, code, 'detail rekening transfer belum dikonfigurasi')
-    return res.status(503).json({ error: 'Pembayaran transfer belum tersedia. Pesanan belum dibuat; silakan coba kembali nanti.' })
-  }
-
-  await sendOrderRecordedEmail({
+  const [order] = await db.insert(orders).values({
     code,
+    accessToken,
+    productId: product.id,
+    productSlug: product.slug,
     productName: product.name,
     buyerName: parsed.data.name,
     buyerEmail: parsed.data.email,
     amountIdr: amount,
-    accessToken,
-  })
-  await db.insert(activity).values({
-    actor: 'system',
-    action: 'Instruksi transfer bank diterbitkan',
-    detail: product.name + ' — ' + code + '. Menunggu verifikasi mutasi oleh owner; belum dihitung sebagai pendapatan.',
+    status: isFree ? 'pending' : serverKey ? 'pending' : 'unpaid',
+    provider: isFree ? 'free' : serverKey ? 'midtrans' : 'midtrans',
+    refCode: parsed.data.ref ?? refFromCookie(req) ?? null,
     dataSource: 'live',
-  })
-  return res.status(201).json({ ok: true, token: accessToken, provider: 'manual_transfer' })
+  }).returning()
+
+  if (isFree) {
+    await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
+    await db.insert(activity).values({ actor: 'system', action: 'Pesanan gratis dibuat', detail: product.name + ' — ' + code + '. Tidak ada pembayaran.', dataSource: 'live' })
+    return res.status(201).json({ ok: true, token: accessToken, free: true })
+  }
+
+  if (!serverKey) {
+    await db.insert(activity).values({
+      actor: 'system',
+      action: 'Checkout menunggu aktivasi Midtrans',
+      detail: product.name + ' — ' + code + '. Kunci merchant Midtrans belum terpasang; tidak ada tagihan atau pembayaran dibuat.',
+      dataSource: 'live',
+    })
+    return res.status(201).json({ ok: true, token: accessToken, provider: 'midtrans', paymentUnavailable: true })
+  }
+
+  const base = production ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
+  try {
+    const response = await fetch(base + '/snap/v1/transactions', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Basic ' + Buffer.from(serverKey + ':').toString('base64'),
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        transaction_details: { order_id: code, gross_amount: amount },
+        customer_details: { first_name: parsed.data.name, email: parsed.data.email },
+        item_details: [{ id: product.id, price: amount, quantity: 1, name: product.name.slice(0, 50) }],
+        callbacks: { finish: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cyber-wealth-web-production.up.railway.app') + '/pesanan/' + accessToken },
+      }),
+      signal: AbortSignal.timeout(15000),
+    })
+    const payload = await response.json().catch(() => ({})) as { token?: string; redirect_url?: string; error_messages?: string[] }
+    if (!response.ok || !payload.redirect_url || !payload.token) {
+      await failCheckout(order.id, code, (payload.error_messages ?? ['Midtrans menolak pembuatan transaksi']).join('; '))
+      return res.status(502).json({ error: 'Gerbang pembayaran belum dapat membuat tagihan. Coba lagi nanti.' })
+    }
+
+    await db.update(orders).set({ invoiceId: payload.token, invoiceUrl: payload.redirect_url }).where(eq(orders.id, order.id))
+    await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
+    await db.insert(activity).values({
+      actor: 'system',
+      action: 'Tagihan Midtrans diterbitkan',
+      detail: product.name + ' — ' + code + '. Menunggu konfirmasi pembayaran resmi; belum dihitung sebagai pendapatan.',
+      dataSource: 'live',
+    })
+    return res.status(201).json({ ok: true, token: accessToken, provider: 'midtrans', paymentUrl: payload.redirect_url })
+  } catch {
+    await failCheckout(order.id, code, 'koneksi ke Midtrans gagal atau timeout')
+    return res.status(502).json({ error: 'Tidak dapat menghubungi gerbang pembayaran. Tidak ada pembayaran yang dibuat.' })
+  }
 }
