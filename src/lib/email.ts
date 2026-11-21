@@ -10,7 +10,7 @@ export function emailConfig() {
   return {
     key: process.env.EMAIL_API_KEY ?? '',
     from: process.env.EMAIL_FROM ?? '',
-    baseUrl: (process.env.EMAIL_API_BASE_URL || 'https://api.resend.com').replace(/\\/+$/, ''),
+    baseUrl: (process.env.EMAIL_API_BASE_URL || 'https://api.resend.com').replace(/\/+$/, ''),
     smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
     smtpPort: Number(process.env.SMTP_PORT || 465),
     smtpUser: process.env.SMTP_USER ?? '',
