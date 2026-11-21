@@ -203,8 +203,12 @@ async function runCeo(trigger: string) {
       dispatch = [...new Set(parsed.dispatch.filter((task): task is Exclude<AutopilotTask, 'ceo'> => typeof task === 'string' && task !== 'ceo' && allowed.has(task as Exclude<AutopilotTask, 'ceo'>)))]
     }
   } catch { dispatch = [] }
+  const fallbackPlan = await buildCeoDispatchPlan()
   const aiDispatchValid = dispatch.length > 0
-  if (!aiDispatchValid) dispatch = await buildCeoDispatchPlan()
+  if (!aiDispatchValid) dispatch = fallbackPlan
+  // Revenue follow-up is mandatory whenever the CRM has open prospects; the CEO may
+  // choose the rest of the plan, but must not silently leave warm leads untouched.
+  if (fallbackPlan.includes('sales') && !dispatch.includes('sales')) dispatch.unshift('sales')
   const detail = `${facts}\\n\\nAnalisis model ${outcome.model}:\\n${outcome.text}\\n\\nUrutan delegasi: ${dispatch.join(' → ') || 'tidak ada tugas yang relevan'}${aiDispatchValid ? ' (dipilih AI CEO)' : ' (rencana cadangan berbasis data; keluaran AI kosong/tidak valid)'}`
   await finishRun(run.id, 'ok', summary, detail, 0)
   await noteAgent('AI CEO', 'Strategi mandiri dan delegasi AI diperbarui', summary)
