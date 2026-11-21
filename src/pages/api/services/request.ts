@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { activity, serviceRequests, services } from '@/lib/db/schema'
 import { serviceRequestCode } from '@/lib/services'
-import { notifyOwner } from '@/lib/email'
+import { notifyOwner, sendEmail } from '@/lib/email'
 
 const Body = z.object({
   slug: z.string().trim().min(1).max(120),
@@ -93,5 +93,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     relatedId: row.id,
   }).catch(() => undefined)
 
-  return res.status(201).json({ ok: true, code: row.code })
+  // Send an immediate receipt to the buyer when a verified sender is configured.
+  // If email is unavailable, keep the request safely recorded and report that honestly.
+  const buyerReceipt = await sendEmail({
+    to: row.email,
+    subject: `Permintaan Anda diterima — ${row.code}`,
+    body: [
+      `Halo ${row.name},`,
+      '',
+      `Permintaan Anda untuk layanan ${row.serviceName} sudah kami terima.`,
+      `Nomor permintaan: ${row.code}`,
+      '',
+      'Tim kami akan meninjau kebutuhan dan mengirimkan rincian lingkup, harga final, serta langkah pembayaran sebelum pekerjaan dimulai.',
+      'Belum ada biaya yang dikenakan dan permintaan ini belum merupakan pesanan berbayar.',
+      '',
+      'Simpan nomor permintaan ini untuk referensi.',
+      'Cyber Wealth',
+    ].join('\\n'),
+    kind: 'buyer-service-receipt',
+    relatedType: 'service-request',
+    relatedId: row.id,
+  }).catch(() => ({ sent: false, status: 'queued', detail: 'Email receipt could not be sent.' }));
+
+  return res.status(201).json({ ok: true, code: row.code, receiptSent: buyerReceipt.sent })
 }
