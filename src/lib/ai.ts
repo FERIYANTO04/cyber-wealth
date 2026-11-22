@@ -56,7 +56,7 @@ async function requestProvider(provider: Provider, args: {
         // GPT-OSS-120B gets the highest supported reasoning budget for deliberate
         // planning, multi-step analysis, and agent decisions.
         ...(provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-')
-          ? { reasoning_effort: 'high', reasoning_format: 'hidden' }
+          ? { reasoning_effort: 'medium', reasoning_format: 'hidden' }
           : {}),
         messages: args.messages,
       }),
@@ -88,7 +88,7 @@ async function requestProvider(provider: Provider, args: {
           : `${provider.label} tidak mengembalikan jawaban.`,
       }
     }
-    const reasoningLabel = provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-') ? ' (reasoning high)' : ''
+    const reasoningLabel = provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-') ? ' (reasoning medium)' : ''
     return { ok: true, text, model: `${provider.label} / ${provider.model}${reasoningLabel}` }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -133,6 +133,7 @@ export async function chatWithAi(args: {
     ].join(' '),
   }
   const governedMessages = [companyCharter, ...args.messages]
+  const governedArgs = { ...args, messages: governedMessages }
   const primaryKey = isPlaceholder(PRIMARY_KEY) ? '' : PRIMARY_KEY
   const primaryIsConfigured = Boolean(primaryKey)
   const fallbackKey = !isPlaceholder(FALLBACK_KEY) ? FALLBACK_KEY : ''
@@ -146,7 +147,7 @@ export async function chatWithAi(args: {
       model: FALLBACK_MODEL,
       key: fallbackKey,
       label: 'Groq cadangan',
-    }, args)
+    }, governedArgs)
   }
 
   const primaryIsGroq = PRIMARY_BASE_URL.includes('api.groq.com')
@@ -156,7 +157,7 @@ export async function chatWithAi(args: {
     key: primaryKey,
     label: primaryIsGroq ? 'Groq' : (NEON_BASE_URL || process.env.AI_BASE_URL ? 'AI Gateway' : 'Groq'),
   }
-  const result = await requestProvider(primary, args)
+  const result = await requestProvider(primary, governedArgs)
   if (result.ok) return result
 
   const fallbackAvailable = FALLBACK_ENABLED && !primaryIsGroq && Boolean(fallbackKey)
