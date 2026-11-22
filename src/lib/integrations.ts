@@ -58,7 +58,7 @@ export async function testAi(): Promise<{ state: CheckState; message: string }> 
   // the configured Groq fallback is healthy.
   const outcome = await chatWithAi({
     messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
-    maxTokens: 20,
+    maxTokens: 256,
     temperature: 0,
   })
 
