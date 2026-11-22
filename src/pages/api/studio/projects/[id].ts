@@ -49,9 +49,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     dueAt: patch.dueAt === undefined ? current.due_at : patch.dueAt,
     agreedPriceIdr: patch.agreedPriceIdr ?? Number(current.agreed_price_idr),
     revisionLimit: patch.revisionLimit ?? current.revision_limit,
-    deliverableUrl: patch.deliverableUrl === undefined ? current.deliverable_url : patch.deliverableUrl,
+    deliverableUrl: patch.status === 'revision' && current.status !== 'revision' ? null : (patch.deliverableUrl === undefined ? current.deliverable_url : patch.deliverableUrl),
     internalNotes: patch.internalNotes === undefined ? current.internal_notes : patch.internalNotes,
-    qualityChecklist: patch.qualityChecklist ?? current.quality_checklist,
+    qualityChecklist: patch.status === 'revision' && current.status !== 'revision' ? { brief_match: false, visual_quality: false, audio_quality: false, spelling_brand: false, rights_clearance: false } : (patch.qualityChecklist ?? current.quality_checklist),
     clientApprovedAt: patch.clientApproved === undefined ? current.client_approved_at : (patch.clientApproved ? (current.client_approved_at ?? new Date()) : null),
     revisionsUsed: Number(current.revisions_used) + (patch.status === 'revision' && current.status !== 'revision' ? 1 : 0),
   }
