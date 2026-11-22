@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
-import { count, desc, eq, sql } from 'drizzle-orm'
+import { count, desc, eq, gte, sql } from 'drizzle-orm'
 import { Activity, ArrowDownLeft, ArrowUpRight, Boxes, CircleDollarSign, Clapperboard, LayoutDashboard, LogOut, Package, Settings2, ShieldCheck, Wallet, ExternalLink } from 'lucide-react'
 import { requireOwnerPage } from '@/lib/auth'
 import { db } from '@/lib/db'
