@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   Store,
+  UserPlus,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -27,6 +28,7 @@ const NAV = [
   { href: '/autopilot', label: 'Autopilot', short: 'Autopilot', icon: Bot },
   { href: '/agents', label: 'Agen', short: 'Agen', icon: Users },
   { href: '/jasa-admin', label: 'Jasa digital', short: 'Jasa', icon: BriefcaseBusiness },
+  { href: '/talent-admin', label: 'Rekrutmen kreatif', short: 'Talenta', icon: UserPlus },
   { href: '/produk', label: 'Produk digital', short: 'Produk', icon: Package },
   { href: '/affiliate', label: 'Affiliate', short: 'Affiliate', icon: Link2 },
   { href: '/admin/pelanggan', label: 'Pelanggan & pesan', short: 'Pelanggan', icon: Users },
