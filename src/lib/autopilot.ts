@@ -172,7 +172,7 @@ async function runCeo(trigger: string) {
 
   const outcome = await askAi({
     system: [
-      'Anda adalah CEO yang berpikir mandiri dan bertanggung jawab atas pertumbuhan Cyber Wealth. Jangan memakai urutan kerja baku; analisis situasi, cari peluang, bandingkan strategi, dan pilih tindakan dengan potensi pertumbuhan tertinggi berdasarkan bukti yang tersedia.',
+      'Anda adalah CEO yang berpikir mandiri dan bertanggung jawab atas pertumbuhan Cyber Wealth melalui website marketplace sebagai satu-satunya kanal pemasaran. Jangan mengarahkan agen ke konten media sosial; analisis katalog website, produk, layanan, checkout, pelanggan, dan penjualan.',
       'Anda boleh mengubah prioritas dan urutan kerja setiap siklus. Delegasikan pekerjaan kepada agen yang paling tepat dari roster. Buat rencana konkret, terukur, dan dapat dieksekusi sekarang; jangan hanya memberi slogan atau laporan.',
       'Bedakan fakta, hipotesis, dan target. Jangan mengarang angka, pelanggan, pembayaran, atau hasil. Jangan menyatakan tindakan sudah selesai sebelum runner mengonfirmasinya.',
       'Agen boleh berpikir kreatif dan menjalankan pekerjaan internal yang aman secara mandiri. Tindakan yang memindahkan uang, membuat utang, investasi, pembelian berbayar, kontrak, perubahan harga publik, atau komitmen eksternal tetap memerlukan persetujuan Owner.',
@@ -184,7 +184,7 @@ async function runCeo(trigger: string) {
       'Hambatan:', blockers.length ? blockers.join('; ') : 'Tidak ada hambatan dasar yang tercatat.',
       `Roster agen: ${TASKS.filter((task) => task.task !== 'ceo').map((task) => task.task + ' = ' + task.agentRole).join('; ')}.`,
       `Layanan yang sudah terbit: ${publishedServices?.n ?? 0}. Produk yang sudah terbit: ${publishedProducts?.n ?? 0}.`,
-      'Tentukan sendiri strategi dan urutan kerja terbaik untuk meningkatkan pelanggan, penjualan layanan yang sudah tersedia, produk siap jual, distribusi, dan pendapatan. Jangan mengabaikan layanan terbit hanya karena katalog produk kosong. Pilih agen sesuai kebutuhan nyata; boleh tidak memilih agen yang tidak relevan. Prioritaskan peluang dengan dampak terbesar dan biaya terendah.',
+      'Tentukan sendiri strategi dan urutan kerja terbaik untuk meningkatkan katalog website, penjualan produk digital, penjualan jasa edit video/desain, konversi checkout, dan pendapatan. Semua hasil kerja yang siap jual harus masuk ke website Cyber Wealth. Jangan membuat, menjadwalkan, atau menerbitkan konten media sosial. Jangan mengabaikan layanan terbit. Pilih agen sesuai kebutuhan nyata; prioritaskan dampak terbesar dan biaya terendah.',
     ].join('\\n'),
     maxTokens: 1800,
   })
@@ -556,7 +556,7 @@ async function runMarketing(trigger: string) {
     })),
     ...publishedServices.map((service) => ({
       title: `Promosi jasa ${service.name}`,
-      channel: 'media sosial',
+      channel: 'website marketplace',
       audience: 'calon klien jasa',
       prompt: `Tulis materi halaman layanan marketplace (judul, manfaat, ruang lingkup, proses pemesanan, dan ajakan mengirim brief) untuk layanan "${service.name}". Ringkasan: ${service.summary}. Harga mulai Rp ${Number(service.priceFromIdr).toLocaleString('id-ID')}, pengerjaan sekitar ${service.deliveryDays} hari kerja. Ajak pembaca mengirim brief singkat.`,
       fallback: `${service.name}\n\n${service.summary}\n\nMulai Rp ${Number(service.priceFromIdr).toLocaleString('id-ID')}, sekitar ${service.deliveryDays} hari kerja. Kirim brief melalui halaman layanan Cyber Wealth.`,
