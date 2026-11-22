@@ -7,17 +7,17 @@
   --font-inter: Arial, Helvetica, sans-serif;
   --font-sora: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-plex-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color-scheme: light;
-  --canvas: 247 248 246;
-  --surface: 255 255 255;
-  --ink: 15 27 42;
-  --ink-quiet: 90 102 114;
-  --line: 226 230 226;
-  --signal: 20 116 111;
-  --signal-soft: 230 242 240;
-  --hold: 183 121 31;
-  --hold-soft: 248 239 224;
-  --danger: 168 62 62;
+  color-scheme: dark;
+  --canvas: 8 11 17;
+  --surface: 15 20 30;
+  --ink: 237 242 250;
+  --ink-quiet: 145 157 174;
+  --line: 38 47 62;
+  --signal: 84 214 181;
+  --signal-soft: 22 49 47;
+  --hold: 226 178 91;
+  --hold-soft: 54 42 24;
+  --danger: 242 112 112;
 }
 
 html,
