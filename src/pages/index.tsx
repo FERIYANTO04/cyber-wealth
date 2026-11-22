@@ -1,6 +1,6 @@
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
-import { ArrowUpRight, BriefcaseBusiness, Box, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowUpRight, ArrowRight, Layers3, ShieldCheck, Workflow, Compass } from 'lucide-react'
 import { StoreFrame } from '@/components/StoreFrame'
 import { PageStack } from '@/components/ui'
 import { getSession } from '@/lib/auth'
@@ -15,29 +15,44 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 function HomePage() {
   return (
     <PageStack>
-      <section className="relative overflow-hidden rounded-[28px] border border-line bg-surface p-7 sm:p-12">
-        <div className="pointer-events-none absolute -right-20 -top-24 size-80 rounded-full bg-signal/10 blur-3xl" />
-        <p className="font-mono text-[10px] uppercase tracking-[.28em] text-signal">Digital solutions · Built for progress</p>
-        <h2 className="mt-5 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">Bangun bisnis lebih cerdas. <span className="text-signal">Bergerak lebih jauh.</span></h2>
-        <p className="mt-6 max-w-2xl text-sm leading-7 text-ink-quiet sm:text-base">Cyber Wealth menghadirkan produk digital, layanan kreatif, dan perangkat kerja untuk membantu individu serta bisnis bergerak lebih efisien.</p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/jasa" className="inline-flex items-center gap-2 rounded-xl bg-signal px-5 py-3 text-sm font-semibold text-[#07110f]">Jelajahi layanan <ArrowUpRight className="size-4"/></Link>
-          <Link href="/toko" className="inline-flex items-center gap-2 rounded-xl border border-line px-5 py-3 text-sm font-semibold text-ink hover:border-signal">Lihat produk digital</Link>
+      <section className="relative overflow-hidden border border-[#b99a5b]/25 bg-[#101113]">
+        <div className="absolute inset-0 opacity-30" style={{backgroundImage:'linear-gradient(rgba(199,169,107,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(199,169,107,.10) 1px, transparent 1px)',backgroundSize:'64px 64px'}} />
+        <div className="absolute -right-24 -top-20 size-[420px] rounded-full border border-[#c5a66a]/20" /><div className="absolute -right-12 -top-8 size-[300px] rounded-full border border-[#c5a66a]/20" />
+        <div className="relative grid min-h-[540px] items-end gap-12 p-7 sm:p-12 lg:grid-cols-[1.3fr_.7fr] lg:p-16">
+          <div className="pb-3">
+            <p className="font-mono text-[10px] uppercase tracking-[.28em] text-[#c5a66a]">A considered approach to digital business</p>
+            <h2 className="mt-7 max-w-4xl text-5xl font-medium leading-[.98] tracking-[-.06em] text-[#f3f0e9] sm:text-6xl lg:text-[76px]">Clarity in strategy.<br/><span className="text-[#c5a66a]">Precision in execution.</span></h2>
+            <p className="mt-7 max-w-xl text-sm leading-7 text-[#aaa69e] sm:text-base">Cyber Wealth menghadirkan solusi digital, layanan kreatif, dan produk siap pakai untuk membantu pekerjaan dan bisnis berjalan lebih terarah.</p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Link href="/jasa" className="inline-flex items-center gap-3 bg-[#c5a66a] px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#101010] transition hover:bg-[#dfc58f]">Explore our services <ArrowUpRight className="size-4"/></Link>
+              <Link href="/tentang" className="inline-flex items-center gap-3 border border-white/20 px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#e9e5db] hover:border-[#c5a66a] hover:text-[#c5a66a]">Discover Cyber Wealth <ArrowRight className="size-4"/></Link>
+            </div>
+          </div>
+          <div className="hidden border-l border-[#c5a66a]/30 pl-8 pb-4 lg:block">
+            <p className="font-mono text-[10px] tracking-[.2em] text-[#c5a66a]">OUR PRINCIPLES</p>
+            <div className="mt-7 space-y-7">
+              <div><p className="text-2xl font-light text-[#f3f0e9]">01</p><p className="mt-1 text-xs tracking-[.12em] text-[#aaa69e]">Purpose before noise</p></div>
+              <div><p className="text-2xl font-light text-[#f3f0e9]">02</p><p className="mt-1 text-xs tracking-[.12em] text-[#aaa69e]">Quality in every detail</p></div>
+              <div><p className="text-2xl font-light text-[#f3f0e9]">03</p><p className="mt-1 text-xs tracking-[.12em] text-[#aaa69e]">Progress through execution</p></div>
+            </div>
+          </div>
         </div>
-        <div className="mt-12 grid gap-3 border-t border-line pt-6 sm:grid-cols-3">
-          <div><p className="text-xs text-ink-quiet">01 / Discover</p><p className="mt-2 text-sm font-semibold">Temukan solusi yang tepat</p></div>
-          <div><p className="text-xs text-ink-quiet">02 / Build</p><p className="mt-2 text-sm font-semibold">Pilih produk atau layanan</p></div>
-          <div><p className="text-xs text-ink-quiet">03 / Grow</p><p className="mt-2 text-sm font-semibold">Kembangkan pekerjaan dan bisnis</p></div>
+        <div className="relative grid grid-cols-2 border-t border-[#c5a66a]/20 sm:grid-cols-4">
+          {['Digital solutions','Creative services','Ready-to-use products','Business systems'].map((x,i)=><div key={x} className="border-r border-[#c5a66a]/15 px-5 py-5 last:border-r-0 sm:px-7"><p className="font-mono text-[9px] text-[#c5a66a]">0{i+1}</p><p className="mt-2 text-[11px] tracking-[.06em] text-[#c5c0b5]">{x}</p></div>)}
         </div>
       </section>
-      <section className="grid gap-4 md:grid-cols-3">
-        <Link href="/jasa" className="group rounded-2xl border border-line bg-surface p-6 transition hover:border-signal"><BriefcaseBusiness className="size-6 text-signal"/><h3 className="mt-5 text-lg font-semibold">Layanan digital</h3><p className="mt-2 text-sm leading-6 text-ink-quiet">Jasa website, desain, konten, dan pemasaran. Kirim kebutuhan untuk ditinjau.</p><span className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-signal">Lihat layanan <ArrowUpRight className="size-3.5"/></span></Link>
-        <Link href="/toko" className="group rounded-2xl border border-line bg-surface p-6 transition hover:border-signal"><Box className="size-6 text-signal"/><h3 className="mt-5 text-lg font-semibold">Produk digital</h3><p className="mt-2 text-sm leading-6 text-ink-quiet">Template, panduan, dan materi praktis yang tersedia di katalog.</p><span className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-signal">Jelajahi katalog <ArrowUpRight className="size-3.5"/></span></Link>
-        <Link href="/harga" className="group rounded-2xl border border-line bg-surface p-6 transition hover:border-signal"><Sparkles className="size-6 text-signal"/><h3 className="mt-5 text-lg font-semibold">Paket platform</h3><p className="mt-2 text-sm leading-6 text-ink-quiet">Bandingkan paket dan fitur untuk kebutuhan operasional digital.</p><span className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-signal">Bandingkan paket <ArrowUpRight className="size-3.5"/></span></Link>
+      <section className="grid gap-12 py-10 lg:grid-cols-[.8fr_1.2fr] lg:py-16">
+        <div><p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#c5a66a]">What we do</p><h3 className="mt-4 max-w-md text-3xl font-medium leading-tight tracking-[-.04em] text-[#f3f0e9] sm:text-4xl">A connected ecosystem for modern work.</h3></div>
+        <div className="grid gap-0 sm:grid-cols-2">
+          <Link href="/jasa" className="group border-t border-[#b99a5b]/30 py-6 pr-6"><Workflow className="size-5 text-[#c5a66a]"/><h4 className="mt-5 text-lg text-[#f3f0e9]">Digital services</h4><p className="mt-2 text-xs leading-6 text-[#9e998f]">Website, desain, konten, dan kebutuhan pemasaran digital yang disesuaikan dengan brief.</p><span className="mt-5 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.16em] text-[#c5a66a]">Explore <ArrowUpRight className="size-3.5"/></span></Link>
+          <Link href="/toko" className="group border-t border-[#b99a5b]/30 py-6 sm:pl-6 sm:border-l"><Layers3 className="size-5 text-[#c5a66a]"/><h4 className="mt-5 text-lg text-[#f3f0e9]">Digital products</h4><p className="mt-2 text-xs leading-6 text-[#9e998f]">Template, panduan, dan materi praktis yang tersedia melalui katalog digital.</p><span className="mt-5 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.16em] text-[#c5a66a]">View catalogue <ArrowUpRight className="size-3.5"/></span></Link>
+          <Link href="/harga" className="group border-t border-[#b99a5b]/30 py-6 pr-6"><Compass className="size-5 text-[#c5a66a]"/><h4 className="mt-5 text-lg text-[#f3f0e9]">Platform plans</h4><p className="mt-2 text-xs leading-6 text-[#9e998f]">Pilihan paket platform yang dapat disesuaikan dengan kebutuhan operasional.</p><span className="mt-5 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.16em] text-[#c5a66a]">Compare plans <ArrowUpRight className="size-3.5"/></span></Link>
+          <Link href="/tentang" className="group border-t border-[#b99a5b]/30 py-6 sm:pl-6 sm:border-l"><ShieldCheck className="size-5 text-[#c5a66a]"/><h4 className="mt-5 text-lg text-[#f3f0e9]">Our approach</h4><p className="mt-2 text-xs leading-6 text-[#9e998f]">Prinsip kerja yang mengutamakan kejelasan, tanggung jawab, dan kualitas eksekusi.</p><span className="mt-5 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.16em] text-[#c5a66a]">About us <ArrowUpRight className="size-3.5"/></span></Link>
+        </div>
       </section>
-      <section className="flex flex-col gap-5 rounded-2xl border border-line p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-4"><ShieldCheck className="mt-1 size-6 shrink-0 text-signal"/><div><h3 className="font-semibold">Informasi jelas sebelum Anda memesan</h3><p className="mt-1 text-sm leading-6 text-ink-quiet">Pelajari cara kerja, ketentuan, dan metode pembayaran melalui halaman bantuan.</p></div></div>
-        <Link href="/faq" className="shrink-0 text-sm font-semibold text-signal">Baca pusat bantuan <ArrowUpRight className="ml-1 inline size-4"/></Link>
+      <section className="flex flex-col gap-6 border border-[#b99a5b]/25 bg-[#101113] p-7 sm:flex-row sm:items-center sm:justify-between sm:p-10">
+        <div><p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#c5a66a]">Start a conversation</p><h3 className="mt-3 text-2xl font-medium tracking-tight text-[#f3f0e9]">Tell us what you are building.</h3><p className="mt-2 max-w-xl text-xs leading-6 text-[#9e998f]">Ceritakan kebutuhan Anda. Tim kami akan meninjau informasi yang dikirim dan menindaklanjutinya.</p></div>
+        <Link href="/kontak" className="inline-flex shrink-0 items-center gap-3 border border-[#c5a66a]/60 px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#d8bd83] hover:bg-[#c5a66a] hover:text-[#101010]">Contact Cyber Wealth <ArrowUpRight className="size-4"/></Link>
       </section>
     </PageStack>
   )
@@ -45,7 +60,7 @@ function HomePage() {
 
 const Page = HomePage as PageWithFrame
 Page.getLayout = (page) => (
-  <StoreFrame eyebrow="Cyber Wealth / Official website" title="Solusi digital untuk langkah berikutnya" intent="Platform digital yang menghubungkan produk siap pakai dan layanan untuk membantu pekerjaan serta bisnis Anda." variant="wide" description="Cyber Wealth menyediakan layanan digital, produk digital, dan paket platform untuk mendukung pertumbuhan bisnis.">
+  <StoreFrame eyebrow="Cyber Wealth / Official website" title="Digital business, thoughtfully built." intent="Strategi, layanan, dan produk digital yang dirancang untuk membuat pekerjaan lebih jelas dan bisnis bergerak lebih jauh." variant="wide" description="Cyber Wealth — digital solutions, creative services, and products for modern business.">
     {page}
   </StoreFrame>
 )
