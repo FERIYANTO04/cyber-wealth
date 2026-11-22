@@ -117,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action: 'Putaran terjadwal autopilot berjalan',
       detail: result.results.map((item) => `${item.label}: ${item.summary}`).join(' · '),
     })
-    return res.status(200).json({ ran: true, results: result.results, billing, social, housekeeping, productFileMigration, integrations })
+    return res.status(200).json({ ran: true, results: result.results, billing, housekeeping, productFileMigration, integrations })
   } catch (error) {
     console.error('[cron autopilot]', error)
     return res.status(500).json({ ran: false, reason: 'Putaran gagal. Periksa log server.' })
