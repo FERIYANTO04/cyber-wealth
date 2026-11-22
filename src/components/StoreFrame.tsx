@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { ArrowUpRight, Box, BriefcaseBusiness, CircleHelp, Home, LayoutDashboard, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Menu } from 'lucide-react'
 
 export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'reading', description, children }: {
   title: string; eyebrow?: string; intent?: string; actions?: ReactNode
@@ -9,53 +9,61 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
   description?: string; children: ReactNode
 }) {
   const links = [
-    { href: '/', label: 'Beranda', icon: Home },
-    { href: '/jasa', label: 'Layanan', icon: BriefcaseBusiness },
-    { href: '/toko', label: 'Produk digital', icon: Box },
-    { href: '/harga', label: 'Paket & harga', icon: Sparkles },
-    { href: '/faq', label: 'Pusat bantuan', icon: CircleHelp },
-    { href: '/kontak', label: 'Hubungi kami', icon: MessageCircle },
+    { href: '/', label: 'Beranda' },
+    { href: '/tentang', label: 'Tentang' },
+    { href: '/jasa', label: 'Layanan' },
+    { href: '/toko', label: 'Produk' },
+    { href: '/harga', label: 'Paket' },
+    { href: '/faq', label: 'Bantuan' },
   ]
   return (
-    <div data-frame="store" data-frame-variant={variant} className="min-h-screen bg-canvas text-ink">
+    <div data-frame="store" data-frame-variant={variant} className="min-h-screen bg-[#08090b] text-[#f3f0e9]">
       <Head>
-        <title>{title} — Cyber Wealth</title><meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#090b10" />
-        <meta name="description" content={description ?? intent ?? 'Cyber Wealth — platform digital untuk bisnis'} />
+        <title>{title} — Cyber Wealth</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#08090b" />
+        <meta name="description" content={description ?? intent ?? 'Cyber Wealth — digital business solutions'} />
       </Head>
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[248px] flex-col border-r border-line bg-surface lg:flex">
-        <Link href="/" className="flex items-center gap-3 border-b border-line px-6 py-6">
-          <span className="brand-mark !size-10 !rounded-xl !bg-signal !text-white">CW</span>
-          <span><span className="block text-sm font-bold tracking-wide text-ink">CYBER WEALTH</span><span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[.2em] text-ink-quiet">Digital company</span></span>
-        </Link>
-        <div className="px-4 pt-7"><p className="eyebrow px-3 pb-3">Jelajahi</p>
-          {links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className="nav-quiet !min-h-11 !rounded-xl"><Icon className="size-4"/> {label}</Link>)}
+      <div className="border-b border-[#b99a5b]/20 bg-[#0d0e10]">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-3 text-[10px] uppercase tracking-[.2em] text-[#9d9688] sm:px-8 lg:px-12">
+          <span>Independent digital company</span><span className="hidden sm:block">Strategy · Technology · Growth</span>
         </div>
-        <div className="mt-auto p-4">
-          <div className="rounded-2xl border border-line bg-canvas p-4"><div className="flex items-center gap-2 text-xs font-semibold"><ShieldCheck className="size-4 text-signal"/> Transaksi transparan</div><p className="mt-2 text-xs leading-5 text-ink-quiet">Informasi produk, layanan, dan pembayaran dijelaskan sebelum Anda memesan.</p></div>
-          <p className="px-2 pt-4 font-mono text-[10px] tracking-wider text-ink-quiet">CYBER WEALTH © 2026</p>
-        </div>
-      </aside>
-      <div className="lg:pl-[248px]">
-        <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-8">
-            <Link href="/" className="flex items-center gap-2 lg:hidden"><span className="brand-mark !bg-signal !text-white">CW</span><span className="text-sm font-bold">CYBER WEALTH</span></Link>
-            <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2">
-              {links.map(({ href, label }) => <Link key={href} href={href} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-ink-quiet transition hover:bg-signal-soft hover:text-signal">{label}</Link>)}
-            </nav>
-            <Link href="/masuk" className="shrink-0 rounded-xl border border-line px-4 py-2 text-xs font-semibold text-ink transition hover:border-signal hover:text-signal">Masuk <ArrowUpRight className="ml-1 inline size-3.5"/></Link>
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-6xl px-4 pb-20 pt-8 sm:px-8 sm:pt-10">
-          {back && <Link href={back.href} className="mb-5 inline-flex items-center gap-2 text-xs text-ink-quiet hover:text-ink">← {back.label}</Link>}
-          <div className={variant === 'wide' ? 'mb-8 flex flex-col gap-4 border-b border-line pb-7 sm:flex-row sm:items-end sm:justify-between' : 'mb-7 flex flex-col gap-3 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between'}>
-            <div>{eyebrow && <p className="mb-2 font-mono text-[10px] uppercase tracking-[.22em] text-signal">{eyebrow}</p>}<h1 className="heading-tight text-3xl leading-tight sm:text-4xl">{title}</h1>{intent && <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-quiet">{intent}</p>}</div>
-            {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
-          </div>
-          {children}
-        </main>
-        <footer className="border-t border-line"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-[11px] text-ink-quiet sm:px-8"><span>© 2026 Cyber Wealth. Platform & digital solutions.</span><div className="flex gap-4"><Link href="/privasi">Privasi</Link><Link href="/syarat">Ketentuan</Link><Link href="/kontak">Kontak</Link></div></div></footer>
       </div>
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#08090b]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-5 px-5 py-4 sm:px-8 lg:px-12">
+          <Link href="/" className="group flex shrink-0 items-center gap-3">
+            <span className="flex size-10 items-center justify-center border border-[#c8a96b]/60 text-sm font-semibold tracking-[-.08em] text-[#d7bd86]">CW</span>
+            <span><span className="block text-[13px] font-semibold tracking-[.19em] text-[#f4f0e7]">CYBER WEALTH</span><span className="mt-1 block text-[9px] uppercase tracking-[.25em] text-[#958b78]">Digital company</span></span>
+          </Link>
+          <nav className="hidden items-center gap-7 lg:flex">
+            {links.map(({href,label}) => <Link key={href} href={href} className="text-[11px] tracking-[.08em] text-[#aaa69e] transition hover:text-[#d8bd83]">{label}</Link>)}
+          </nav>
+          <div className="flex shrink-0 items-center gap-3">
+            <Link href="/kontak" className="hidden items-center gap-2 border border-[#b99a5b]/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[.16em] text-[#d8bd83] transition hover:bg-[#b99a5b] hover:text-[#101010] sm:inline-flex">Hubungi kami <ArrowUpRight className="size-3.5"/></Link>
+            <Link href="/masuk" className="text-[10px] uppercase tracking-[.16em] text-[#aaa69e] hover:text-white">Masuk</Link>
+          </div>
+        </div>
+        <nav className="flex gap-6 overflow-x-auto border-t border-white/[.06] px-5 py-3 text-[10px] tracking-[.1em] text-[#aaa69e] lg:hidden sm:px-8">
+          {links.map(({href,label}) => <Link key={href} href={href} className="shrink-0 hover:text-[#d8bd83]">{label}</Link>)}
+          <Link href="/kontak" className="shrink-0 text-[#d8bd83]">Kontak</Link>
+        </nav>
+      </header>
+      <main className="mx-auto w-full max-w-[1440px] px-5 pb-24 pt-9 sm:px-8 sm:pt-12 lg:px-12">
+        {back && <Link href={back.href} className="mb-6 inline-flex items-center gap-2 text-xs text-[#a49d8e] hover:text-[#d8bd83]">← {back.label}</Link>}
+        <div className={variant === 'wide' ? 'mb-10 flex flex-col gap-5 border-b border-[#b99a5b]/20 pb-9 sm:flex-row sm:items-end sm:justify-between' : 'mb-8 flex flex-col gap-4 border-b border-[#b99a5b]/20 pb-7 sm:flex-row sm:items-end sm:justify-between'}>
+          <div>{eyebrow && <p className="mb-3 font-mono text-[10px] uppercase tracking-[.24em] text-[#c5a66a]">{eyebrow}</p>}<h1 className="max-w-4xl text-3xl font-medium leading-[1.12] tracking-[-.045em] text-[#f3f0e9] sm:text-4xl lg:text-5xl">{title}</h1>{intent && <p className="mt-4 max-w-2xl text-sm leading-7 text-[#a9a49a]">{intent}</p>}</div>
+          {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+        </div>
+        {children}
+      </main>
+      <footer className="border-t border-[#b99a5b]/20 bg-[#0d0e10]">
+        <div className="mx-auto grid max-w-[1440px] gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr] lg:px-12">
+          <div><div className="text-xs font-semibold tracking-[.2em]">CYBER WEALTH</div><p className="mt-3 max-w-sm text-xs leading-6 text-[#969187]">Membangun pengalaman digital yang terarah, fungsional, dan dirancang untuk mendukung perkembangan bisnis.</p></div>
+          <div><p className="text-[10px] uppercase tracking-[.2em] text-[#c5a66a]">Explore</p><div className="mt-4 grid gap-3 text-xs text-[#aaa69e]"><Link href="/tentang">Tentang perusahaan</Link><Link href="/jasa">Layanan digital</Link><Link href="/toko">Produk digital</Link><Link href="/harga">Paket & harga</Link></div></div>
+          <div><p className="text-[10px] uppercase tracking-[.2em] text-[#c5a66a]">Information</p><div className="mt-4 grid gap-3 text-xs text-[#aaa69e]"><Link href="/faq">Pusat bantuan</Link><Link href="/kontak">Hubungi kami</Link><Link href="/privasi">Kebijakan privasi</Link><Link href="/syarat">Syarat layanan</Link></div></div>
+        </div>
+        <div className="border-t border-white/[.06]"><div className="mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 px-5 py-5 text-[10px] tracking-[.08em] text-[#77736b] sm:px-8 lg:px-12"><span>© 2026 CYBER WEALTH. ALL RIGHTS RESERVED.</span><span>DESIGNED WITH INTENTION.</span></div></div>
+      </footer>
     </div>
   )
 }
