@@ -177,7 +177,7 @@ async function runCeo(trigger: string) {
       'Anda boleh mengubah prioritas dan urutan kerja setiap siklus. Delegasikan pekerjaan kepada agen yang paling tepat dari roster. Buat rencana konkret, terukur, dan dapat dieksekusi sekarang; jangan hanya memberi slogan atau laporan.',
       'Bedakan fakta, hipotesis, dan target. Jangan mengarang angka, pelanggan, pembayaran, atau hasil. Jangan menyatakan tindakan sudah selesai sebelum runner mengonfirmasinya.',
       'Agen boleh berpikir kreatif dan menjalankan pekerjaan internal yang aman secara mandiri. Anda memiliki mandat CEO untuk mengambil keputusan operasional dan finansial perusahaan, termasuk alokasi anggaran, pengeluaran besar, pembelian alat/komponen, biaya R&D, perekrutan vendor, investasi ulang, dan penghentian proyek. Jangan meminta persetujuan Owner untuk keputusan bisnis rutin maupun keputusan belanja yang berada dalam kapasitas dana perusahaan. Jangan mengarang saldo atau menganggap usulan sebagai pembayaran. Jangan mengakses dana pribadi Owner, membuat utang/pinjaman, atau melakukan transfer/charge nyata tanpa rekening dan otorisasi transaksi yang memang terhubung serta tercatat.',
-      'Keluarkan JSON valid saja dengan bentuk: {"condition":"...","priorities":["..."],"dispatch":["research","product","marketing","sales","finance","intelligence","science","patents","engineering","prototype","academic","transfer","security","quality","legal","procurement"],"staffing_gaps":[{"role":"...","reason":"...","type":"agent|human"}],"reasoning":"...","owner_attention":"..."}. dispatch harus berisi urutan kerja pilihan Anda, tanpa duplikasi, hanya task yang ada di daftar. Anda sendiri yang memilih agen dan urutan; jangan minta Owner memilih atau menjalankan agen satu per satu. Gunakan spesialis R&D saat prioritas penemuan membutuhkannya. Pimpin rapat lintas agen, gunakan laporan terbaru mereka, tetapkan pemilik tugas dan serah-terima, serta putuskan kesenjangan keahlian dan penambahan spesialis AI. Untuk manusia, siapkan kebutuhan dan seleksi; jangan mengklaim perekrutan terjadi sebelum proses sah.',
+      'Keluarkan JSON valid saja dengan bentuk: {"condition":"...","priorities":["..."],"dispatch":["research","product","marketing","sales","finance","intelligence","science","patents","engineering","prototype","academic","transfer","security","quality","legal","procurement","workforce"],"staffing_gaps":[{"role":"...","reason":"...","type":"agent|human"}],"reasoning":"...","owner_attention":"..."}. dispatch harus berisi urutan kerja pilihan Anda, tanpa duplikasi, hanya task yang ada di daftar. Anda sendiri yang memilih agen dan urutan; jangan minta Owner memilih atau menjalankan agen satu per satu. Gunakan spesialis R&D saat prioritas penemuan membutuhkannya. Pimpin rapat lintas agen, gunakan laporan terbaru mereka, tetapkan pemilik tugas dan serah-terima, serta putuskan kesenjangan keahlian dan penambahan spesialis AI. Untuk manusia, siapkan kebutuhan dan seleksi; jangan mengklaim perekrutan terjadi sebelum proses sah.',
     ].join(' '),
     prompt: [
       `Pemicu: ${trigger}`,
@@ -889,12 +889,13 @@ async function runFinance(trigger: string) {
  * content, active subscriptions — and says what those numbers mean. Every figure is a
  * row in the database; nothing is estimated, projected, or invented.
  */
-async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | 'procurement', trigger: string) {
+async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | 'procurement' | 'workforce', trigger: string) {
   const roles = {
     security: ['AI Security & Compliance', 'Audit keamanan aplikasi, autentikasi, privasi, backup, dan kepatuhan.'],
     quality: ['AI Quality & Reliability', 'Audit checkout, pembayaran, file delivery, UX, bug, dan mutu produk.'],
     legal: ['AI Legal & IP Counsel', 'Petakan risiko kontrak, merek, hak cipta, paten, privasi, dan kebutuhan penasihat hukum.'],
     procurement: ['AI Procurement Intelligence', 'Bandingkan vendor, alat, komponen, biaya total, dan risiko pemasok.'],
+    workforce: ['AI Workforce Architect', 'Audit seluruh fungsi, temukan skill gap, rancang spesialis AI baru dengan mandat, output, alat, batas wewenang, dan kriteria pengujian. Hindari duplikasi.'],
   } as const
   const spec = roles[task]
   const run = await startRun(spec[0], task, trigger)
@@ -994,6 +995,7 @@ const TASK_RUNNERS: Record<AutopilotTask, () => Promise<{ summary: string }>> = 
   quality: () => runCorporateSpecialist('quality', 'owner'),
   legal: () => runCorporateSpecialist('legal', 'owner'),
   procurement: () => runCorporateSpecialist('procurement', 'owner'),
+  workforce: () => runCorporateSpecialist('workforce', 'owner'),
 }
 
 export type AgentTaskResult = { ok: boolean; summary: string; blocked?: string }
@@ -1039,7 +1041,7 @@ async function buildCeoDispatchPlan(): Promise<Exclude<AutopilotTask, 'ceo'>[]> 
   const plan: Exclude<AutopilotTask, 'ceo'>[] = []
   if ((openLeads?.n ?? 0) + (newServiceRequests?.n ?? 0) + (pendingOrders?.n ?? 0) > 0) plan.push('sales')
   if ((publishedProducts?.n ?? 0) === 0 || (draftProducts?.n ?? 0) > 0 || (publishedNeedsReview?.n ?? 0) > 0) plan.push('product')
-  plan.push('research', 'science', 'patents', 'engineering', 'security', 'quality', 'legal', 'procurement')
+  plan.push('research', 'science', 'patents', 'engineering', 'security', 'quality', 'legal', 'procurement', 'workforce')
   if ((publishedProducts?.n ?? 0) + (publishedServices?.n ?? 0) > 0) plan.push('marketing')
   plan.push('finance', 'intelligence')
   return plan
@@ -1070,7 +1072,7 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     outcomes.push({ task: 'intelligence', label: 'Intelijen bisnis', summary: 'CEO AI tidak menghasilkan rencana delegasi yang valid; agen lain tidak dijalankan agar tidak kembali memakai urutan kerja tetap.' })
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
-  const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis', science: 'Riset penemuan', patents: 'Intelijen paten', engineering: 'Rekayasa sistem', prototype: 'Prototipe & validasi', academic: 'Kemitraan akademik', transfer: 'Transfer teknologi', security: 'Keamanan & kepatuhan', quality: 'Kualitas & keandalan', legal: 'Hukum & IP', procurement: 'Pengadaan & vendor' }
+  const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis', science: 'Riset penemuan', patents: 'Intelijen paten', engineering: 'Rekayasa sistem', prototype: 'Prototipe & validasi', academic: 'Kemitraan akademik', transfer: 'Transfer teknologi', security: 'Keamanan & kepatuhan', quality: 'Kualitas & keandalan', legal: 'Hukum & IP', procurement: 'Pengadaan & vendor', workforce: 'Arsitek organisasi AI' }
   await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. AI CEO memimpin koordinasi lintas agen; laporan setiap agen menjadi bahan kerja agen berikutnya.`)
   const runners: Record<Exclude<AutopilotTask, 'ceo'>, () => Promise<{ summary: string }>> = {
     research: () => runResearch(trigger), sales: () => runSales(trigger), product: () => runProduct(trigger),
@@ -1081,7 +1083,7 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     engineering: () => runInnovationSpecialist('engineering', trigger),
     prototype: () => runInnovationSpecialist('prototype', trigger),
     academic: () => runInnovationSpecialist('academic', trigger),
-    transfer: () => runInnovationSpecialist('transfer', trigger), security: () => runCorporateSpecialist('security', trigger), quality: () => runCorporateSpecialist('quality', trigger), legal: () => runCorporateSpecialist('legal', trigger), procurement: () => runCorporateSpecialist('procurement', trigger),
+    transfer: () => runInnovationSpecialist('transfer', trigger), security: () => runCorporateSpecialist('security', trigger), quality: () => runCorporateSpecialist('quality', trigger), legal: () => runCorporateSpecialist('legal', trigger), procurement: () => runCorporateSpecialist('procurement', trigger), workforce: () => runCorporateSpecialist('workforce', trigger),
   }
   const sequence = plan.map((task) => [task, labels[task], runners[task]] as const)
 
