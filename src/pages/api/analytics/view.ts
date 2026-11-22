@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHash, createHmac, randomBytes } from 'node:crypto'
 import { db } from '@/lib/db'
-import { siteVisit } from '@/lib/db/schema'
+import { sql } from 'drizzle-orm'
 
 function readCookie(value: string | undefined, name: string): string | undefined {
   return value?.split(';').map((v) => v.trim()).find((v) => v.startsWith(name + '='))?.slice(name.length + 1)
@@ -29,10 +29,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (headers.length) res.setHeader('Set-Cookie', headers)
   const visitorHash = createHmac('sha256', secret).update(visitor).digest('hex')
-  await db.insert(siteVisit).values({
-    id: createHash('sha256').update(randomBytes(32)).digest('hex'),
-    visitorHash,
-    path: path.split('?')[0],
-  })
+  await db.execute(sql`INSERT INTO site_visit (id, visitor_hash, path) VALUES (${createHash('sha256').update(randomBytes(32)).digest('hex')}, ${visitorHash}, ${path.split('?')[0]})`)
   return res.status(204).end()
 }
