@@ -10,4 +10,5 @@ CREATE TABLE IF NOT EXISTS "talent_application" (
   "created_at" timestamp DEFAULT now() NOT NULL,
   "updated_at" timestamp DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "talent_application_created_at_idx" ON "talent_application" ("created_at");
