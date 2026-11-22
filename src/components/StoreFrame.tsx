@@ -1,152 +1,53 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowUpRight, Box, LayoutDashboard, ShieldCheck, Sparkles } from 'lucide-react'
 
-/**
- * Surface: the public storefront. Anyone can reach these pages — no login — so the
- * frame is its own: a quiet masthead, one centred reading column, and no console
- * navigation. It shares the palette and type of the console on purpose.
- */
-export function StoreFrame({
-  title,
-  eyebrow,
-  intent,
-  actions,
-  back,
-  variant = 'reading',
-  description,
-  children,
-}: {
-  title: string
-  eyebrow?: string
-  intent?: string
-  actions?: ReactNode
-  back?: { href: string; label: string }
-  /** `reading` is one centred column; `wide` is the marketing front, one size up. */
-  variant?: 'reading' | 'wide'
-  /** Overrides the meta description when the page needs its own. */
-  description?: string
-  children: ReactNode
+export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'reading', description, children }: {
+  title: string; eyebrow?: string; intent?: string; actions?: ReactNode
+  back?: { href: string; label: string }; variant?: 'reading' | 'wide'
+  description?: string; children: ReactNode
 }) {
   return (
-    <div
-      data-frame="store"
-      data-frame-variant={variant}
-      className="min-h-screen bg-canvas"
-    >
+    <div data-frame="store" data-frame-variant={variant} className="min-h-screen bg-canvas text-ink">
       <Head>
-        <title>{title}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#F7F8F6" />
-        <meta name="description" content={description ?? intent ?? 'Katalog produk digital.'} />
+        <title>{title}</title><meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#090b10" />
+        <meta name="description" content={description ?? intent ?? 'Cyber Wealth — digital products'} />
       </Head>
-
-      <header className="border-b border-line bg-surface">
-        <div
-          className={
-            variant === 'wide'
-              ? 'mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-page py-block'
-              : 'mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-page py-block'
-          }
-        >
-          <Link href="/toko" className="flex items-center gap-2">
-            <span className="brand-mark">CW</span>
-            <span className="heading-tight text-[0.8125rem] leading-tight">
-              Cyber Wealth
-              <br />
-              Digital Store
-            </span>
-          </Link>
-          <nav aria-label="Navigasi utama" className="flex items-center gap-1">
-            <Link href="/toko" className="nav-quiet">
-              Produk
-            </Link>
-            <Link href="/harga" className="nav-quiet">
-              Harga
-            </Link>
-            <Link href="/faq" className="nav-quiet hidden sm:flex">
-              FAQ
-            </Link>
-            <Link href="/kontak" className="nav-quiet hidden sm:flex">
-              Kontak
-            </Link>
-            <Link href="/masuk" className="nav-quiet hidden md:flex">
-              Masuk
-            </Link>
-          </nav>
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[248px] flex-col border-r border-line bg-surface lg:flex">
+        <Link href="/toko" className="flex items-center gap-3 border-b border-line px-6 py-6">
+          <span className="brand-mark !size-10 !rounded-xl !bg-signal !text-white">CW</span>
+          <span><span className="block text-sm font-bold tracking-wide text-ink">CYBER WEALTH</span><span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[.2em] text-ink-quiet">Digital commerce</span></span>
+        </Link>
+        <div className="px-4 pt-7"><p className="eyebrow px-3 pb-3">Workspace</p>
+          <Link href="/toko" className="nav-quiet !min-h-11 !rounded-xl !bg-signal-soft !text-signal"><Box className="size-4"/> Katalog produk</Link>
+          <Link href="/harga" className="nav-quiet !min-h-11 !rounded-xl"><Sparkles className="size-4"/> Paket & harga</Link>
+          <Link href="/faq" className="nav-quiet !min-h-11 !rounded-xl"><LayoutDashboard className="size-4"/> Pusat bantuan</Link>
         </div>
-      </header>
-
-      <main
-        className={
-          variant === 'wide'
-            ? 'mx-auto w-full max-w-5xl px-page pb-section pt-section'
-            : 'mx-auto w-full max-w-3xl px-page pb-section pt-stack'
-        }
-      >
-        {back && (
-          <Link
-            href={back.href}
-            className="mb-block inline-flex items-center gap-1.5 text-[0.8125rem] text-ink-quiet transition-colors hover:text-ink"
-          >
-            <ArrowLeft className="size-3.5" aria-hidden="true" />
-            {back.label}
-          </Link>
-        )}
-
-        <div
-          className={
-            variant === 'wide'
-              ? 'hidden'
-              : 'mb-stack flex flex-col gap-3 border-b border-line pb-stack sm:flex-row sm:items-end sm:justify-between'
-          }
-        >
-          <div className="min-w-0">
-            {eyebrow && (
-              <p className="mb-1 font-mono text-[0.6875rem] uppercase tracking-[0.16em] text-ink-quiet">{eyebrow}</p>
-            )}
-            <h1 className="heading-tight text-[1.5rem] leading-tight sm:text-[1.875rem]">{title}</h1>
-            {intent && <p className="mt-1.5 max-w-prose text-[0.875rem] leading-relaxed text-ink-quiet">{intent}</p>}
+        <div className="mt-auto p-4">
+          <div className="rounded-2xl border border-line bg-canvas p-4"><div className="flex items-center gap-2 text-xs font-semibold"><ShieldCheck className="size-4 text-signal"/> Pembelian aman</div><p className="mt-2 text-xs leading-5 text-ink-quiet">File digital tersedia setelah pembayaran berhasil diverifikasi.</p></div>
+          <p className="px-2 pt-4 font-mono text-[10px] tracking-wider text-ink-quiet">CYBER WEALTH © 2026</p>
+        </div>
+      </aside>
+      <div className="lg:pl-[248px]">
+        <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-8">
+            <Link href="/toko" className="flex items-center gap-2 lg:hidden"><span className="brand-mark !bg-signal !text-white">CW</span><span className="text-sm font-bold">CYBER WEALTH</span></Link>
+            <div className="hidden min-w-0 lg:block"><p className="font-mono text-[10px] uppercase tracking-[.2em] text-ink-quiet">Digital marketplace / Indonesia</p><p className="mt-1 text-xs text-ink-quiet">Temukan tools untuk kerja dan bisnis</p></div>
+            <nav className="flex items-center gap-2"><Link href="/faq" className="nav-quiet hidden sm:flex">Bantuan</Link><Link href="/masuk" className="rounded-xl border border-line px-4 py-2 text-xs font-semibold text-ink transition hover:border-signal hover:text-signal">Masuk <ArrowUpRight className="ml-1 inline size-3.5"/></Link></nav>
           </div>
-          {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
-        </div>
-
-        {children}
-      </main>
-
-      <footer className="border-t border-line">
-        <div
-          className={
-            variant === 'wide'
-              ? 'mx-auto flex w-full max-w-5xl flex-col gap-block px-page py-section'
-              : 'mx-auto w-full max-w-3xl px-page py-stack'
-          }
-        >
-          {variant === 'wide' && (
-            <nav aria-label="Informasi" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <Link href="/harga" className="link-quiet">
-                Harga
-              </Link>
-              <Link href="/faq" className="link-quiet">
-                Tanya jawab
-              </Link>
-              <Link href="/kontak" className="link-quiet">
-                Kontak
-              </Link>
-              <Link href="/privasi" className="link-quiet">
-                Kebijakan privasi
-              </Link>
-              <Link href="/syarat" className="link-quiet">
-                Syarat layanan
-              </Link>
-            </nav>
-          )}
-          <p className="text-xs leading-relaxed text-ink-quiet">
-            Produk digital dikirim setelah pemilik memverifikasi dana masuk ke rekening.
-          </p>
-        </div>
-      </footer>
+        </header>
+        <main className="mx-auto w-full max-w-6xl px-4 pb-20 pt-8 sm:px-8 sm:pt-10">
+          {back && <Link href={back.href} className="mb-5 inline-flex items-center gap-2 text-xs text-ink-quiet hover:text-ink">← {back.label}</Link>}
+          <div className={variant === 'wide' ? 'mb-8 flex flex-col gap-4 border-b border-line pb-7 sm:flex-row sm:items-end sm:justify-between' : 'mb-7 flex flex-col gap-3 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between'}>
+            <div>{eyebrow && <p className="mb-2 font-mono text-[10px] uppercase tracking-[.22em] text-signal">{eyebrow}</p>}<h1 className="heading-tight text-3xl leading-tight sm:text-4xl">{title}</h1>{intent && <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-quiet">{intent}</p>}</div>
+            {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+          </div>
+          {children}
+        </main>
+        <footer className="border-t border-line"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-[11px] text-ink-quiet sm:px-8"><span>© 2026 Cyber Wealth. Digital products, made useful.</span><div className="flex gap-4"><Link href="/privasi">Privasi</Link><Link href="/syarat">Ketentuan</Link><Link href="/kontak">Kontak</Link></div></div></footer>
+      </div>
     </div>
   )
 }
