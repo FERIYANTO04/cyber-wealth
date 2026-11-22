@@ -4,7 +4,7 @@ import { ActivationSummary, IntegrationGuide, type CheckState, type ServiceCard 
 import { PageStack } from '@/components/ui'
 import { SchedulerGuide } from '@/components/SchedulerGuide'
 import { requireOwnerPage } from '@/lib/auth'
-import { aiConfig, storageStatus } from '@/lib/integrations'
+import { aiConfig, midtransStatus, storageStatus } from '@/lib/integrations'
 import { isPlaceholder } from '@/lib/env'
 import { emailConfig } from '@/lib/email'
 import { getEngineCounts } from '@/lib/data'
@@ -19,6 +19,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const ai = aiConfig()
   const email = emailConfig()
   const storage = await storageStatus()
+  const midtrans = midtransStatus()
   const engines = await getEngineCounts()
 
   const aiState: CheckState = isPlaceholder(ai.key) ? 'missing' : 'unverified'
@@ -62,6 +63,22 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       testable: true,
     },
     {
+      key: 'midtrans',
+      title: 'Pembayaran Midtrans',
+      summary: 'Checkout pembeli melalui transfer bank, QRIS, dan metode pembayaran yang tersedia di Midtrans.',
+      state: midtrans.state,
+      message: midtrans.message,
+      required: ['MIDTRANS_SERVER_KEY', 'MIDTRANS_IS_PRODUCTION (false untuk Sandbox, true untuk Production)'],
+      steps: [
+        'Masukkan Server Key Midtrans ke Railway Production.',
+        'Atur MIDTRANS_IS_PRODUCTION sesuai mode akun merchant.',
+        'Daftarkan webhook: ' + `https://${host}/api/webhooks/midtrans`,
+        'Lakukan satu transaksi uji kecil dan pastikan status lunas dikonfirmasi oleh webhook.',
+      ],
+      where: 'Website hanya mencatat pendapatan setelah status transaksi diverifikasi langsung ke Midtrans.',
+      testable: false,
+    },
+    {
       key: 'storage',
       title: 'Penyimpanan berkas privat',
       summary: 'Menyimpan file produk digital untuk diunduh pembeli setelah pembayaran dikonfirmasi.',
@@ -87,6 +104,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if (engines.products === 0) blockers.push('Belum ada produk digital yang terbit.')
   if (engines.services === 0) blockers.push('Belum ada layanan jasa yang terbit.')
   if (engines.plans === 0) blockers.push('Belum ada paket langganan yang terbit.')
+  if (midtrans.state === 'missing') blockers.push('Kunci Midtrans belum dipasang; checkout berbayar belum aktif.')
   if (storage.state !== 'ready') blockers.push('Penyimpanan file privat belum lulus uji.')
 
   const endpoint = `${proto}://${host}/api/cron/autopilot`
