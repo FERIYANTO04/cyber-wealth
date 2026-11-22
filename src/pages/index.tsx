@@ -1,12 +1,15 @@
 import type { GetServerSideProps } from 'next'
 import { getSession } from '@/lib/auth'
 
-/** Cyber Wealth is an owner-operated control room. Customer pages remain on their own routes. */
+/**
+ * Public visitors should land on the customer-facing service catalog.
+ * Authenticated owners retain the private operations dashboard.
+ */
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const session = await getSession(ctx.req)
   return {
     redirect: {
-      destination: session ? '/owner' : '/login?next=%2Fowner',
+      destination: session ? '/owner' : '/jasa',
       permanent: false,
     },
   }
