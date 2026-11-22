@@ -201,7 +201,7 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
       await gmailSmtp()
       return { state: 'ready', message: `Gmail SMTP berhasil diautentikasi untuk ${c.smtpUser}.` }
     } catch (error) {
-      return { state: 'invalid', message: error instanceof Error ? error.message.slice(0, 300) : 'Autentikasi Gmail gagal.' }
+      return { state: 'invalid', message: error instanceof Error && error.message.trim() ? error.message.slice(0, 300) : 'Gmail SMTP gagal merespons. Periksa SMTP_USER, App Password Gmail, SMTP_HOST, dan SMTP_PORT.' }
     }
   }
   if (isPlaceholder(c.key)) {
