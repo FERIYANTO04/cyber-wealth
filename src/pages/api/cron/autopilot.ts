@@ -109,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const result = await runAutopilot('schedule')
     if (result.paused) {
-      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, social, housekeeping, productFileMigration, integrations })
+      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, housekeeping, productFileMigration, integrations })
     }
 
     await logActivity({
