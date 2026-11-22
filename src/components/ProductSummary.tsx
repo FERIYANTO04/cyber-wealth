@@ -35,6 +35,7 @@ export function ProductSummary({
                 ? 'Setelah pembayaran dikonfirmasi, berkas produk bisa diunduh langsung dari halaman pesanan Anda.'
                 : 'Penjual menyiapkan serahan produk setelah pembayaran dikonfirmasi.'}
             </p>
+            <p>Untuk produk video, file master dikirim sebagai unduhan digital privat setelah pembayaran terverifikasi. Pastikan format dan lisensi penggunaan dijelaskan pada deskripsi produk.</p>
           </div>
         </PanelBody>
       </Panel>
