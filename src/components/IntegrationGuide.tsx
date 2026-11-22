@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 export type CheckState = 'ready' | 'missing' | 'invalid' | 'error' | 'unverified'
 
 export type ServiceCard = {
-  key: 'ai' | 'payment' | 'webhook' | 'email' | 'storage'
+  key: 'ai' | 'payment' | 'webhook' | 'email' | 'storage' | 'midtrans'
   title: string
   summary: string
   state: CheckState
