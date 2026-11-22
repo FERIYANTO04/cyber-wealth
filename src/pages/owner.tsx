@@ -60,6 +60,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 }
 
 type Props = {
+  analytics: { todayViews: number; todayVisitors: number; weekViews: number; daily: { day: string; views: number; visitors: number }[]; topPages: { path: string; views: number }[]; clientRequests: number; agentRuns: number; agentSuccess: number; agentFailed: number; agentItems: number }
   owner: { name: string; email: string; createdAt: string }
   revenue: number; expenses: number; netCash: number; assets: number; netWorth: number
   transactions: { id: string; kind: string; category: string; description: string; amount: number; date: string }[]
