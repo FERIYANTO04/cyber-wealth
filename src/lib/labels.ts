@@ -9,7 +9,7 @@ export const SERVICE_STATUS: { value: string; label: string }[] = [
   { value: 'lost', label: 'Tidak lanjut' },
 ]
 
-export type AutopilotTask = 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence' | 'science' | 'patents' | 'engineering' | 'prototype' | 'academic' | 'transfer' | 'security' | 'quality' | 'legal' | 'procurement'
+export type AutopilotTask = 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence' | 'science' | 'patents' | 'engineering' | 'prototype' | 'academic' | 'transfer' | 'security' | 'quality' | 'legal' | 'procurement' | 'workforce'
 
 export const TASKS: { task: AutopilotTask; agentRole: string; label: string; description: string }[] = [
   {
@@ -94,6 +94,7 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
   { task: 'quality', agentRole: 'AI Quality & Reliability', label: 'Kualitas & keandalan', description: 'Menguji checkout, pembayaran, file delivery, UX, bug, dan mutu produk.' },
   { task: 'legal', agentRole: 'AI Legal & IP Counsel', label: 'Hukum & kekayaan intelektual', description: 'Memetakan risiko kontrak, merek, hak cipta, paten, privasi, dan kebutuhan ahli hukum.' },
   { task: 'procurement', agentRole: 'AI Procurement Intelligence', label: 'Pengadaan & vendor', description: 'Membandingkan vendor, alat, komponen, harga, dan risiko pemasok.' },
+  { task: 'workforce', agentRole: 'AI Workforce Architect', label: 'Arsitek organisasi AI', description: 'Menilai kesenjangan kemampuan dan merancang, membuat, serta menguji spesialis AI baru.' },
 ]
 
  // ── Social studio vocabulary ──────────────────────────────────────────────
