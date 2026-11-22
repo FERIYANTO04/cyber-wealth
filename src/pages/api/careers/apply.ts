@@ -11,7 +11,7 @@ const Application = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.string().trim().toLowerCase().email().max(200),
   role: z.enum(['Video editor', 'Graphic designer', 'Motion designer', 'AI creative operator', 'Creative producer', 'Freelance specialist']),
-  portfolio: z.string().trim().max(500).optional(),
+  portfolio: z.string().trim().max(500).optional().refine((value) => !value || /^https?:\/\//i.test(value), 'Portofolio harus berupa tautan HTTP atau HTTPS.'),
   experience: z.string().trim().min(20).max(2000),
   message: z.string().trim().min(20).max(3000),
   consent: z.literal(true),
