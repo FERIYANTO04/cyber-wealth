@@ -39,7 +39,8 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
   const objectKey='client-uploads/'+access.project_id+'/'+assetId+'/'+fileName.replace(/[^A-Za-z0-9._-]/g,'_')
   try{
    await sqlClient.begin(async tx=>{
-    await tx`SELECT id FROM creative_asset_access WHERE id=${access.id} FOR UPDATE`
+    const [validAccess]=await tx`SELECT id FROM creative_asset_access WHERE id=${access.id} AND revoked_at IS NULL AND expires_at>now() FOR UPDATE`
+    if(!validAccess) throw new Error('Tautan upload sudah dicabut atau kedaluwarsa.')
     const [usage]=await tx`SELECT COALESCE(SUM(size_bytes),0)::bigint AS used_bytes FROM creative_asset WHERE project_id=${access.project_id} AND status IN ('pending','ready')`
     if(Number(usage.used_bytes)+parsed.data.sizeBytes>PROJECT_QUOTA) throw new Error('Kuota penyimpanan proyek 5 GB sudah tercapai.')
     await tx`INSERT INTO creative_asset (id,project_id,access_id,object_key,file_name,content_type,size_bytes,status) VALUES (${assetId},${access.project_id},${access.id},${objectKey},${fileName},${parsed.data.contentType},${parsed.data.sizeBytes},'pending')`
