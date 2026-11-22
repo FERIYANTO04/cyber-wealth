@@ -337,6 +337,91 @@ async function runResearch(trigger: string) {
   return { summary, created: created + suggested }
 }
 
+async function runInnovationSpecialist(task: Exclude<AutopilotTask, 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence'>, trigger: string) {
+  const roles: Record<typeof task, { role: string; focus: string; output: string }> = {
+    science: { role: 'AI Chief Scientific Officer', focus: 'Temukan masalah ilmiah penting lintas disiplin dan rumuskan hipotesis penemuan yang dapat diuji.', output: 'Masalah ilmiah, hipotesis orisinal, mekanisme yang diusulkan, dan eksperimen pembuktian.' },
+    patents: { role: 'AI Patent Intelligence', focus: 'Buat strategi penelusuran prior-art untuk satu kandidat teknologi; identifikasi kata kunci, klasifikasi, basis data paten, dan pembeda yang perlu diuji.', output: 'Peta pencarian prior-art, kata kunci, sumber yang wajib diperiksa, risiko tumpang tindih, dan kriteria novelty.' },
+    engineering: { role: 'AI Systems Engineering', focus: 'Ubah satu hipotesis penemuan menjadi arsitektur sistem awal yang bisa ditinjau insinyur.', output: 'Arsitektur, subsistem, spesifikasi awal, antarmuka, BOM konseptual, dan rencana verifikasi.' },
+    prototype: { role: 'AI Prototype Engineering', focus: 'Rancang jalur prototipe dan validasi yang aman untuk kandidat teknologi.', output: 'Tahapan prototipe, metode manufaktur, alat uji, metrik, risiko keselamatan, dan kriteria lulus/gagal.' },
+    academic: { role: 'AI Academic Partnerships', focus: 'Siapkan kerangka dossier akademis yang dapat menarik profesor dan universitas tanpa klaim berlebihan.', output: 'Abstrak riset, pertanyaan penelitian, nilai akademis, fasilitas/keahlian mitra yang dibutuhkan, dan kerangka proposal.' },
+    transfer: { role: 'AI Technology Transfer', focus: 'Nilai jalur komersialisasi dan lisensi kandidat teknologi untuk universitas, laboratorium, dan industri.', output: 'Pengguna institusional, aplikasi, model lisensi, bukti yang masih kurang, dan tahapan kesiapan teknologi.' },
+  }
+  const spec = roles[task]
+  const run = await startRun(spec.role, task, trigger)
+  if (!aiConfigured()) {
+    const summary = 'Agen R&D terdaftar, tetapi model AI belum terhubung; belum ada kandidat penemuan yang dibuat.'
+    await finishRun(run.id, 'skipped', summary, 'Hubungkan penyedia AI yang sudah ada sebelum menjalankan riset berbantuan model.', 0)
+    await noteAgent(spec.role, 'Riset R&D dilewati', summary)
+    return { summary }
+  }
+
+  const outcome = await askAi({
+    system: [
+      'Anda bekerja di laboratorium penemuan teknologi Cyber Wealth.',
+      'Jangan mengklaim ide belum pernah ada di dunia, jangan mengarang paten, jurnal, sumber, eksperimen, prototipe, profesor, pembeli, atau hasil pengujian.',
+      'Bedakan pengetahuan umum, hipotesis, dan fakta yang benar-benar diverifikasi. Anda tidak sedang melakukan pencarian web atau pemeriksaan basis data paten secara langsung.',
+      'Pilih satu masalah bernilai tinggi dan hasilkan pekerjaan teknis yang dapat ditindaklanjuti oleh insinyur atau peneliti.',
+      'Hindari konsep fiksi ilmiah yang melanggar fisika. Utamakan kelayakan, keselamatan, pengukuran, dan cara membuktikan atau membantah hipotesis.',
+      'Keluarkan JSON valid dengan kunci title, problem, hypothesis, differentiator, evidence_needed, validation_plan, risks, next_step. Bahasa Indonesia.',
+    ].join(' '),
+    prompt: `Peran: ${spec.role}. Fokus: ${spec.focus}
+Jenis keluaran wajib: ${spec.output}
+Pemicu: ${trigger}
+Buat satu kandidat kerja R&D yang tajam, dapat diuji, dan berpotensi menarik universitas/laboratorium. Jangan menyatakan novelty terbukti. Tandai semua hal yang membutuhkan pencarian prior-art atau eksperimen fisik.`,
+    maxTokens: 1400,
+  })
+
+  if (!outcome.ok) {
+    const summary = `Agen R&D belum menghasilkan keluaran: ${outcome.reason}`
+    await finishRun(run.id, 'failed', summary, summary, 0)
+    await noteAgent(spec.role, 'Riset R&D gagal', summary)
+    return { summary }
+  }
+
+  let parsed: Record<string, unknown> = {}
+  try {
+    const raw = outcome.text.match(/\{[\s\S]*\}/)?.[0]
+    if (raw) parsed = JSON.parse(raw) as Record<string, unknown>
+  } catch { parsed = {} }
+  const title = String(parsed.title ?? '').trim().slice(0, 160)
+  const problem = String(parsed.problem ?? '').trim()
+  const hypothesis = String(parsed.hypothesis ?? '').trim()
+  const detail = [
+    `Peran: ${spec.role}`,
+    `Masalah: ${problem || 'Belum dirumuskan dengan cukup jelas.'}`,
+    `Hipotesis: ${hypothesis || outcome.text}`,
+    `Pembeda yang diusulkan: ${String(parsed.differentiator ?? 'Perlu dirumuskan dan dibandingkan dengan prior-art.')}`,
+    `Bukti yang dibutuhkan: ${String(parsed.evidence_needed ?? 'Penelusuran jurnal/paten dan eksperimen independen.')}`,
+    `Rencana validasi: ${String(parsed.validation_plan ?? 'Belum tersedia.')}`,
+    `Risiko: ${String(parsed.risks ?? 'Belum dinilai.')}`,
+    `Langkah berikutnya: ${String(parsed.next_step ?? 'Tinjau oleh peneliti dan insinyur.')}`,
+    'STATUS: Hipotesis AI untuk diteliti. Bukan penemuan terverifikasi, bukan hasil eksperimen, dan bukan klaim kebaruan global.',
+    `Model: ${outcome.model}`,
+  ].join('\\n')
+
+  let created = 0
+  if (title) {
+    const [existing] = await db.select({ id: marketSignals.id }).from(marketSignals).where(eq(marketSignals.title, title)).limit(1)
+    if (!existing) {
+      await db.insert(marketSignals).values({
+        title,
+        market: 'R&D global',
+        evidence: detail,
+        metric: 'Hipotesis — perlu verifikasi',
+        confidence: 'proposal',
+        dataSource: 'live',
+      })
+      created = 1
+    }
+  }
+  const summary = title
+    ? `${created ? 'Kandidat R&D dicatat' : 'Kandidat R&D sudah tercatat'}: ${title}. Status masih hipotesis, belum tervalidasi.`
+    : 'Keluaran R&D diterima tetapi format kandidat belum lengkap; tidak ada kandidat yang dicatat.'
+  await finishRun(run.id, title ? 'ok' : 'skipped', summary, detail, created)
+  await noteAgent(spec.role, 'Kandidat R&D disusun', summary)
+  return { summary }
+}
+
 async function runProduct(trigger: string) {
   const run = await startRun('AI Product Creator', 'product', trigger)
 
@@ -878,6 +963,12 @@ const TASK_RUNNERS: Record<AutopilotTask, () => Promise<{ summary: string }>> = 
   finance: () => runFinance('owner'),
   ceo: () => runCeo('owner'),
   intelligence: () => runIntelligence('owner'),
+  science: () => runInnovationSpecialist('science', 'owner'),
+  patents: () => runInnovationSpecialist('patents', 'owner'),
+  engineering: () => runInnovationSpecialist('engineering', 'owner'),
+  prototype: () => runInnovationSpecialist('prototype', 'owner'),
+  academic: () => runInnovationSpecialist('academic', 'owner'),
+  transfer: () => runInnovationSpecialist('transfer', 'owner'),
 }
 
 export type AgentTaskResult = { ok: boolean; summary: string; blocked?: string }
@@ -923,7 +1014,7 @@ async function buildCeoDispatchPlan(): Promise<Exclude<AutopilotTask, 'ceo'>[]> 
   const plan: Exclude<AutopilotTask, 'ceo'>[] = []
   if ((openLeads?.n ?? 0) + (newServiceRequests?.n ?? 0) + (pendingOrders?.n ?? 0) > 0) plan.push('sales')
   if ((publishedProducts?.n ?? 0) === 0 || (draftProducts?.n ?? 0) > 0 || (publishedNeedsReview?.n ?? 0) > 0) plan.push('product')
-  plan.push('research')
+  plan.push('research', 'science', 'patents', 'engineering')
   if ((publishedProducts?.n ?? 0) + (publishedServices?.n ?? 0) > 0) plan.push('marketing')
   plan.push('finance', 'intelligence')
   return plan
@@ -954,12 +1045,18 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     outcomes.push({ task: 'intelligence', label: 'Intelijen bisnis', summary: 'CEO AI tidak menghasilkan rencana delegasi yang valid; agen lain tidak dijalankan agar tidak kembali memakai urutan kerja tetap.' })
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
-  const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis' }
+  const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis', science: 'Riset penemuan', patents: 'Intelijen paten', engineering: 'Rekayasa sistem', prototype: 'Prototipe & validasi', academic: 'Kemitraan akademik', transfer: 'Transfer teknologi' }
   await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Urutan dipilih AI CEO berdasarkan analisis siklus ini; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
   const runners: Record<Exclude<AutopilotTask, 'ceo'>, () => Promise<{ summary: string }>> = {
     research: () => runResearch(trigger), sales: () => runSales(trigger), product: () => runProduct(trigger),
     marketing: () => runMarketing(trigger), finance: () => runFinance(trigger),
     intelligence: () => runIntelligence(trigger),
+    science: () => runInnovationSpecialist('science', trigger),
+    patents: () => runInnovationSpecialist('patents', trigger),
+    engineering: () => runInnovationSpecialist('engineering', trigger),
+    prototype: () => runInnovationSpecialist('prototype', trigger),
+    academic: () => runInnovationSpecialist('academic', trigger),
+    transfer: () => runInnovationSpecialist('transfer', trigger),
   }
   const sequence = plan.map((task) => [task, labels[task], runners[task]] as const)
 
