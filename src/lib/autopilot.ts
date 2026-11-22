@@ -339,7 +339,7 @@ async function runResearch(trigger: string) {
   return { summary, created: created + suggested }
 }
 
-async function runInnovationSpecialist(task: Exclude<AutopilotTask, 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence'>, trigger: string) {
+async function runInnovationSpecialist(task: 'science' | 'patents' | 'engineering' | 'prototype' | 'academic' | 'transfer', trigger: string) {
   const roles: Record<typeof task, { role: string; focus: string; output: string }> = {
     science: { role: 'AI Chief Scientific Officer', focus: 'Temukan masalah ilmiah penting lintas disiplin dan rumuskan hipotesis penemuan yang dapat diuji.', output: 'Masalah ilmiah, hipotesis orisinal, mekanisme yang diusulkan, dan eksperimen pembuktian.' },
     patents: { role: 'AI Patent Intelligence', focus: 'Buat strategi penelusuran prior-art untuk satu kandidat teknologi; identifikasi kata kunci, klasifikasi, basis data paten, dan pembeda yang perlu diuji.', output: 'Peta pencarian prior-art, kata kunci, sumber yang wajib diperiksa, risiko tumpang tindih, dan kriteria novelty.' },
