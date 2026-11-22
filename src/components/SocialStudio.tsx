@@ -210,6 +210,33 @@ export function SocialStudio({
         </PanelBody>
       </Panel>
 
+      <Panel>
+        <PanelHead label="Hubungkan akun resmi" />
+        <PanelBody>
+          <p className="list-lead">
+            Hubungkan akun perusahaan agar konten yang sudah ditinjau dapat diterbitkan melalui kanal resmi.
+            Anda akan diarahkan ke TikTok atau Google untuk menyetujui akses; kata sandi tidak dimasukkan ke Cyber Wealth.
+          </p>
+          <div className="action-row">
+            <a
+              href="/api/integrations/social/tiktok"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink transition hover:border-signal hover:text-signal"
+            >
+              Hubungkan TikTok
+            </a>
+            <a
+              href="/api/integrations/social/youtube"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink transition hover:border-signal hover:text-signal"
+            >
+              Hubungkan YouTube
+            </a>
+          </div>
+          <p className="list-lead">
+            Publikasi tetap mengikuti persetujuan Owner dan kebijakan masing-masing platform.
+          </p>
+        </PanelBody>
+      </Panel>
+
       {note && <InlineNote tone="signal">{note}</InlineNote>}
       {error && (
         <InlineNote tone="danger">
