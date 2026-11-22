@@ -6,9 +6,8 @@ import { runBillingPass } from '@/lib/billing'
 import { publishDuePosts } from '@/lib/social'
 import { isPlaceholder } from '@/lib/env'
 import { runHousekeeping } from '@/lib/housekeeping'
-import { testAi, testPaddle, storageStatus } from '@/lib/integrations'
+import { testAi, storageStatus } from '@/lib/integrations'
 import { testEmail } from '@/lib/email'
-import { telegramConnectionStatus } from '@/lib/telegram'
 import { db } from '@/lib/db'
 import { products } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -97,14 +96,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Provider checks are read-only except for a temporary storage probe file that is
     // deleted immediately. This gives the owner verified status rather than just key presence.
-    const [aiCheck, emailCheck, paddleCheck, storageCheck, telegramCheck] = await Promise.all([
+    const [aiCheck, emailCheck, storageCheck] = await Promise.all([
       testAi().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'AI check failed' })),
       testEmail().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Email check failed' })),
-      testPaddle().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Paddle check failed' })),
       storageStatus().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Storage check failed' })),
-      telegramConnectionStatus().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Telegram check failed' })),
     ])
-    const integrations = { ai: aiCheck, email: emailCheck, paddle: paddleCheck, storage: storageCheck, telegram: telegramCheck }
+    const integrations = { ai: aiCheck, email: emailCheck, storage: storageCheck }
     await logActivity({
       actor: 'system',
       action: 'Pemeriksaan integrasi terjadwal',
