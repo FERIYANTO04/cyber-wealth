@@ -423,7 +423,7 @@ async function remindIfNeeded(
   result.remindersSent += 1
 }
 
-/** Recurring Paddle billing is not enabled yet. Never fall back to a manual bank-transfer invoice. */
+/** Automatic recurring billing is disabled until a verified recurring-payment provider is configured. */
 async function invoiceCycleIfDue(
   subscription: typeof subscriptions.$inferSelect,
   cycle: typeof billingCycles.$inferSelect,
@@ -435,9 +435,9 @@ async function invoiceCycleIfDue(
 
   await db
     .update(billingCycles)
-    .set({ status: 'failed', note: 'Paddle recurring checkout belum tersedia. Tidak ada tagihan atau transfer manual yang diminta.' })
+    .set({ status: 'failed', note: 'Pembayaran berulang otomatis belum tersedia. Tidak ada tagihan yang dibuat.' })
     .where(eq(billingCycles.id, cycle.id))
-  result.notes.push(`Perpanjangan ${subscription.accountEmail} ditahan: Paddle recurring belum aktif. Tidak ada pembayaran yang diminta.`)
+  result.notes.push(`Perpanjangan ${subscription.accountEmail} ditahan: penyedia pembayaran berulang belum dikonfigurasi. Tidak ada pembayaran yang diminta.`)
 }
 
 /** The subscriber turns automatic renewal on or off. Their own click, their own record. */
@@ -454,7 +454,7 @@ export async function setAutoRenew(token: string, enabled: boolean) {
   }
 
   if (enabled) {
-    return { ok: false as const, error: 'Perpanjangan otomatis belum tersedia karena alur recurring Paddle belum diaktifkan.' }
+    return { ok: false as const, error: 'Perpanjangan otomatis belum tersedia karena penyedia pembayaran berulang belum dikonfigurasi.' }
   }
 
   await db
