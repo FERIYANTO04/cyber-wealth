@@ -19,7 +19,6 @@ import {
 import { SETTINGS_ID, getFinance, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
-import { generatePosts } from './social'
 import { emailConfigured, sendEmail } from './email'
 
 /**
@@ -158,8 +157,8 @@ async function runCeo(trigger: string) {
     'KONDISI: ' + factualSummary,
     'KEPUTUSAN CEO: Dahulukan penjualan layanan yang sudah terbit dan bisa dipesan sekarang; jangan menunggu produk digital baru jika layanan siap dijual. Produk berstatus draf atau berkas bertanda DRAF tidak boleh dipasarkan atau dijual. Uji satu kanal promosi dengan biaya Rp0 dan tindak lanjuti prospek yang sudah ada.',
     'PENGEMBANGAN AI: Evaluasi apakah agen perlu ditingkatkan, diganti modelnya, atau ditambah spesialis baru. Prioritaskan opsi gratis/termurah. Gunakan hanya anggaran operasional yang benar-benar tersedia dan sudah dialokasikan; jangan memakai dana Owner atau cadangan, jangan menghitung omzet belum diterima sebagai kas, dan jangan membuat komitmen berbayar tanpa persetujuan Owner. Catat biaya, manfaat, dan alasan.',
-    'TUGAS AGEN: AI Product Creator memeriksa kelengkapan berkas produk; AI Marketing menyiapkan dan merapikan draf promosi; AI Sales menindaklanjuti prospek yang benar-benar masuk; AI Finance terus mencatat hanya pembayaran terkonfirmasi.',
-    'REKOMENDASI TUGAS: AI Marketing dapat menyiapkan draf konten faktual dari katalog yang sudah lolos pemeriksaan. Ini bukan publikasi; konten eksternal hanya boleh diterbitkan setelah kanal terhubung dan Owner memberi persetujuan. Tidak ada biaya iklan atau layanan berbayar tanpa persetujuan Owner.',
+    'TUGAS AGEN: AI Product Creator membangun produk digital yang benar-benar lengkap untuk katalog website; AI Marketing merapikan halaman produk dan layanan di marketplace Cyber Wealth; AI Sales menangani pesanan dan prospek masuk melalui website/email resmi yang terverifikasi; AI Finance hanya mencatat pembayaran terkonfirmasi.',
+    'REKOMENDASI TUGAS: Seluruh pemasaran diarahkan ke marketplace dan halaman produk Cyber Wealth. Jangan membuat, menjadwalkan, atau menerbitkan konten media sosial. Fokus pada katalog website, gambar cover, deskripsi, harga, halaman detail, checkout, dan tindak lanjut pembeli. Tidak ada biaya iklan atau layanan berbayar tanpa persetujuan Owner.',
     blockers.length ? 'HAMBATAN: ' + blockers.join('; ') : 'HAMBATAN: Tidak ada hambatan dasar yang terdeteksi.',
     'CATATAN: Ini analisis aturan berbasis database, bukan jawaban model AI.'
   ].join('\\n')
@@ -550,17 +549,17 @@ async function runMarketing(trigger: string) {
   const materials: Material[] = [
     ...publishedProducts.map((product) => ({
       title: `Promosi ${product.name}`,
-      channel: 'media sosial',
+      channel: 'website marketplace',
       audience: 'pembeli produk digital',
-      prompt: `Tulis satu kiriman media sosial (maksimal 120 kata) untuk produk digital "${product.name}". Ringkasan: ${product.summary}. Harga: Rp ${Number(product.priceIdr).toLocaleString('id-ID')}. Sertakan satu ajakan bertindak.`,
-      fallback: `Draf promosi untuk ${product.name}.\n\n${product.summary}\n\nTersedia sekarang dengan harga Rp ${Number(product.priceIdr).toLocaleString('id-ID')}. Buka katalog untuk detail dan pembelian.`,
+      prompt: `Tulis materi halaman produk marketplace (judul jualan, manfaat, isi yang benar-benar tersedia, untuk siapa, dan ajakan membeli) untuk produk digital "${product.name}". Ringkasan: ${product.summary}. Harga: Rp ${Number(product.priceIdr).toLocaleString('id-ID')}. Sertakan satu ajakan bertindak.`,
+      fallback: `${product.name}\n\n${product.summary}\n\nTersedia di katalog Cyber Wealth dengan harga Rp ${Number(product.priceIdr).toLocaleString('id-ID')}. Buka halaman produk untuk detail dan pembelian.`,
     })),
     ...publishedServices.map((service) => ({
       title: `Promosi jasa ${service.name}`,
       channel: 'media sosial',
       audience: 'calon klien jasa',
-      prompt: `Tulis pengumuman media sosial (maksimal 120 kata) untuk layanan "${service.name}". Ringkasan: ${service.summary}. Harga mulai Rp ${Number(service.priceFromIdr).toLocaleString('id-ID')}, pengerjaan sekitar ${service.deliveryDays} hari kerja. Ajak pembaca mengirim brief singkat.`,
-      fallback: `Butuh ${service.name.toLowerCase()}?\n\n${service.summary}\n\nMulai Rp ${Number(service.priceFromIdr).toLocaleString('id-ID')}, sekitar ${service.deliveryDays} hari kerja. Kirim brief singkat lewat halaman layanan dan kami tinjau lebih dulu.`,
+      prompt: `Tulis materi halaman layanan marketplace (judul, manfaat, ruang lingkup, proses pemesanan, dan ajakan mengirim brief) untuk layanan "${service.name}". Ringkasan: ${service.summary}. Harga mulai Rp ${Number(service.priceFromIdr).toLocaleString('id-ID')}, pengerjaan sekitar ${service.deliveryDays} hari kerja. Ajak pembaca mengirim brief singkat.`,
+      fallback: `${service.name}\n\n${service.summary}\n\nMulai Rp ${Number(service.priceFromIdr).toLocaleString('id-ID')}, sekitar ${service.deliveryDays} hari kerja. Kirim brief melalui halaman layanan Cyber Wealth.`,
     })),
   ]
 
@@ -598,16 +597,9 @@ async function runMarketing(trigger: string) {
     created += 1
   }
 
-  // The same run also fills the social studio, so content the owner approves there is
-  // written from the catalog rather than from scratch.
-  const social = await generatePosts({ limit: 6 }).catch(() => null)
-
-  const summary =
-    created === 0
-      ? social && social.created > 0
-        ? `${social.created} draf konten sosial disiapkan untuk ditinjau.`
-        : 'Semua produk dan layanan terbit sudah punya draf promosi.'
-      : `${created} draf materi promosi dan ${social?.created ?? 0} draf konten sosial disiapkan untuk ditinjau.`
+  const summary = created === 0
+    ? 'Semua produk dan layanan terbit sudah memiliki materi halaman marketplace.'
+    : `${created} materi halaman produk/layanan website disiapkan untuk katalog Cyber Wealth.`
 
   await finishRun(
     run.id,
@@ -615,7 +607,7 @@ async function runMarketing(trigger: string) {
     summary,
     failures.length > 0
       ? `Sebagian draf disusun tanpa AI karena: ${failures[0]}`
-      : 'Konten disusun dan dijadwalkan. Kanal yang sudah terhubung akan menerbitkan saat jadwal tiba; kanal tanpa kredensial tetap tertahan.',
+      : 'Materi dibuat khusus untuk halaman katalog website. Tidak ada publikasi ke media sosial.',
     created
   )
   await noteAgent('AI Marketing', 'Materi promosi disiapkan', summary)
