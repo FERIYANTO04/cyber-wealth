@@ -18,6 +18,7 @@ if (!/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
 }
 
 const client = globalForDb.client ?? postgres(databaseUrl, { max: 1, prepare: false, max_pipeline: 1, infer: true })
+export const sqlClient = client
 export const db = globalForDb.db ?? drizzle(client, { schema })
 if (process.env.NODE_ENV !== 'production') {
   globalForDb.client = client
