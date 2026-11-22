@@ -190,6 +190,13 @@
       "when": 1795356000000,
       "tag": "0026_creative_production_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795359600000,
+      "tag": "0027_team_roster",
+      "breakpoints": true
     }
   ]
 }
