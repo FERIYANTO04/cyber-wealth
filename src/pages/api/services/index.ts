@@ -10,7 +10,7 @@ const Body = z.object({
   name: z.string().trim().min(3, 'Nama layanan minimal 3 karakter').max(120),
   summary: z.string().trim().min(10, 'Ringkasan minimal 10 karakter').max(300),
   detail: z.string().trim().min(20, 'Rincian minimal 20 karakter').max(4000),
-  category: z.enum(['desain', 'website', 'konten', 'pemasaran']),
+  category: z.enum(['desain', 'website', 'konten', 'pemasaran', 'video', 'editing', 'motion', 'ai', 'branding', 'social']),
   priceFromIdr: z.coerce.number().int().min(0).max(1_000_000_000),
   deliveryDays: z.coerce.number().int().min(1).max(180),
   status: z.enum(['draft', 'published']).default('draft'),
