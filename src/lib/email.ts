@@ -13,8 +13,9 @@ export function emailConfig() {
     baseUrl: (process.env.EMAIL_API_BASE_URL || 'https://api.resend.com').replace(/\/+$/, ''),
     smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
     smtpPort: Number(process.env.SMTP_PORT || 465),
-    smtpUser: process.env.SMTP_USER ?? '',
-    smtpPassword: process.env.SMTP_APP_PASSWORD ?? '',
+    smtpUser: (process.env.SMTP_USER ?? '').trim(),
+    // Google displays App Passwords in groups of four; ignore copied whitespace.
+    smtpPassword: (process.env.SMTP_APP_PASSWORD ?? '').replace(/\s+/g, ''),
   }
 }
 
@@ -201,7 +202,8 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
       await gmailSmtp()
       return { state: 'ready', message: `Gmail SMTP berhasil diautentikasi untuk ${c.smtpUser}.` }
     } catch (error) {
-      return { state: 'invalid', message: error instanceof Error && error.message.trim() ? error.message.slice(0, 300) : 'Gmail SMTP gagal merespons. Periksa SMTP_USER, App Password Gmail, SMTP_HOST, dan SMTP_PORT.' }
+      const detail = error instanceof Error ? error.message.trim() : String(error ?? '').trim()
+      return { state: 'invalid', message: detail ? `Gmail SMTP: ${detail.slice(0, 300)}` : 'Gmail SMTP gagal merespons. Periksa SMTP_USER, App Password Gmail, SMTP_HOST, dan SMTP_PORT.' }
     }
   }
   if (isPlaceholder(c.key)) {
