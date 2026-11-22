@@ -1,7 +1,6 @@
 import type { GetServerSideProps } from 'next'
 import { ConsoleFrame } from '@/components/ConsoleFrame'
 import { AgentTeam, type AgentItem } from '@/components/AgentList'
-import { TASKS } from '@/lib/labels'
 import { Badge } from '@/components/ui'
 import { requireOwnerPage } from '@/lib/auth'
 import { getAgents, getSettings } from '@/lib/data'
@@ -30,20 +29,20 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 }
 
 function AgentsPage({ agents, aiPaused }: { agents: AgentItem[]; aiPaused: boolean }) {
-  return <AgentTeam agents={agents} globalPaused={aiPaused} runnableRoles={TASKS.map((task) => task.agentRole)} />
+  return <AgentTeam agents={agents} globalPaused={aiPaused} />
 }
 
 const Page = AgentsPage as PageWithFrame<{ agents: AgentItem[]; aiPaused: boolean }>
 Page.getLayout = (page, props) => (
   <ConsoleFrame
     eyebrow="Tim AI"
-    title="Agen bisnis"
+    title="Tim di bawah AI CEO"
     intent={
       props.aiPaused
-        ? 'Operasi global dijeda — semua agen berhenti sampai Anda melanjutkan di ringkasan.'
-        : 'Setiap agen punya mandat terbatas. Yang butuh dana, kontrak, atau investasi selalu naik ke meja Anda.'
+        ? 'Operasi global dijeda. Saat aktif, AI CEO menentukan agen mana yang bekerja dan urutan tugasnya.'
+        : 'AI CEO mengatur pembagian tugas, prioritas, dan tindak lanjut seluruh agen. Owner mengawasi hasil dan menyetujui komitmen berisiko.'
     }
-    actions={<Badge tone="signal">Supervised autonomy</Badge>}
+    actions={<Badge tone="signal">Keputusan AI CEO</Badge>}
   >
     {page}
   </ConsoleFrame>
