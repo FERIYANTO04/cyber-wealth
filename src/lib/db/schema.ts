@@ -582,6 +582,6 @@ export const talentApplications = pgTable('talent_application', {
   status: text('status').notNull().default('new'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdateFn(() => new Date()),
-, (table) => ({
+}, (table) => ({
   createdAtIdx: index('talent_application_created_at_idx').on(table.createdAt),
-})
+}))
