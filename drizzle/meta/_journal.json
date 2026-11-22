@@ -176,6 +176,13 @@
       "when": 1795348800000,
       "tag": "0024_creative_services",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795352400000,
+      "tag": "0025_talent_applications",
+      "breakpoints": true
     }
   ]
 }
