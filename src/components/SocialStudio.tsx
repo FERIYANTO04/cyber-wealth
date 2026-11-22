@@ -87,6 +87,7 @@ export function SocialStudio({
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [emailLinkBusy, setEmailLinkBusy] = useState(false)
 
   const [genMarkets, setGenMarkets] = useState<string[]>(markets.map((m) => m.key))
   const [genChannels, setGenChannels] = useState<string[]>(['telegram', 'tiktok', 'youtube'])
@@ -118,6 +119,25 @@ export function SocialStudio({
   async function refresh() {
     const refreshed = await fetch('/api/social/posts').then((r) => r.json()).catch(() => null)
     if (refreshed?.posts) setPosts(refreshed.posts)
+  }
+
+  async function sendTikTokApprovalLink() {
+    setEmailLinkBusy(true)
+    setError(null)
+    setNote(null)
+    try {
+      const response = await fetch('/api/integrations/social/tiktok-email', { method: 'GET', cache: 'no-store' })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.ok) {
+        setError(data.error || 'Tautan persetujuan belum berhasil dikirim.')
+        return
+      }
+      setNote('Tautan persetujuan TikTok berhasil dikirim ke kinggepenkfx@gmail.com. Buka Gmail dan setujui akses dalam 10 menit.')
+    } catch {
+      setError('Koneksi terputus. Email belum dapat dipastikan terkirim.')
+    } finally {
+      setEmailLinkBusy(false)
+    }
   }
 
   async function generate() {
@@ -221,7 +241,14 @@ export function SocialStudio({
                     <Badge tone={account ? 'signal' : 'hold'}>{account ? 'Terhubung' : 'Belum terhubung'}</Badge>
                   </div>
                   {account ? <p className="text-xs text-ink-quiet">{account.name}</p> : <p className="text-xs text-ink-quiet">Perlu otorisasi owner.</p>}
-                  {!account && <a className="inline-flex min-h-9 items-center justify-center rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-surface" href={'/api/integrations/social/' + platform}>Hubungkan {platform === 'youtube' ? 'YouTube' : 'TikTok'}</a>}
+                  {!account && (platform === 'tiktok' ? (
+                    <button type="button" onClick={sendTikTokApprovalLink} disabled={emailLinkBusy} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-surface disabled:opacity-60">
+                      {emailLinkBusy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                      {emailLinkBusy ? 'Mengirim tautan…' : 'Kirim tautan persetujuan ke Gmail'}
+                    </button>
+                  ) : (
+                    <a className="inline-flex min-h-9 items-center justify-center rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-surface" href={'/api/integrations/social/' + platform}>Hubungkan YouTube</a>
+                  ))}
                 </div>
               )
             })}
