@@ -16,7 +16,7 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
     task: 'ceo',
     agentRole: 'AI CEO',
     label: 'Strategi harian',
-    description: 'Menyusun ringkasan kondisi bisnis dan prioritas hari ini dari data nyata.',
+    description: 'Menetapkan strategi, memilih agen, membagi pekerjaan, mengevaluasi hasil, dan menentukan tindak lanjut seluruh perusahaan.',
   },
   {
     task: 'research',
@@ -28,13 +28,13 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
     task: 'product',
     agentRole: 'AI Product Creator',
     label: 'Produk digital',
-    description: 'Menyiapkan draf produk baru dengan model AI, siap Anda tinjau sebelum terbit.',
+    description: 'Mengembangkan produk digital lengkap untuk marketplace; hasil yang belum lolos pemeriksaan tetap menjadi draf.',
   },
   {
     task: 'marketing',
     agentRole: 'AI Marketing',
     label: 'Pemasaran',
-    description: 'Membuat draf konten promosi dan draf konten sosial untuk produk yang sudah terbit.',
+    description: 'Mengoptimalkan halaman, penawaran, dan merchandising marketplace Cyber Wealth; tidak menerbitkan konten media sosial perusahaan.',
   },
   {
     task: 'sales',
@@ -82,7 +82,7 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
     task: 'academic',
     agentRole: 'AI Academic Partnerships',
     label: 'Kemitraan akademik',
-    description: 'Menyiapkan dossier ilmiah dan proposal kolaborasi profesor/universitas untuk ditinjau Owner.',
+    description: 'Menyiapkan dossier ilmiah dan proposal kolaborasi profesor/universitas; komitmen eksternal tetap memerlukan persetujuan Owner.',
   },
   {
     task: 'transfer',
