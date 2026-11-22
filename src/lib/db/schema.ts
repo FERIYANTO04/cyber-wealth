@@ -570,3 +570,16 @@ export const moneyAllocationPolicy = pgTable('money_allocation_policy', {
   check('money_allocation_policy_total_100', sql`${table.ownerPercent} + ${table.operationsPercent} + ${table.reservePercent} = 100`),
   check('money_allocation_policy_nonnegative', sql`${table.ownerPercent} >= 0 AND ${table.operationsPercent} >= 0 AND ${table.reservePercent} >= 0`),
 ])
+
+export const talentApplications = pgTable('talent_application', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  role: text('role').notNull(),
+  portfolio: text('portfolio'),
+  experience: text('experience').notNull(),
+  message: text('message').notNull(),
+  status: text('status').notNull().default('new'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdateFn(() => new Date()),
+})
