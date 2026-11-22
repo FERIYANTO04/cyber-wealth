@@ -15,7 +15,8 @@ export default function App({ Component, pageProps }: AppProps & { Component: Pa
   useEffect(() => {
     if (!router.isReady) return
     const path = router.asPath.split('?')[0]
-    if (/^\\/(owner|login|talent-admin|api)(\\/|$)/i.test(path)) return
+    const firstSegment = path.split('/')[1]
+    if (['owner', 'login', 'talent-admin', 'api'].includes(firstSegment)) return
     void fetch('/api/analytics/view', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path }), keepalive: true, credentials: 'same-origin' }).catch(() => undefined)
   }, [router.isReady, router.asPath])
   return (
