@@ -1,6 +1,4 @@
-import { useState } from 'react'
-import { Play } from 'lucide-react'
-import { Badge, Button, CountNote, InlineNote, Panel, PanelHead, SourceTag } from '@/components/ui'
+import { Badge, CountNote, Panel, PanelHead, SourceTag } from '@/components/ui'
 import { relativeTime } from '@/lib/format'
 
 export type AgentItem = {
@@ -13,98 +11,22 @@ export type AgentItem = {
   lastRunAt: string | null
 }
 
-export function AgentRow({
-  agent,
-  globalPaused,
-  runnable,
-}: {
-  agent: AgentItem
-  globalPaused?: boolean
-  /** True when this agent has a task of its own that can be triggered from here. */
-  runnable?: boolean
-}) {
-  const [status, setStatus] = useState(agent.status)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [running, setRunning] = useState(false)
-  const [result, setResult] = useState<string | null>(null)
-
-  async function toggle() {
-    setBusy(true)
-    setError(null)
-    const next = status === 'active' ? 'paused' : 'active'
-    try {
-      const response = await fetch(`/api/agents/${agent.id}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: next }),
-      })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        setError(data.error ?? 'Status tidak tersimpan.')
-        return
-      }
-      setStatus(next)
-    } catch {
-      setError('Koneksi terputus.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function run() {
-    setRunning(true)
-    setError(null)
-    setResult(null)
-    try {
-      const response = await fetch(`/api/agents/${agent.id}/run`, { method: 'POST' })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        setError(data.error ?? 'Tugas tidak bisa dijalankan.')
-        return
-      }
-      setResult(data.summary ?? 'Tugas selesai.')
-    } catch {
-      setError('Koneksi terputus saat menjalankan tugas.')
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  const disabled = globalPaused || status !== 'active'
-
+export function AgentRow({ agent }: { agent: AgentItem }) {
   return (
     <li className="flex flex-col gap-3 px-page py-stack">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="heading-tight text-[0.9375rem]">{agent.name}</p>
-            <Badge tone={status === 'active' ? 'signal' : 'neutral'}>{status === 'active' ? 'Aktif' : 'Dijeda'}</Badge>
-            {globalPaused && status === 'active' && <Badge tone="danger">Tertahan jeda global</Badge>}
+            <Badge tone={agent.status === 'active' ? 'signal' : 'neutral'}>{agent.status === 'active' ? 'Aktif' : 'Dijeda'}</Badge>
             <SourceTag source={agent.dataSource} />
           </div>
           <p className="eyebrow mt-0.5 tracking-[0.1em]">{agent.role}</p>
           <p className="mt-1.5 max-w-prose text-[0.8125rem] leading-relaxed text-ink-quiet">{agent.mandate}</p>
           <p className="mt-1.5 text-xs text-ink-quiet">Terakhir jalan: {relativeTime(agent.lastRunAt)}</p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:mt-1">
-          {runnable && (
-            <Button size="sm" onClick={run} disabled={running || disabled}>
-              <Play className="size-3.5" aria-hidden="true" />
-              {running ? 'Bekerja…' : 'Jalankan'}
-            </Button>
-          )}
-          <Button variant={status === 'active' ? 'secondary' : 'primary'} size="sm" onClick={toggle} disabled={busy}>
-            {busy ? 'Menyimpan…' : status === 'active' ? 'Jeda' : 'Aktifkan'}
-          </Button>
-        </div>
+        <Badge tone="neutral">Diatur AI CEO</Badge>
       </div>
-      {result && <InlineNote tone="signal">{result}</InlineNote>}
-      {error && (
-        <InlineNote tone="danger">
-          <span role="alert">{error}</span>
-        </InlineNote>
-      )}
     </li>
   )
 }
@@ -134,11 +56,9 @@ export function AgentMiniList({ agents }: { agents: AgentItem[] }) {
 export function AgentTeam({
   agents,
   globalPaused,
-  runnableRoles,
 }: {
   agents: AgentItem[]
   globalPaused?: boolean
-  runnableRoles?: string[]
 }) {
   return (
     <Panel>
@@ -148,8 +68,6 @@ export function AgentTeam({
           <AgentRow
             key={agent.id}
             agent={agent}
-            globalPaused={globalPaused}
-            runnable={runnableRoles ? runnableRoles.includes(agent.role) : true}
           />
         ))}
       </ul>
