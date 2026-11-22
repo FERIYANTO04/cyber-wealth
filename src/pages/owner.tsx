@@ -5,7 +5,7 @@ import { count, countDistinct, desc, eq, gte, sql } from 'drizzle-orm'
 import { Activity, ArrowDownLeft, ArrowUpRight, Boxes, CircleDollarSign, Clapperboard, LayoutDashboard, LogOut, Package, Settings2, ShieldCheck, Wallet, ExternalLink } from 'lucide-react'
 import { requireOwnerPage } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { activity as activityTable, agentRuns, agents, assets, ownerAccount, products, serviceRequests, siteVisit, transactions } from '@/lib/db/schema'
+import { activity as activityTable, agentRuns, agents, assets, ownerAccount, products, serviceRequests, transactions } from '@/lib/db/schema'
 import type { PageWithFrame } from '@/lib/frame'
 
 const idr = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
@@ -23,11 +23,11 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     db.select({ id: products.id, name: products.name, priceIdr: products.priceIdr, status: products.status, updatedAt: products.updatedAt }).from(products).where(eq(products.dataSource, 'live')).orderBy(desc(products.updatedAt)).limit(8),
     db.select({ id: agents.id, name: agents.name, role: agents.role, status: agents.status, lastRunAt: agents.lastRunAt }).from(agents).orderBy(agents.sortOrder).limit(20),
     db.select({ id: activityTable.id, actor: activityTable.actor, agentName: activityTable.agentName, action: activityTable.action, detail: activityTable.detail, createdAt: activityTable.createdAt }).from(activityTable).where(eq(activityTable.dataSource, 'live')).orderBy(desc(activityTable.createdAt)).limit(8),
-    db.select({ value: count() }).from(siteVisit).where(gte(siteVisit.viewedAt, todayStart)),
-    db.select({ value: countDistinct(siteVisit.visitorHash) }).from(siteVisit).where(gte(siteVisit.viewedAt, todayStart)),
-    db.select({ value: count() }).from(siteVisit).where(gte(siteVisit.viewedAt, since7)),
-    db.select({ day: sql<string>`to_char(date_trunc('day', ${siteVisit.viewedAt}), 'YYYY-MM-DD')`, views: count(), visitors: countDistinct(siteVisit.visitorHash) }).from(siteVisit).where(gte(siteVisit.viewedAt, since7)).groupBy(sql`date_trunc('day', ${siteVisit.viewedAt})`).orderBy(sql`date_trunc('day', ${siteVisit.viewedAt})`),
-    db.select({ path: siteVisit.path, views: count() }).from(siteVisit).where(gte(siteVisit.viewedAt, since7)).groupBy(siteVisit.path).orderBy(desc(count())).limit(5),
+    db.execute(sql`SELECT count(*)::int AS value FROM site_visit WHERE viewed_at >= ${todayStart}`),
+    db.execute(sql`SELECT count(DISTINCT visitor_hash)::int AS value FROM site_visit WHERE viewed_at >= ${todayStart}`),
+    db.execute(sql`SELECT count(*)::int AS value FROM site_visit WHERE viewed_at >= ${since7}`),
+    db.execute(sql`SELECT to_char(date_trunc('day', viewed_at), 'YYYY-MM-DD') AS day, count(*)::int AS views, count(DISTINCT visitor_hash)::int AS visitors FROM site_visit WHERE viewed_at >= ${since7} GROUP BY date_trunc('day', viewed_at) ORDER BY date_trunc('day', viewed_at)`),
+    db.execute(sql`SELECT path, count(*)::int AS views FROM site_visit WHERE viewed_at >= ${since7} GROUP BY path ORDER BY count(*) DESC LIMIT 5`),
     db.select({ value: count() }).from(serviceRequests),
     db.select({ agentName: agentRuns.agentName, status: agentRuns.status, startedAt: agentRuns.startedAt, finishedAt: agentRuns.finishedAt, itemsCreated: agentRuns.itemsCreated }).from(agentRuns).where(gte(agentRuns.startedAt, since7)).orderBy(desc(agentRuns.startedAt)).limit(300),
   ])
