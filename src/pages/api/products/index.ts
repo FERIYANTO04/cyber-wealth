@@ -10,7 +10,7 @@ const Body = z.object({
   name: z.string().trim().min(3, 'Nama produk minimal 3 karakter').max(120),
   summary: z.string().trim().min(10, 'Ringkasan minimal 10 karakter').max(300),
   description: z.string().trim().min(20, 'Deskripsi minimal 20 karakter').max(4000),
-  category: z.enum(['template', 'ebook', 'desain', 'materi', 'toolkit']),
+  category: z.enum(['template', 'ebook', 'desain', 'materi', 'toolkit', 'video', 'motion', 'audio', 'social']),
   priceIdr: z.coerce.number().int().min(0, 'Harga tidak boleh negatif').max(1_000_000_000),
   deliverableNote: z.string().trim().max(600).optional(),
   status: z.enum(['draft', 'published']).default('draft'),
