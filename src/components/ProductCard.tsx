@@ -17,6 +17,10 @@ const CATEGORY_LABEL: Record<string, string> = {
   desain: 'Aset desain',
   materi: 'Materi bisnis',
   toolkit: 'Toolkit',
+  video: 'Video siap jual',
+  motion: 'Motion graphics',
+  audio: 'Audio & sound pack',
+  social: 'Paket konten',
 }
 
 /** One product as it appears in the public catalog. */
