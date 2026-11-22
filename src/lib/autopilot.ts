@@ -156,9 +156,9 @@ async function runCeo(trigger: string) {
   const offlineCeoAnalysis = [
     'KONDISI: ' + factualSummary,
     'KEPUTUSAN CEO: Dahulukan penjualan layanan yang sudah terbit dan bisa dipesan sekarang; jangan menunggu produk digital baru jika layanan siap dijual. Produk berstatus draf atau berkas bertanda DRAF tidak boleh dipasarkan atau dijual. Uji satu kanal promosi dengan biaya Rp0 dan tindak lanjuti prospek yang sudah ada.',
-    'PENGEMBANGAN AI: Evaluasi apakah agen perlu ditingkatkan, diganti modelnya, atau ditambah spesialis baru. Prioritaskan opsi gratis/termurah. Gunakan hanya anggaran operasional yang benar-benar tersedia dan sudah dialokasikan; jangan memakai dana Owner atau cadangan, jangan menghitung omzet belum diterima sebagai kas, dan jangan membuat komitmen berbayar tanpa persetujuan Owner. Catat biaya, manfaat, dan alasan.',
+    'PENGEMBANGAN AI: Evaluasi apakah agen perlu ditingkatkan, diganti modelnya, atau ditambah spesialis baru. Prioritaskan opsi gratis/termurah. Gunakan hanya anggaran operasional yang benar-benar tersedia dan sudah dialokasikan; jangan menghitung omzet belum diterima sebagai kas. Anda berwenang menetapkan prioritas dan alokasi anggaran dari kas operasional perusahaan yang benar-benar tersedia; lindungi kewajiban dan cadangan likuiditas. Catat biaya rencana, manfaat, risiko, dan alasan. Jangan menyatakan pembayaran terjadi jika transaksi belum dikonfirmasi.',
     'TUGAS AGEN: AI Product Creator membangun produk digital yang benar-benar lengkap untuk katalog website; AI Marketing merapikan halaman produk dan layanan di marketplace Cyber Wealth; AI Sales menangani pesanan dan prospek masuk melalui website/email resmi yang terverifikasi; AI Finance hanya mencatat pembayaran terkonfirmasi.',
-    'REKOMENDASI TUGAS: Seluruh pemasaran diarahkan ke marketplace dan halaman produk Cyber Wealth. Jangan membuat, menjadwalkan, atau menerbitkan konten media sosial. Fokus pada katalog website, gambar cover, deskripsi, harga, halaman detail, checkout, dan tindak lanjut pembeli. Tidak ada biaya iklan atau layanan berbayar tanpa persetujuan Owner.',
+    'REKOMENDASI TUGAS: Seluruh pemasaran diarahkan ke marketplace dan halaman produk Cyber Wealth. Jangan membuat, menjadwalkan, atau menerbitkan konten media sosial. Fokus pada katalog website, gambar cover, deskripsi, harga, halaman detail, checkout, dan tindak lanjut pembeli. CEO dapat memutuskan biaya iklan atau layanan berbayar berdasarkan anggaran perusahaan yang tersedia; catat rencana dan jangan mengaku pembayaran telah terjadi sebelum ada bukti transaksi.',
     blockers.length ? 'HAMBATAN: ' + blockers.join('; ') : 'HAMBATAN: Tidak ada hambatan dasar yang terdeteksi.',
     'CATATAN: Ini analisis aturan berbasis database, bukan jawaban model AI.'
   ].join('\\n')
@@ -175,7 +175,7 @@ async function runCeo(trigger: string) {
       'Anda adalah CEO yang memimpin dua mesin Cyber Wealth: website marketplace untuk pendapatan dan Future Technology R&D Lab untuk penemuan orisinal. Jangan mengarahkan agen ke publikasi media sosial. Seimbangkan katalog/checkout/penjualan dengan riset ilmiah, pemeriksaan prior-art, rekayasa sistem, prototipe, kemitraan akademik, dan transfer teknologi.',
       'Anda boleh mengubah prioritas dan urutan kerja setiap siklus. Delegasikan pekerjaan kepada agen yang paling tepat dari roster. Buat rencana konkret, terukur, dan dapat dieksekusi sekarang; jangan hanya memberi slogan atau laporan.',
       'Bedakan fakta, hipotesis, dan target. Jangan mengarang angka, pelanggan, pembayaran, atau hasil. Jangan menyatakan tindakan sudah selesai sebelum runner mengonfirmasinya.',
-      'Agen boleh berpikir kreatif dan menjalankan pekerjaan internal yang aman secara mandiri. Tindakan yang memindahkan uang, membuat utang, investasi, pembelian berbayar, kontrak, perubahan harga publik, atau komitmen eksternal tetap memerlukan persetujuan Owner.',
+      'Agen boleh berpikir kreatif dan menjalankan pekerjaan internal yang aman secara mandiri. Anda memiliki mandat CEO untuk mengambil keputusan operasional dan finansial perusahaan, termasuk alokasi anggaran, pengeluaran besar, pembelian alat/komponen, biaya R&D, perekrutan vendor, investasi ulang, dan penghentian proyek. Jangan meminta persetujuan Owner untuk keputusan bisnis rutin maupun keputusan belanja yang berada dalam kapasitas dana perusahaan. Jangan mengarang saldo atau menganggap usulan sebagai pembayaran. Jangan mengakses dana pribadi Owner, membuat utang/pinjaman, atau melakukan transfer/charge nyata tanpa rekening dan otorisasi transaksi yang memang terhubung serta tercatat.',
       'Keluarkan JSON valid saja dengan bentuk: {"condition":"...","priorities":["..."],"dispatch":["research","product","marketing","sales","finance","intelligence","science","patents","engineering","prototype","academic","transfer"],"reasoning":"...","owner_attention":"..."}. dispatch harus berisi urutan kerja pilihan Anda, tanpa duplikasi, hanya task yang ada di daftar. Anda sendiri yang memilih agen dan urutan; jangan minta Owner memilih atau menjalankan agen satu per satu. Gunakan spesialis R&D saat prioritas penemuan membutuhkannya.',
     ].join(' '),
     prompt: [
@@ -869,13 +869,13 @@ async function runFinance(trigger: string) {
 
   const summary =
     `Pendapatan terkonfirmasi 30 hari terakhir: Rp ${total.toLocaleString('id-ID')}. ` +
-    `${(pendingProposal?.n ?? 0) + proposed} usulan pengeluaran menunggu keputusan Anda.`
+    `${(pendingProposal?.n ?? 0) + proposed} catatan usulan anggaran untuk dievaluasi AI CEO.`
 
   await finishRun(
     run.id,
     'ok',
     summary,
-    'Hanya pembayaran yang diverifikasi pemilik setelah dana masuk yang dihitung. Usulan pengeluaran hanya menjadi catatan setelah Anda menyetujuinya — tidak ada transfer otomatis.',
+    'Hanya pembayaran yang terverifikasi yang dihitung sebagai pendapatan atau pengeluaran aktual. AI CEO menetapkan prioritas anggaran dan keputusan bisnis; catatan anggaran bukan bukti transfer. Transaksi nyata hanya dapat dilakukan melalui rekening/payment rail perusahaan yang terhubung dan diotorisasi.',
     proposed
   )
   await noteAgent('AI Finance', 'Rekap keuangan disusun', summary)
