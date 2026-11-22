@@ -8,7 +8,7 @@ import { logActivity } from '@/lib/data'
 import { uploadUrl } from '@/lib/storage'
 import { randomUUID } from 'node:crypto'
 
-const MAX_BYTES = 20 * 1024 * 1024
+const MAX_BYTES = 500 * 1024 * 1024
 
 const Body = z.object({
   productId: z.string().regex(/^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i),
@@ -18,7 +18,7 @@ const Body = z.object({
 })
 
 const ALLOWED =
-  /^(application\/(zip|x-zip-compressed|pdf|epub\+zip|json|vnd\.openxmlformats-officedocument\.[a-z.]+)|text\/(plain|csv|markdown)|image\/(png|jpeg|webp|svg\+xml))$/
+  /^(application\/(zip|x-zip-compressed|pdf|epub\+zip|json|vnd\.openxmlformats-officedocument\.[a-z.]+)|text\/(plain|csv|markdown)|image\/(png|jpeg|webp|svg\+xml)|video\/(mp4|webm|quicktime|x-matroska|x-msvideo|3gpp|x-m4v))$/
 
 /**
  * Signs an upload for a product's deliverable file. The browser PUTs the bytes
@@ -34,11 +34,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const parsed = Body.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ error: 'Data berkas tidak valid.' })
   if (parsed.data.size > MAX_BYTES) {
-    return res.status(400).json({ error: 'Berkas terlalu besar. Maksimal 20 MB per berkas.' })
+    return res.status(400).json({ error: 'Berkas terlalu besar. Maksimal 500 MB per berkas.' })
   }
   if (!ALLOWED.test(parsed.data.contentType)) {
     return res.status(400).json({
-      error: 'Jenis berkas ini belum didukung. Gunakan ZIP, PDF, dokumen, teks, atau gambar.',
+      error: 'Jenis berkas ini belum didukung. Gunakan ZIP, PDF, dokumen, teks, gambar, atau video MP4/MOV/WebM/MKV.',
     })
   }
 
