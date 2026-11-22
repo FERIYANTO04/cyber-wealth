@@ -54,9 +54,45 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
     label: 'Intelijen bisnis',
     description: 'Membaca penjualan, prospek, konten, dan langganan yang benar-benar tercatat, lalu menyimpulkan apa yang bekerja.',
   },
+  {
+    task: 'science',
+    agentRole: 'AI Chief Scientific Officer',
+    label: 'Riset penemuan',
+    description: 'Menyusun kandidat penemuan lintas disiplin dengan hipotesis dan bukti yang masih harus diverifikasi.',
+  },
+  {
+    task: 'patents',
+    agentRole: 'AI Patent Intelligence',
+    label: 'Intelijen paten',
+    description: 'Menyusun peta prior-art dan daftar pemeriksaan paten; tidak mengklaim kebaruan tanpa sumber.',
+  },
+  {
+    task: 'engineering',
+    agentRole: 'AI Systems Engineering',
+    label: 'Rekayasa sistem',
+    description: 'Menerjemahkan kandidat penemuan menjadi arsitektur, spesifikasi, BOM awal, dan rencana verifikasi.',
+  },
+  {
+    task: 'prototype',
+    agentRole: 'AI Prototype Engineering',
+    label: 'Prototipe & validasi',
+    description: 'Menyusun rencana prototipe, manufaktur, pengujian, metrik, dan analisis risiko.',
+  },
+  {
+    task: 'academic',
+    agentRole: 'AI Academic Partnerships',
+    label: 'Kemitraan akademik',
+    description: 'Menyiapkan dossier ilmiah dan proposal kolaborasi profesor/universitas untuk ditinjau Owner.',
+  },
+  {
+    task: 'transfer',
+    agentRole: 'AI Technology Transfer',
+    label: 'Komersialisasi teknologi',
+    description: 'Mengkaji kesiapan teknologi, lisensi, perlindungan IP, dan calon pengguna institusional.',
+  },
 ]
 
-// ── Social studio vocabulary ──────────────────────────────────────────────
+ // ── Social studio vocabulary ──────────────────────────────────────────────
 // Client-safe: components show channel names and limits without importing the
 // database module.
 export type ChannelKey = 'x' | 'linkedin' | 'tiktok' | 'youtube'
