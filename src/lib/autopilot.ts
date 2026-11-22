@@ -887,6 +887,25 @@ async function runFinance(trigger: string) {
  * content, active subscriptions — and says what those numbers mean. Every figure is a
  * row in the database; nothing is estimated, projected, or invented.
  */
+async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | 'procurement', trigger: string) {
+  const roles = {
+    security: ['AI Security & Compliance', 'Audit keamanan aplikasi, autentikasi, privasi, backup, dan kepatuhan.'],
+    quality: ['AI Quality & Reliability', 'Audit checkout, pembayaran, file delivery, UX, bug, dan mutu produk.'],
+    legal: ['AI Legal & IP Counsel', 'Petakan risiko kontrak, merek, hak cipta, paten, privasi, dan kebutuhan penasihat hukum.'],
+    procurement: ['AI Procurement Intelligence', 'Bandingkan vendor, alat, komponen, biaya total, dan risiko pemasok.'],
+  } as const
+  const spec = roles[task]
+  const run = await startRun(spec[0], task, trigger)
+  const peers = await db.select({ agentName: agentRuns.agentName, task: agentRuns.task, summary: agentRuns.summary, detail: agentRuns.detail }).from(agentRuns).where(sql`${agentRuns.status} <> 'running'`).orderBy(desc(agentRuns.startedAt)).limit(10)
+  const handoff = peers.filter((row) => row.task !== task).map((row) => row.agentName + ' [' + row.task + ']: ' + (row.summary ?? '') + ' ' + (row.detail ?? '').slice(0, 300)).join('\n')
+  if (!aiConfigured()) { const summary = 'Spesialis terdaftar, tetapi model AI belum terhubung.'; await finishRun(run.id, 'skipped', summary, summary, 0); await noteAgent(spec[0], 'Audit dilewati', summary); return { summary } }
+  const out = await askAi({ system: 'Anda spesialis senior. Baca laporan rekan, lakukan koreksi silang, tunjukkan dependensi, risiko, dan tindakan yang harus diserahkan ke agen lain. Pisahkan fakta, dugaan, rekomendasi, dan kebutuhan ahli manusia.', prompt: 'Peran: ' + spec[0] + '. Fokus: ' + spec[1] + '. Pemicu: ' + trigger + '.\nLaporan rekan:\n' + handoff + '\nBuat audit fondasi dan daftar tindakan prioritas serta agen penanggung jawab.', maxTokens: 1300 })
+  if (!out.ok) { const summary = 'Audit gagal: ' + out.reason; await finishRun(run.id, 'failed', summary, summary, 0); await noteAgent(spec[0], 'Audit gagal', summary); return { summary } }
+  const summary = spec[0] + ' menyusun audit fondasi dan koordinasi lintas agen.'
+  await finishRun(run.id, 'ok', summary, out.text + '\n\nRekomendasi AI; belum merupakan audit eksternal atau sertifikasi.', 0)
+  await noteAgent(spec[0], 'Audit fondasi lintas agen', summary)
+  return { summary }
+}
 async function runIntelligence(trigger: string) {
   const run = await startRun('AI Business Intelligence', 'intelligence', trigger)
 
@@ -969,6 +988,10 @@ const TASK_RUNNERS: Record<AutopilotTask, () => Promise<{ summary: string }>> = 
   prototype: () => runInnovationSpecialist('prototype', 'owner'),
   academic: () => runInnovationSpecialist('academic', 'owner'),
   transfer: () => runInnovationSpecialist('transfer', 'owner'),
+  security: () => runCorporateSpecialist('security', 'owner'),
+  quality: () => runCorporateSpecialist('quality', 'owner'),
+  legal: () => runCorporateSpecialist('legal', 'owner'),
+  procurement: () => runCorporateSpecialist('procurement', 'owner'),
 }
 
 export type AgentTaskResult = { ok: boolean; summary: string; blocked?: string }
@@ -1014,7 +1037,7 @@ async function buildCeoDispatchPlan(): Promise<Exclude<AutopilotTask, 'ceo'>[]> 
   const plan: Exclude<AutopilotTask, 'ceo'>[] = []
   if ((openLeads?.n ?? 0) + (newServiceRequests?.n ?? 0) + (pendingOrders?.n ?? 0) > 0) plan.push('sales')
   if ((publishedProducts?.n ?? 0) === 0 || (draftProducts?.n ?? 0) > 0 || (publishedNeedsReview?.n ?? 0) > 0) plan.push('product')
-  plan.push('research', 'science', 'patents', 'engineering')
+  plan.push('research', 'science', 'patents', 'engineering', 'security', 'quality', 'legal', 'procurement')
   if ((publishedProducts?.n ?? 0) + (publishedServices?.n ?? 0) > 0) plan.push('marketing')
   plan.push('finance', 'intelligence')
   return plan
@@ -1045,8 +1068,8 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     outcomes.push({ task: 'intelligence', label: 'Intelijen bisnis', summary: 'CEO AI tidak menghasilkan rencana delegasi yang valid; agen lain tidak dijalankan agar tidak kembali memakai urutan kerja tetap.' })
     return { ranAt: new Date().toISOString(), paused: false, results: outcomes }
   }
-  const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis', science: 'Riset penemuan', patents: 'Intelijen paten', engineering: 'Rekayasa sistem', prototype: 'Prototipe & validasi', academic: 'Kemitraan akademik', transfer: 'Transfer teknologi' }
-  await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. Urutan dipilih AI CEO berdasarkan analisis siklus ini; tindakan keuangan tetap memerlukan persetujuan pemilik.`)
+  const labels: Record<AutopilotTask, string> = { ceo: 'Arahan AI CEO', research: 'Riset pasar', sales: 'Penjualan', product: 'Produk digital', marketing: 'Pemasaran', finance: 'Keuangan', intelligence: 'Intelijen bisnis', science: 'Riset penemuan', patents: 'Intelijen paten', engineering: 'Rekayasa sistem', prototype: 'Prototipe & validasi', academic: 'Kemitraan akademik', transfer: 'Transfer teknologi', security: 'Keamanan & kepatuhan', quality: 'Kualitas & keandalan', legal: 'Hukum & IP', procurement: 'Pengadaan & vendor' }
+  await noteAgent('AI CEO', 'Rencana kerja agen didelegasikan', `Urutan kerja berdasarkan data operasional: ${plan.map((task) => labels[task]).join(' → ')}. AI CEO memimpin koordinasi lintas agen; laporan setiap agen menjadi bahan kerja agen berikutnya.`)
   const runners: Record<Exclude<AutopilotTask, 'ceo'>, () => Promise<{ summary: string }>> = {
     research: () => runResearch(trigger), sales: () => runSales(trigger), product: () => runProduct(trigger),
     marketing: () => runMarketing(trigger), finance: () => runFinance(trigger),
@@ -1056,7 +1079,7 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     engineering: () => runInnovationSpecialist('engineering', trigger),
     prototype: () => runInnovationSpecialist('prototype', trigger),
     academic: () => runInnovationSpecialist('academic', trigger),
-    transfer: () => runInnovationSpecialist('transfer', trigger),
+    transfer: () => runInnovationSpecialist('transfer', trigger), security: () => runCorporateSpecialist('security', trigger), quality: () => runCorporateSpecialist('quality', trigger), legal: () => runCorporateSpecialist('legal', trigger), procurement: () => runCorporateSpecialist('procurement', trigger),
   }
   const sequence = plan.map((task) => [task, labels[task], runners[task]] as const)
 
