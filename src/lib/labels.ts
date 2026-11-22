@@ -9,7 +9,7 @@ export const SERVICE_STATUS: { value: string; label: string }[] = [
   { value: 'lost', label: 'Tidak lanjut' },
 ]
 
-export type AutopilotTask = 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence' | 'science' | 'patents' | 'engineering' | 'prototype' | 'academic' | 'transfer'
+export type AutopilotTask = 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence' | 'science' | 'patents' | 'engineering' | 'prototype' | 'academic' | 'transfer' | 'security' | 'quality' | 'legal' | 'procurement'
 
 export const TASKS: { task: AutopilotTask; agentRole: string; label: string; description: string }[] = [
   {
@@ -90,6 +90,10 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
     label: 'Komersialisasi teknologi',
     description: 'Mengkaji kesiapan teknologi, lisensi, perlindungan IP, dan calon pengguna institusional.',
   },
+  { task: 'security', agentRole: 'AI Security & Compliance', label: 'Keamanan & kepatuhan', description: 'Audit keamanan aplikasi, privasi, akses, backup, dan kepatuhan.' },
+  { task: 'quality', agentRole: 'AI Quality & Reliability', label: 'Kualitas & keandalan', description: 'Menguji checkout, pembayaran, file delivery, UX, bug, dan mutu produk.' },
+  { task: 'legal', agentRole: 'AI Legal & IP Counsel', label: 'Hukum & kekayaan intelektual', description: 'Memetakan risiko kontrak, merek, hak cipta, paten, privasi, dan kebutuhan ahli hukum.' },
+  { task: 'procurement', agentRole: 'AI Procurement Intelligence', label: 'Pengadaan & vendor', description: 'Membandingkan vendor, alat, komponen, harga, dan risiko pemasok.' },
 ]
 
  // ── Social studio vocabulary ──────────────────────────────────────────────
