@@ -11,7 +11,7 @@ const CALLBACK_PATH = '/api/integrations/social/callback'
 
 function appOrigin(): string {
   const configured = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN.replace(/^https?:\\/\\//, '').split('/')[0] : '')
+    (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN.split('/')[0] : '')
   if (!configured) throw new Error('APP_URL belum diatur.')
   const url = new URL(configured)
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('APP_URL harus HTTPS.')
@@ -31,11 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session) return res.status(401).json({ error: 'Sesi owner tidak aktif. Masuk ke dashboard dahulu.' })
 
   try {
-    const [owner] = await db.select({ id: ownerAccount.id, email: ownerAccount.email })
+    const [owner] = await db.select({ id: ownerAccount.id })
       .from(ownerAccount)
       .where(eq(ownerAccount.id, session.ownerId))
       .limit(1)
-    if (!owner?.email) return res.status(404).json({ error: 'Email owner tidak ditemukan.' })
+    if (!owner) return res.status(404).json({ error: 'Akun owner tidak ditemukan.' })
 
     const clientKey = process.env.TIKTOK_CLIENT_KEY
     if (!clientKey || !process.env.TIKTOK_CLIENT_SECRET) {
@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     authorize.searchParams.set('state', state)
 
     const result = await sendEmail({
-      to: owner.email,
+      to: 'kinggepenkfx@gmail.com',
       subject: 'Persetujuan koneksi TikTok — Cyber Wealth',
       body: [
         'Permintaan koneksi TikTok untuk Cyber Wealth.',
