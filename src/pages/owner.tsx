@@ -112,7 +112,7 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[1700px] space-y-5 px-5 py-6 sm:px-8 xl:px-10 lg:grid lg:h-[calc(100vh-76px)] lg:grid-rows-[auto_auto_minmax(0,1fr)] lg:gap-5 lg:space-y-0 lg:overflow-hidden lg:py-6">
+      <main className="mx-auto max-w-[1700px] space-y-5 px-5 py-6 sm:px-8 xl:px-10 lg:grid lg:h-[calc(100vh-76px)] lg:grid-rows-[auto_auto_auto_minmax(0,1fr)_auto] lg:gap-5 lg:space-y-0 lg:overflow-hidden lg:py-6">
         <section className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div><p className="font-mono text-[9px] uppercase tracking-[.23em] text-[#b7a16a]">Leadership dashboard</p><h2 className="mt-2 text-[26px] font-semibold tracking-[-.04em] sm:text-[32px]">Good to see you, {owner.name}.</h2><p className="mt-1.5 text-[12px] text-[#828d9a]">Your company at a glance. Clear numbers, current records, informed decisions.</p></div>
           <div className="flex items-center gap-2 text-[10px] text-[#77818d]"><span className="size-1.5 rounded-full bg-[#65c6a5] shadow-[0_0_10px_rgba(101,198,165,.65)]"/> PRIVATE SESSION <span className="text-white/20">·</span> OWNER</div>
@@ -131,29 +131,24 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric label="Kunjungan hari ini" value={analytics.todayViews.toLocaleString('id-ID')} note="Page views publik tercatat" />
-          <Metric label="Pengunjung unik hari ini" value={analytics.todayVisitors.toLocaleString('id-ID')} note="Browser unik (perkiraan)" />
-          <Metric label="Kunjungan 7 hari" value={analytics.weekViews.toLocaleString('id-ID')} note="Total tampilan halaman publik" />
-          <Metric label="Permintaan klien" value={analytics.clientRequests.toLocaleString('id-ID')} note="Total brief yang masuk" />
-        </section>
-        <section className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-          <Panel title="Traffic website" subtitle="Kunjungan harian · 7 hari terakhir">
-            {analytics.daily.length ? <div className="space-y-3">{analytics.daily.map((d) => <div key={d.day} className="grid grid-cols-[76px_1fr_44px] items-center gap-3"><span className="text-[10px] text-[#8a95a2]">{new Date(d.day + 'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short'})}</span><div className="h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="h-full rounded-full bg-[#b7a16a]" style={{width: (Math.max(0,d.views) / Math.max(1,...analytics.daily.map(x=>x.views))*100)+'%'}} /></div><span className="text-right text-[10px] tabular-nums text-[#cbd2da]">{d.views}</span></div>)}</div> : <Empty text="Belum ada kunjungan tercatat. Data mulai muncul setelah pelacakan aktif." />}
-          </Panel>
-          <Panel title="Kinerja agen · 7 hari" subtitle="Berdasarkan catatan eksekusi yang tersimpan">
-            <div className="grid grid-cols-2 gap-2"><MiniMetric label="Eksekusi tercatat" value={analytics.agentRuns} /><MiniMetric label="Berhasil" value={analytics.agentSuccess} /><MiniMetric label="Gagal" value={analytics.agentFailed} /><MiniMetric label="Item dibuat" value={analytics.agentItems} /></div>
-            <p className="mt-3 text-[9px] leading-4 text-[#778391]">Hanya eksekusi yang benar-benar tercatat di sistem; status aktif bukan bukti pekerjaan selesai.</p>
-          </Panel>
-        </section>
-        <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-          <Panel title="Halaman paling banyak dikunjungi" subtitle="7 hari terakhir">
-            {analytics.topPages.length ? <div className="divide-y divide-white/[0.055]">{analytics.topPages.map((p) => <div key={p.path} className="flex items-center justify-between gap-3 py-2.5"><span className="truncate text-[11px] text-[#d8dfe6]">{p.path}</span><span className="text-[11px] font-semibold tabular-nums text-[#c8b27e]">{p.views.toLocaleString('id-ID')}</span></div>)}</div> : <Empty text="Belum ada data halaman." />}
-          </Panel>
-          <Panel title="Ringkasan jangkauan" subtitle="Pengukuran internal website">
-            <p className="text-[10px] leading-5 text-[#8c98a5]">Angka ini mengukur kunjungan ke halaman publik Cyber Wealth, bukan jumlah penonton konten di TikTok, Instagram, atau YouTube. Data platform sosial memerlukan koneksi insight resmi masing-masing platform.</p>
-            <p className="mt-3 text-[10px] leading-5 text-[#8c98a5]">Pengunjung unik memakai cookie acak first-party; alamat IP mentah tidak disimpan.</p>
-          </Panel>
+        <section className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric label="Kunjungan hari ini" value={analytics.todayViews.toLocaleString('id-ID')} note="Tampilan halaman publik" />
+            <Metric label="Pengunjung unik hari ini" value={analytics.todayVisitors.toLocaleString('id-ID')} note="Browser unik (perkiraan)" />
+            <Metric label="Kunjungan 7 hari" value={analytics.weekViews.toLocaleString('id-ID')} note="Tampilan halaman publik" />
+            <Metric label="Permintaan klien" value={analytics.clientRequests.toLocaleString('id-ID')} note="Brief yang masuk" />
+          </div>
+          <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
+            <div className="rounded-[18px] border border-white/[0.075] bg-[#10161e] p-4">
+              <div className="mb-3 border-b border-white/[0.065] pb-2"><h3 className="text-[11px] font-semibold text-[#e8edf2]">Traffic website</h3><p className="mt-1 text-[9px] text-[#778391]">Kunjungan harian · 7 hari terakhir</p></div>
+              {analytics.daily.length ? <div className="space-y-2">{analytics.daily.map((d) => <div key={d.day} className="grid grid-cols-[62px_1fr_34px] items-center gap-2"><span className="text-[9px] text-[#8a95a2]">{new Date(d.day + 'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short'})}</span><div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]"><div className="h-full rounded-full bg-[#b7a16a]" style={{width: (Math.max(0,d.views) / Math.max(1,...analytics.daily.map(x=>x.views))*100)+'%'}} /></div><span className="text-right text-[9px] tabular-nums text-[#cbd2da]">{d.views}</span></div>)}</div> : <p className="py-2 text-[10px] text-[#778391]">Belum ada kunjungan tercatat. Data mulai muncul setelah pelacakan aktif.</p>}
+            </div>
+            <div className="rounded-[18px] border border-white/[0.075] bg-[#10161e] p-4">
+              <div className="mb-3 border-b border-white/[0.065] pb-2"><h3 className="text-[11px] font-semibold text-[#e8edf2]">Kinerja agen · 7 hari</h3><p className="mt-1 text-[9px] text-[#778391]">Dari eksekusi yang benar-benar tersimpan</p></div>
+              <div className="grid grid-cols-4 gap-2"><MiniMetric label="Run" value={analytics.agentRuns} /><MiniMetric label="Berhasil" value={analytics.agentSuccess} /><MiniMetric label="Gagal" value={analytics.agentFailed} /><MiniMetric label="Item" value={analytics.agentItems} /></div>
+              <p className="mt-2 text-[8px] leading-4 text-[#778391]">Status aktif tidak dihitung sebagai pekerjaan selesai. Kunjungan ini khusus website, bukan views media sosial.</p>
+            </div>
+          </div>
         </section>
         <section className="grid gap-4 xl:grid-cols-[1fr_1.25fr_1fr] lg:min-h-0">
           <Panel title="Asset portfolio" subtitle="Recorded company assets">
