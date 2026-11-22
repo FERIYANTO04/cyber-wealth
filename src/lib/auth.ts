@@ -7,8 +7,8 @@ import { ownerAccount } from '@/lib/db/schema'
 export const COOKIE_NAME = 'cwa_session'
 const SESSION_SECONDS = 60 * 60 * 24 * 7
 
-export const cookieSameSite: 'None' | 'Strict' =
-  process.env.NEXT_PUBLIC_IS_PLAYGROUND === 'true' ? 'None' : 'Strict'
+export const cookieSameSite: 'None' | 'Lax' =
+  process.env.NEXT_PUBLIC_IS_PLAYGROUND === 'true' ? 'None' : 'Lax'
 
 function key(): Uint8Array | null {
   const secret = process.env.JWT_SECRET
