@@ -902,10 +902,35 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
   const peers = await db.select({ agentName: agentRuns.agentName, task: agentRuns.task, summary: agentRuns.summary, detail: agentRuns.detail }).from(agentRuns).where(sql`${agentRuns.status} <> 'running'`).orderBy(desc(agentRuns.startedAt)).limit(10)
   const handoff = peers.filter((row) => row.task !== task).map((row) => row.agentName + ' [' + row.task + ']: ' + (row.summary ?? '') + ' ' + (row.detail ?? '').slice(0, 300)).join('\n')
   if (!aiConfigured()) { const summary = 'Spesialis terdaftar, tetapi model AI belum terhubung.'; await finishRun(run.id, 'skipped', summary, summary, 0); await noteAgent(spec[0], 'Audit dilewati', summary); return { summary } }
-  const out = await askAi({ system: 'Anda spesialis senior. Baca laporan rekan, lakukan koreksi silang, tunjukkan dependensi, risiko, dan tindakan yang harus diserahkan ke agen lain. Pisahkan fakta, dugaan, rekomendasi, dan kebutuhan ahli manusia.', prompt: 'Peran: ' + spec[0] + '. Fokus: ' + spec[1] + '. Pemicu: ' + trigger + '.\nLaporan rekan:\n' + handoff + '\nBuat audit fondasi dan daftar tindakan prioritas serta agen penanggung jawab.', maxTokens: 1300 })
+  const out = await askAi({ system: 'Anda spesialis senior. Baca laporan rekan, lakukan koreksi silang, tunjukkan dependensi, risiko, dan tindakan yang harus diserahkan ke agen lain. Pisahkan fakta, dugaan, rekomendasi, dan kebutuhan ahli manusia.', prompt: 'Peran: ' + spec[0] + '. Fokus: ' + spec[1] + '. Pemicu: ' + trigger + '.\nLaporan rekan:\n' + handoff + '\nBuat audit fondasi dan daftar tindakan prioritas serta agen penanggung jawab.' + (task === 'workforce' ? ' Untuk membuat agen, keluarkan JSON valid: {"new_agents":[{"name":"...","role":"...","mandate":"..."}],"skill_gaps":[...],"handoffs":[...]}. Maksimal 3 agen baru. Buat hanya spesialisasi yang belum ada dalam roster; mandat minimal 40 karakter.' : ''), maxTokens: 1300 })
   if (!out.ok) { const summary = 'Audit gagal: ' + out.reason; await finishRun(run.id, 'failed', summary, summary, 0); await noteAgent(spec[0], 'Audit gagal', summary); return { summary } }
+  let report = out.text
+  if (task === 'workforce') {
+    try {
+      const raw = out.text.match(/\\{[\\s\\S]*\\}/)?.[0]
+      const parsed = raw ? JSON.parse(raw) as { new_agents?: unknown } : null
+      const proposals = Array.isArray(parsed?.new_agents) ? parsed.new_agents.slice(0, 3) : []
+      const created: string[] = []
+      for (const item of proposals) {
+        if (!item || typeof item !== 'object') continue
+        const spec = item as { role?: unknown; mandate?: unknown; name?: unknown }
+        const role = typeof spec.role === 'string' ? spec.role.trim().slice(0, 90) : ''
+        const mandate = typeof spec.mandate === 'string' ? spec.mandate.trim().slice(0, 1200) : ''
+        const name = typeof spec.name === 'string' ? spec.name.trim().slice(0, 90) : ''
+        if (!role || !mandate || !name || role.length < 5 || mandate.length < 40) continue
+        const dynamicRole = 'AI Custom: ' + role
+        const [existing] = await db.select({ id: agents.id }).from(agents).where(eq(agents.role, dynamicRole)).limit(1)
+        if (existing) continue
+        await db.insert(agents).values({ name, role: dynamicRole, mandate, status: 'active', dataSource: 'live', sortOrder: 40 })
+        created.push(name + ' — ' + role)
+      }
+      report += '\\nAgen baru yang benar-benar didaftarkan: ' + (created.join('; ') || 'Tidak ada; tidak ditemukan kebutuhan baru yang memenuhi syarat.')
+    } catch {
+      report += '\\nSpesifikasi agen tidak valid; tidak ada agen baru yang didaftarkan.'
+    }
+  }
   const summary = spec[0] + ' menyusun audit fondasi dan koordinasi lintas agen.'
-  await finishRun(run.id, 'ok', summary, out.text + '\n\nRekomendasi AI; belum merupakan audit eksternal atau sertifikasi.', 0)
+  await finishRun(run.id, 'ok', summary, report + '\\n\\nRekomendasi AI; belum merupakan audit eksternal atau sertifikasi.', 0)
   await noteAgent(spec[0], 'Audit fondasi lintas agen', summary)
   return { summary }
 }
