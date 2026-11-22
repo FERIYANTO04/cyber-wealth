@@ -46,7 +46,7 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
     task: 'finance',
     agentRole: 'AI Finance',
     label: 'Keuangan',
-    description: 'Merangkum pemasukan yang sudah terkonfirmasi dan pengeluaran tercatat.',
+    description: 'Mengelola laporan keuangan, menyusun anggaran, dan memberi AI CEO dasar untuk memutuskan alokasi serta prioritas pengeluaran.',
   },
   {
     task: 'intelligence',
@@ -82,7 +82,7 @@ export const TASKS: { task: AutopilotTask; agentRole: string; label: string; des
     task: 'academic',
     agentRole: 'AI Academic Partnerships',
     label: 'Kemitraan akademik',
-    description: 'Menyiapkan dossier ilmiah dan proposal kolaborasi profesor/universitas; komitmen eksternal tetap memerlukan persetujuan Owner.',
+    description: 'Menyiapkan dossier ilmiah dan mengelola pipeline kolaborasi profesor/universitas di bawah mandat AI CEO.',
   },
   {
     task: 'transfer',
