@@ -5,6 +5,7 @@ import { ConsoleFrame } from '@/components/ConsoleFrame'
 import { requireOwnerPage } from '@/lib/auth'
 import { sqlClient } from '@/lib/db'
 import type { PageWithFrame } from '@/lib/frame'
+import { ClientAssetsPanel } from '@/components/studio/ClientAssetsPanel'
 
 type Checklist={brief_match:boolean;visual_quality:boolean;audio_quality:boolean;spelling_brand:boolean;rights_clearance:boolean}
 type Project={id:string;project_code:string;service_request_id:string;client_name:string;client_email:string;service_name:string;brief:string;status:string;priority:string;assigned_type:string;assigned_to:string|null;assigned_role:string|null;due_at:string|null;agreed_price_idr:number;revision_limit:number;revisions_used:number;quality_checklist:Checklist;deliverable_url:string|null;client_approved_at:string|null;internal_notes:string|null;created_at:string;updated_at:string}
@@ -64,6 +65,7 @@ function ProjectCard({project,onUpdated}:{project:Project;onUpdated:(p:Project)=
   </div>
   {expanded&&<div className="space-y-5 p-4 sm:p-5">
    <div><p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wider text-ink-quiet">Brief pelanggan</p><p className="whitespace-pre-wrap rounded-xl bg-surface-muted p-3 text-xs leading-6">{project.brief}</p></div>
+   <ClientAssetsPanel projectId={project.id} closed={!active}/>
    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     <label className="text-xs text-ink-quiet">Model penugasan<select value={kind} onChange={e=>setKind(e.target.value)} className="mt-1.5 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink"><option value="unassigned">Belum ditugaskan</option><option value="human">Tenaga manusia</option><option value="ai">Bantuan AI</option><option value="hybrid">AI + manusia</option></select></label>
     <label className="text-xs text-ink-quiet">Nama penanggung jawab<input value={assignee} onChange={e=>setAssignee(e.target.value)} placeholder="Nama pekerja / operator AI" className="mt-1.5 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink"/></label>
