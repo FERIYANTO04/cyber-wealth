@@ -34,7 +34,7 @@ const PUBLISH_TONE: Record<string, 'signal' | 'hold' | 'danger' | 'neutral'> = {
 
 const PUBLISH_LABEL: Record<string, string> = {
   published: 'Terbit (dikonfirmasi kanal)',
-  not_connected: 'Belum terbit — kanal belum terhubung',
+  not_connected: 'Disimpan di studio — belum diterbitkan',
   failed: 'Gagal dikirim',
 }
 
@@ -56,14 +56,12 @@ export function SocialStudio({
   channels,
   markets,
   aiReady,
-  socialConnections,
 }: {
   initialPosts: PostItem[]
   totals: StudioTotals
   channels: ChannelOption[]
   markets: MarketOption[]
   aiReady: boolean
-  socialConnections: { channel: string; name: string; status: string }[]
 }) {
   const [posts, setPosts] = useState(initialPosts)
   // Counts come from the list on screen, so a freshly generated draft moves them at
@@ -85,7 +83,6 @@ export function SocialStudio({
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
-  const [emailLinkBusy, setEmailLinkBusy] = useState(false)
 
   const [genMarkets, setGenMarkets] = useState<string[]>(markets.map((m) => m.key))
   const [genChannels, setGenChannels] = useState<string[]>(['tiktok', 'youtube'])
@@ -119,24 +116,6 @@ export function SocialStudio({
     if (refreshed?.posts) setPosts(refreshed.posts)
   }
 
-  async function sendTikTokApprovalLink() {
-    setEmailLinkBusy(true)
-    setError(null)
-    setNote(null)
-    try {
-      const response = await fetch('/api/integrations/social/tiktok-email', { method: 'GET', cache: 'no-store' })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data.ok) {
-        setError(data.error || 'Tautan persetujuan belum berhasil dikirim.')
-        return
-      }
-      setNote('Tautan persetujuan TikTok berhasil dikirim ke kinggepenkfx@gmail.com. Buka Gmail dan setujui akses dalam 10 menit.')
-    } catch {
-      setError('Koneksi terputus. Email belum dapat dipastikan terkirim.')
-    } finally {
-      setEmailLinkBusy(false)
-    }
-  }
 
   async function generate() {
     setBusy(true)
@@ -162,7 +141,7 @@ export function SocialStudio({
       setNote(
         data.created === 0
           ? 'Semua kombinasi kanal dan pasar sudah punya konten. Ubah kanal atau pasar untuk membuat variasi baru.'
-          : `${data.created} konten baru dibuat. ${data.scheduledPosts ?? 0} konten teks dijadwalkan; ${data.videoDrafts ?? 0} paket video tetap menjadi draf sampai MP4 final dilampirkan dan ditinjau. Publikasi menunggu kanal resmi terhubung.`
+          : `${data.created} konten baru dibuat. ${data.scheduledPosts ?? 0} konten teks dijadwalkan; ${data.videoDrafts ?? 0} paket video tetap menjadi draf sampai MP4 final dilampirkan dan ditinjau. Materi tersimpan di studio; tidak ada akun eksternal yang perlu dihubungkan.`
       )
       if (data.reason) setNote((old) => `${old} Sebagian draf disusun tanpa AI: ${data.reason}`)
     } catch {
@@ -191,7 +170,7 @@ export function SocialStudio({
       if (refreshed?.posts) setPosts(refreshed.posts)
       setNote(
         kind === 'decide' && payload.decision === 'approved'
-          ? 'Konten disetujui. Kanal yang terhubung akan menerbitkannya saat jadwal tiba.'
+          ? 'Konten disetujui. Materi disetujui untuk kalender dan arsip internal.'
           : kind === 'decide'
             ? 'Konten ditolak dan tidak akan dijadwalkan.'
             : 'Perubahan tersimpan.'
@@ -218,47 +197,6 @@ export function SocialStudio({
       )}
 
       <Panel>
-        <PanelHead label="Akun publikasi YouTube dan TikTok" />
-        <PanelBody>
-          <p className="list-lead">Hubungkan akun resmi agar studio dapat mengirim konten melalui API platform. Token disimpan terenkripsi di server.</p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {(['youtube', 'tiktok'] as const).map((platform) => {
-              const account = socialConnections.find((item) => item.channel === platform && item.status === 'connected')
-              return (
-                <div key={platform} className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-line p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-ink">{platform === 'youtube' ? 'YouTube' : 'TikTok'}</span>
-                    <Badge tone={account ? 'signal' : 'hold'}>{account ? 'Terhubung' : 'Belum terhubung'}</Badge>
-                  </div>
-                  {account ? <p className="text-xs text-ink-quiet">{account.name}</p> : <p className="text-xs text-ink-quiet">Perlu otorisasi owner.</p>}
-                  {!account && (platform === 'tiktok' ? (
-                    <button type="button" onClick={sendTikTokApprovalLink} disabled={emailLinkBusy} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-surface disabled:opacity-60">
-                      {emailLinkBusy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-                      {emailLinkBusy ? 'Mengirim tautan…' : 'Kirim tautan persetujuan ke Gmail'}
-                    </button>
-                  ) : (
-                    <a className="inline-flex min-h-9 items-center justify-center rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-surface" href={'/api/integrations/social/' + platform}>Hubungkan YouTube</a>
-                  ))}
-                </div>
-              )
-            })}
-          </div>
-          <div className="rounded-lg border border-line p-3">
-            <p className="eyebrow mb-1">Pengaturan OAuth di Railway</p>
-            <p className="text-xs leading-relaxed text-ink-quiet">Isi variabel berikut pada layanan cyber-wealth-web. Jangan kirim nilai rahasia ke chat.</p>
-            <ul className="mt-2 flex flex-col gap-1 text-xs text-ink">
-              <li><code>APP_URL</code> = <code>https://cyber-wealth-web-production.up.railway.app</code></li>
-              <li><code>SOCIAL_TOKEN_ENCRYPTION_KEY</code> = rahasia acak minimal 32 karakter</li>
-              <li><code>YOUTUBE_CLIENT_ID</code> dan <code>YOUTUBE_CLIENT_SECRET</code></li>
-              <li><code>TIKTOK_CLIENT_KEY</code> dan <code>TIKTOK_CLIENT_SECRET</code></li>
-            </ul>
-            <p className="mt-2 text-xs leading-relaxed text-ink-quiet">Redirect URI untuk Google Cloud dan TikTok Developer: <code>https://cyber-wealth-web-production.up.railway.app/api/integrations/social/callback</code></p>
-          </div>
-          <p className="list-lead">TikTok mewajibkan persetujuan eksplisit sebelum setiap video dikirim. Aplikasi yang belum lolos audit hanya dapat menerbitkan konten secara privat. YouTube memakai status unlisted secara default sampai owner mengatur privasi lain.</p>
-        </PanelBody>
-      </Panel>
-
-      <Panel>
         <PanelBody>
           <div className="grid grid-cols-2 gap-stack sm:grid-cols-4">
             <Stat label="Menunggu Anda" value={String(live.drafts)} context="draf belum disetujui" />
@@ -267,8 +205,7 @@ export function SocialStudio({
             <Stat label="Terbit" value={String(live.published)} context="dikonfirmasi kanal" tone={live.published > 0 ? 'signal' : 'default'} />
           </div>
           <p className="list-lead">
-            Angka “Terbit” hanya bertambah bila sebuah kanal mengonfirmasi kirimannya. Selama belum ada akun terhubung,
-            angkanya nol — dan itu memang keadaan sebenarnya, bukan kegagalan tampilan.
+            Angka “Terbit” hanya bertambah bila sebuah kanal mengonfirmasi kirimannya. Jumlah ini hanya menghitung publikasi yang benar-benar dikonfirmasi platform; studio tetap dapat menyimpan pekerjaan tanpa akun eksternal.
           </p>
         </PanelBody>
       </Panel>
@@ -373,7 +310,7 @@ export function SocialStudio({
                 title={posts.length === 0 ? 'Belum ada konten' : 'Tidak ada konten di saringan ini'}
                 body={
                   posts.length === 0
-                    ? 'Buat konten pertama dari produk dan layanan yang sudah terbit. Konten aman dapat dijadwalkan agen; publikasi menunggu kanal resmi terhubung dan materi media tersedia.'
+                    ? 'Buat konten pertama dari produk dan layanan yang sudah terbit. Agen dapat menyiapkan dan menyimpan materi di studio tanpa meminta Owner menghubungkan akun.'
                     : 'Ubah pasar, kanal, atau status untuk melihat konten lain.'
                 }
               />
