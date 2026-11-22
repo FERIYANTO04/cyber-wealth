@@ -11,7 +11,6 @@ import {
   Mail,
   Megaphone,
   Package,
-  Plug,
   Repeat,
   ScrollText,
   Settings,
@@ -38,7 +37,6 @@ const NAV = [
   { href: '/finance', label: 'Keuangan', short: 'Keuangan', icon: Wallet },
   { href: '/revenue', label: 'Mesin pendapatan', short: 'Pendapatan', icon: Store },
   { href: '/social', label: 'Studio konten sosial', short: 'Konten', icon: Megaphone },
-  { href: '/integrasi', label: 'Integrasi', short: 'Integrasi', icon: Plug },
   { href: '/activity', label: 'Log aktivitas', short: 'Log', icon: ScrollText },
   { href: '/settings', label: 'Pengaturan', short: 'Akun', icon: Settings },
 ]
@@ -46,7 +44,7 @@ const NAV = [
 // The bottom bar on a phone carries the six places the owner visits most; the rest
 // live on the full rail. Six is the ceiling: a seventh would push each tab below a
 // comfortable thumb target.
-const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/produk', '/admin/members', '/integrasi']
+const MOBILE_NAV = ['/dashboard', '/approvals', '/autopilot', '/produk', '/admin/members']
 
 function QuietNavButton({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
@@ -144,7 +142,7 @@ export function ConsoleFrame({
       {/* Mobile bottom bar */}
       <nav
         aria-label="Navigasi utama"
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         {NAV.filter((item) => MOBILE_NAV.includes(item.href)).map((item) => {
           const Icon = item.icon
