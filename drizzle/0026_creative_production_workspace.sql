@@ -27,8 +27,11 @@ CREATE TABLE IF NOT EXISTS "creative_project" (
   "created_at" timestamptz NOT NULL DEFAULT now(),
   "updated_at" timestamptz NOT NULL DEFAULT now()
 );
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "creative_project_status_idx" ON "creative_project" ("status", "updated_at" DESC);
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "creative_project_due_idx" ON "creative_project" ("due_at") WHERE "status" NOT IN ('delivered','cancelled');
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "creative_project_event" (
   "id" text PRIMARY KEY,
   "project_id" text NOT NULL REFERENCES "creative_project"("id") ON DELETE CASCADE,
@@ -37,4 +40,5 @@ CREATE TABLE IF NOT EXISTS "creative_project_event" (
   "detail" text NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT now()
 );
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "creative_project_event_project_idx" ON "creative_project_event" ("project_id", "created_at" DESC);
