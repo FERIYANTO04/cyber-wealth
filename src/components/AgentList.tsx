@@ -52,7 +52,7 @@ export function AgentMiniList({ agents }: { agents: AgentItem[] }) {
   )
 }
 
-/** The full agent roster with each one's pause control. */
+/** Read-only owner view: the AI CEO controls individual agent assignments. */
 export function AgentTeam({
   agents,
   globalPaused,
@@ -62,7 +62,7 @@ export function AgentTeam({
 }) {
   return (
     <Panel>
-      <PanelHead label="Agen dan mandatnya" aside={<CountNote>{`${agents.length} agen`}</CountNote>} />
+      <PanelHead label="Agen dan mandatnya" aside={<div className="flex items-center gap-2">{globalPaused && <Badge tone="danger">Operasi dijeda</Badge>}<CountNote>{`${agents.length} agen`}</CountNote></div>} />
       <ul className="divide-y divide-line">
         {agents.map((agent) => (
           <AgentRow
