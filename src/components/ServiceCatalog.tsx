@@ -13,10 +13,16 @@ export type ServiceItem = {
 }
 
 const CATEGORY: Record<string, string> = {
-  desain: 'Desain',
+  desain: 'Desain grafis',
   website: 'Website',
   konten: 'Konten',
   pemasaran: 'Pemasaran digital',
+  video: 'Produksi video',
+  editing: 'Video editing',
+  motion: 'Motion graphics',
+  ai: 'AI creative studio',
+  branding: 'Brand identity',
+  social: 'Konten sosial media',
 }
 
 /** The agency's offer list — what can be ordered, and from what price. */
@@ -61,7 +67,7 @@ export function ServiceCatalog({ services, isOwner }: { services: ServiceItem[];
             <p className="mt-1 text-[0.8125rem] leading-relaxed text-ink-quiet">{service.summary}</p>
           </div>
           <p className="mt-3 font-mono text-xs text-ink-quiet">
-            Mulai {money(service.priceFromIdr)} · {service.deliveryDays} hari kerja
+            {service.priceFromIdr > 0 ? `Mulai ${money(service.priceFromIdr)}` : 'Harga berdasarkan brief'} · estimasi {service.deliveryDays} hari kerja
           </p>
         </Link>
       ))}
