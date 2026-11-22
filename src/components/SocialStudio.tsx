@@ -56,7 +56,6 @@ export function SocialStudio({
   channels,
   markets,
   aiReady,
-  telegramReady,
   socialConnections,
 }: {
   initialPosts: PostItem[]
@@ -64,7 +63,6 @@ export function SocialStudio({
   channels: ChannelOption[]
   markets: MarketOption[]
   aiReady: boolean
-  telegramReady: boolean
   socialConnections: { channel: string; name: string; status: string }[]
 }) {
   const [posts, setPosts] = useState(initialPosts)
@@ -90,7 +88,7 @@ export function SocialStudio({
   const [emailLinkBusy, setEmailLinkBusy] = useState(false)
 
   const [genMarkets, setGenMarkets] = useState<string[]>(markets.map((m) => m.key))
-  const [genChannels, setGenChannels] = useState<string[]>(['telegram', 'tiktok', 'youtube'])
+  const [genChannels, setGenChannels] = useState<string[]>(['tiktok', 'youtube'])
 
   const filtered = useMemo(() => {
     return posts.filter((post) => {
@@ -218,14 +216,6 @@ export function SocialStudio({
           </p>
         </Notice>
       )}
-
-      <Notice tone={telegramReady ? 'signal' : 'hold'} icon={<AlertTriangle className="warn-icon" aria-hidden="true" />}>
-        <p className="note-text">
-          {telegramReady
-            ? 'Telegram terhubung. Agen pemasaran dapat menerbitkan konten yang sudah disetujui sesuai jadwal dan menyimpan tautan serta ID pesan sebagai bukti.'
-            : 'Telegram belum terhubung. Sistem penerbitan sudah disiapkan, tetapi bot dan kanal Telegram perlu diotorisasi melalui TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID pada pengaturan layanan. Agen tidak akan mengaku konten terbit sebelum Telegram mengonfirmasi.'}
-        </p>
-      </Notice>
 
       <Panel>
         <PanelHead label="Akun publikasi YouTube dan TikTok" />
