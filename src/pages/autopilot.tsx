@@ -2,7 +2,6 @@ import type { GetServerSideProps } from 'next'
 import { ConsoleFrame } from '@/components/ConsoleFrame'
 import { AutopilotPanel, type RunRow } from '@/components/AutopilotPanel'
 import { AgentTeam, type AgentItem } from '@/components/AgentList'
-import { TASKS } from '@/lib/labels'
 import { PageStack } from '@/components/ui'
 import { requireOwnerPage } from '@/lib/auth'
 import { getAgentRuns, getLastRun } from '@/lib/autopilot'
@@ -67,7 +66,7 @@ function AutopilotPage({ runs, agents, paused, aiReady }: Props) {
   return (
     <PageStack>
       <AutopilotPanel runs={runs} paused={paused} aiReady={aiReady} />
-      <AgentTeam agents={agents} globalPaused={paused} runnableRoles={TASKS.map((task) => task.agentRole)} />
+      <AgentTeam agents={agents} globalPaused={paused} />
     </PageStack>
   )
 }
@@ -77,7 +76,7 @@ Page.getLayout = (page) => (
   <ConsoleFrame
     eyebrow="Autopilot"
     title="Operasi otomatis"
-    intent="Jalankan putaran kerja agen, jeda satu agen, dan lihat hasil setiap pekerjaan."
+    intent="AI CEO menentukan prioritas dan membagi pekerjaan secara otomatis. Halaman ini hanya untuk mengawasi status serta hasil kerja tim."
   >
     {page}
   </ConsoleFrame>
