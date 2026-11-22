@@ -10,7 +10,6 @@ import { campaignDrafts, socialAccounts } from '@/lib/db/schema'
 import { desc, inArray } from 'drizzle-orm'
 import { CHANNELS, MARKETS, channelShort } from '@/lib/labels'
 import { aiConfigured } from '@/lib/ai'
-import { telegramReady as checkTelegramReady } from '@/lib/telegram'
 import type { PageWithFrame } from '@/lib/frame'
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
@@ -19,7 +18,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   const posts = await getPosts(150)
   const totals = await getStudioTotals()
-  const telegram = await checkTelegramReady().catch(() => false)
   const drafts = await db.select().from(campaignDrafts).orderBy(desc(campaignDrafts.createdAt)).limit(20)
   const socialConnections = await db.select({ channel: socialAccounts.channel, name: socialAccounts.name, status: socialAccounts.status }).from(socialAccounts).where(inArray(socialAccounts.channel, ['youtube', 'tiktok']))
 
@@ -39,7 +37,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       channels,
       markets,
       aiReady: aiConfigured(),
-      telegramReady: telegram,
       socialConnections,
       drafts: drafts.map(
         (row): CampaignRow => ({
@@ -62,7 +59,6 @@ type Props = {
   channels: ChannelOption[]
   markets: MarketOption[]
   aiReady: boolean
-  telegramReady: boolean
   socialConnections: { channel: string; name: string; status: string }[]
   drafts: CampaignRow[]
 }
@@ -76,7 +72,6 @@ function SocialPage(props: Props) {
         channels={props.channels}
         markets={props.markets}
         aiReady={props.aiReady}
-        telegramReady={props.telegramReady}
         socialConnections={props.socialConnections}
       />
       <CampaignDrafts drafts={props.drafts} />
