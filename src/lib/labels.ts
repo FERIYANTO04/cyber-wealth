@@ -9,7 +9,7 @@ export const SERVICE_STATUS: { value: string; label: string }[] = [
   { value: 'lost', label: 'Tidak lanjut' },
 ]
 
-export type AutopilotTask = 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence'
+export type AutopilotTask = 'ceo' | 'research' | 'product' | 'marketing' | 'sales' | 'finance' | 'intelligence' | 'science' | 'patents' | 'engineering' | 'prototype' | 'academic' | 'transfer'
 
 export const TASKS: { task: AutopilotTask; agentRole: string; label: string; description: string }[] = [
   {
