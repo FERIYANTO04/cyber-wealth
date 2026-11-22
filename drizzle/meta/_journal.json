@@ -183,6 +183,13 @@
       "when": 1795352400000,
       "tag": "0025_talent_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795356000000,
+      "tag": "0026_creative_production_workspace",
+      "breakpoints": true
     }
   ]
 }
