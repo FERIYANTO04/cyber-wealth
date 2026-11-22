@@ -22,11 +22,17 @@ function jwtKey(): Uint8Array {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Metode tidak diizinkan.' })
-  const session = await requireOwnerSession(req)
-  if (!session) return res.status(401).json({ error: 'Silakan masuk sebagai owner.' })
-
   const platform = String(req.query.platform || '')
   if (platform !== 'youtube' && platform !== 'tiktok') return res.status(404).json({ error: 'Kanal tidak dikenal.' })
+
+  // OAuth is opened by a normal browser navigation. If the owner session is
+  // missing/expired, send the owner through login and return to this exact
+  // OAuth start URL instead of showing a dead-end JSON 401 page.
+  const session = await requireOwnerSession(req)
+  if (!session) {
+    const next = `/api/integrations/social/${platform}`
+    return res.redirect(302, `/login?next=${encodeURIComponent(next)}`)
+  }
 
   try {
     const redirectUri = appOrigin() + CALLBACK_PATH
