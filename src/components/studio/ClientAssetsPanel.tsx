@@ -1,5 +1,5 @@
 import { useEffect,useState } from 'react'
-import { Copy,FileText,Link2,RefreshCw,Trash2,UploadCloud } from 'lucide-react'
+import { Copy,FileText,Link2,RefreshCw,Trash2 } from 'lucide-react'
 
 type Asset={id:string;fileName:string;contentType:string;sizeBytes:number;status:string;createdAt:string;downloadUrl:string|null}
 const size=(n:number)=>n>=1024*1024*1024?(n/1024/1024/1024).toFixed(2)+' GB':(n/1024/1024).toFixed(1)+' MB'
