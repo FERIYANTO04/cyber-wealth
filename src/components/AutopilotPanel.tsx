@@ -55,7 +55,7 @@ export function AutopilotPanel({
         <PanelHead label="Putaran autopilot" aside={<Timer className="size-4 text-ink-quiet" aria-hidden="true" />} />
         <PanelBody>
           <p className="text-[0.8125rem] leading-relaxed text-ink-quiet">
-            AI CEO menjalankan evaluasi terjadwal, memilih agen yang relevan dari seluruh tim, membagi pekerjaan, lalu mengevaluasi hasilnya. Anda tidak perlu menjalankan agen satu per satu. Setiap tugas meninggalkan catatan di log aktivitas. Pengeluaran, kontrak, dan komitmen eksternal tetap memerlukan persetujuan Owner.
+            AI CEO menjalankan evaluasi terjadwal, memilih agen yang relevan dari seluruh tim, membagi pekerjaan, lalu mengevaluasi hasilnya. Anda tidak perlu menjalankan agen satu per satu. Setiap tugas meninggalkan catatan di log aktivitas. AI CEO memutuskan alokasi anggaran dan pengeluaran operasional, termasuk belanja R&D. Owner cukup mengawasi laporan. Transaksi uang nyata tetap memerlukan rekening/payment rail perusahaan yang terhubung dan otorisasi teknis yang sah.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {paused ? <Badge tone="danger">Operasi dijeda</Badge> : <Badge tone="signal">Menunggu / berjalan sesuai jadwal otomatis</Badge>}
