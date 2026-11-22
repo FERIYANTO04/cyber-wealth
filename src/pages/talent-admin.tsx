@@ -2,9 +2,7 @@ import type { GetServerSideProps } from 'next'
 import { useState } from 'react'
 import { ConsoleFrame } from '@/components/ConsoleFrame'
 import { requireOwnerPage } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { talentApplications } from '@/lib/db/schema'
-import { desc } from 'drizzle-orm'
+import { sqlClient } from '@/lib/db'
 import { PageStack } from '@/components/ui'
 import type { PageWithFrame } from '@/lib/frame'
 
@@ -12,8 +10,8 @@ type Candidate={id:string;name:string;email:string;role:string;portfolio:string|
 export const getServerSideProps:GetServerSideProps=async(ctx)=>{
  const guard=await requireOwnerPage(ctx)
  if('redirectTo'in guard)return{redirect:{destination:guard.redirectTo,permanent:false}}
- const rows=await db.select().from(talentApplications).orderBy(desc(talentApplications.createdAt)).limit(100)
- return{props:{candidates:rows.map(r=>({id:r.id,name:r.name,email:r.email,role:r.role,portfolio:r.portfolio,experience:r.experience,message:r.message,status:r.status,createdAt:r.createdAt.toISOString()}))}}
+ const rows=await sqlClient`SELECT * FROM "talent_application" ORDER BY "created_at" DESC LIMIT 100`
+ return{props:{candidates:rows.map(r=>({id:r.id,name:r.name,email:r.email,role:r.role,portfolio:r.portfolio,experience:r.experience,message:r.message,status:r.status,createdAt:new Date(r.created_at).toISOString()}))}}
 }
 function TalentAdmin({candidates}:{candidates:Candidate[]}){
  const [rows,setRows]=useState(candidates);const [busy,setBusy]=useState<string|null>(null);const [error,setError]=useState('')
