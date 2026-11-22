@@ -10,19 +10,22 @@ import { ClientAssetsPanel } from '@/components/studio/ClientAssetsPanel'
 type Checklist={brief_match:boolean;visual_quality:boolean;audio_quality:boolean;spelling_brand:boolean;rights_clearance:boolean}
 type Project={id:string;project_code:string;service_request_id:string;client_name:string;client_email:string;service_name:string;brief:string;status:string;priority:string;assigned_type:string;assigned_to:string|null;assigned_role:string|null;due_at:string|null;agreed_price_idr:number;revision_limit:number;revisions_used:number;quality_checklist:Checklist;deliverable_url:string|null;client_approved_at:string|null;internal_notes:string|null;created_at:string;updated_at:string}
 type Eligible={id:string;code:string;service_name:string;name:string;email:string;brief:string;status:string;created_at:string}
-type Props={projects:Project[];eligible:Eligible[]}
+type TeamMember={id:string;name:string;role:string;employment_type:string}
+type Props={projects:Project[];eligible:Eligible[];members:TeamMember[]}
 
 function iso(value:any):string|null{return value?new Date(value).toISOString():null}
 export const getServerSideProps:GetServerSideProps=async(ctx)=>{
  const guard=await requireOwnerPage(ctx)
  if('redirectTo'in guard)return{redirect:{destination:guard.redirectTo,permanent:false}}
- const [projects,eligible]=await Promise.all([
+ const [projects,eligible,members]=await Promise.all([
   sqlClient`SELECT * FROM "creative_project" ORDER BY CASE WHEN status IN ('delivered','cancelled') THEN 1 ELSE 0 END,due_at ASC NULLS LAST,updated_at DESC LIMIT 100`,
-  sqlClient`SELECT r.id,r.code,r.service_name,r.name,r.email,r.brief,r.status,r.created_at FROM "service_request" r WHERE r.status='won' AND NOT EXISTS(SELECT 1 FROM "creative_project" p WHERE p.service_request_id=r.id) ORDER BY r.created_at ASC LIMIT 50`
+  sqlClient`SELECT r.id,r.code,r.service_name,r.name,r.email,r.brief,r.status,r.created_at FROM "service_request" r WHERE r.status='won' AND NOT EXISTS(SELECT 1 FROM "creative_project" p WHERE p.service_request_id=r.id) ORDER BY r.created_at ASC LIMIT 50`,
+  sqlClient`SELECT id,name,role,employment_type FROM team_member WHERE status='active' ORDER BY name ASC LIMIT 200`
  ])
  return{props:{
   projects:projects.map(r=>({id:r.id,project_code:r.project_code,service_request_id:r.service_request_id,client_name:r.client_name,client_email:r.client_email,service_name:r.service_name,brief:r.brief,status:r.status,priority:r.priority,assigned_type:r.assigned_type,assigned_to:r.assigned_to,assigned_role:r.assigned_role,due_at:iso(r.due_at),agreed_price_idr:Number(r.agreed_price_idr),revision_limit:r.revision_limit,revisions_used:r.revisions_used,quality_checklist:r.quality_checklist,deliverable_url:r.deliverable_url,client_approved_at:iso(r.client_approved_at),internal_notes:r.internal_notes,created_at:iso(r.created_at),updated_at:iso(r.updated_at)})),
-  eligible:eligible.map(r=>({...r,created_at:iso(r.created_at)}))
+  eligible:eligible.map(r=>({...r,created_at:iso(r.created_at)})),
+  members:members.map(m=>({id:m.id,name:m.name,role:m.role,employment_type:m.employment_type}))
  }}
 }
 
@@ -31,7 +34,7 @@ const CHECKS:[keyof Checklist,string][]=[['brief_match','Sesuai brief klien'],['
 const label=(status:string)=>STAGES.find(s=>s[0]===status)?.[1]??status
 const dateLabel=(v:string|null)=>v?new Date(v).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'Belum ditetapkan'
 
-function ProjectCard({project,onUpdated}:{project:Project;onUpdated:(p:Project)=>void}){
+function ProjectCard({project,onUpdated,members}:{project:Project;onUpdated:(p:Project)=>void;members:TeamMember[]}){
  const [assignee,setAssignee]=useState(project.assigned_to??'')
  const [role,setRole]=useState(project.assigned_role??'')
  const [kind,setKind]=useState(project.assigned_type)
@@ -68,6 +71,7 @@ function ProjectCard({project,onUpdated}:{project:Project;onUpdated:(p:Project)=
    <ClientAssetsPanel projectId={project.id} closed={!active}/>
    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     <label className="text-xs text-ink-quiet">Model penugasan<select value={kind} onChange={e=>setKind(e.target.value)} className="mt-1.5 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink"><option value="unassigned">Belum ditugaskan</option><option value="human">Tenaga manusia</option><option value="ai">Bantuan AI</option><option value="hybrid">AI + manusia</option></select></label>
+    <label className="text-xs text-ink-quiet">Pilih anggota roster aktif<select value={members.find(m=>m.name===assignee)?.id||""} onChange={e=>{const m=members.find(x=>x.id===e.target.value);if(m){setAssignee(m.name);setRole(m.role)}}} className="mt-1.5 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink"><option value="">Pilih anggota atau isi manual</option>{members.map(m=><option key={m.id} value={m.id}>{m.name} · {m.role}</option>)}</select></label>
     <label className="text-xs text-ink-quiet">Nama penanggung jawab<input value={assignee} onChange={e=>setAssignee(e.target.value)} placeholder="Nama pekerja / operator AI" className="mt-1.5 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink"/></label>
     <label className="text-xs text-ink-quiet">Keahlian / peran<input value={role} onChange={e=>setRole(e.target.value)} placeholder="Video editor, motion designer..." className="mt-1.5 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink"/></label>
     <label className="text-xs text-ink-quiet">Prioritas<select value={priority} onChange={e=>setPriority(e.target.value)} className="mt-1.5 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink"><option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="urgent">Mendesak</option></select></label>
@@ -94,7 +98,7 @@ function ProjectCard({project,onUpdated}:{project:Project;onUpdated:(p:Project)=
  </article>
 }
 
-function StudioPage({projects:initial,eligible:initialEligible}:Props){
+function StudioPage({projects:initial,eligible:initialEligible,members}:Props){
  const [projects,setProjects]=useState(initial);const [eligible,setEligible]=useState(initialEligible);const [busy,setBusy]=useState<string|null>(null);const [error,setError]=useState('')
  async function createProject(id:string){setBusy(id);setError('');try{const r=await fetch('/api/studio/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:id})});const d=await r.json().catch(()=>({}));if(!r.ok){setError(d.error||'Proyek tidak dapat dibuat.');return}const reload=await fetch('/api/studio/projects');const data=await reload.json();setProjects(data.projects.map((p:any)=>({...p,agreed_price_idr:Number(p.agreed_price_idr),due_at:iso(p.due_at),client_approved_at:iso(p.client_approved_at),created_at:iso(p.created_at),updated_at:iso(p.updated_at)})));setEligible(data.eligible); }catch{setError('Koneksi terputus.')}finally{setBusy(null)}}
  function updateProject(next:Project){setProjects(old=>old.map(p=>p.id===next.id?next:p))}
@@ -108,7 +112,7 @@ function StudioPage({projects:initial,eligible:initialEligible}:Props){
    {eligible.length===0?<p className="mt-4 text-xs text-ink-quiet">Belum ada kesepakatan baru yang menunggu dibuatkan proyek.</p>:<div className="mt-3 divide-y divide-line">{eligible.map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="text-xs font-medium">{row.service_name} · {row.name}</p><p className="mt-1 font-mono text-[0.65rem] text-ink-quiet">{row.code} · {row.email}</p></div><button disabled={busy===row.id} onClick={()=>createProject(row.id)} className="rounded-lg border border-line px-3 py-2 text-xs disabled:opacity-50">{busy===row.id?'Membuat...':'Buat proyek'}</button></div>)}</div>}
   </section>
   <section><div className="mb-3 flex flex-wrap items-end justify-between gap-2"><div><h2 className="text-sm font-semibold">Papan produksi</h2><p className="mt-1 text-xs text-ink-quiet">Penugasan, tenggat, standar mutu, revisi, dan serah terima.</p></div><span className="text-xs text-ink-quiet">{projects.length} proyek tercatat</span></div>
-   {projects.length===0?<div className="rounded-xl border border-dashed border-line p-8 text-center text-xs text-ink-quiet">Belum ada proyek produksi. Konfirmasi kesepakatan dari halaman Layanan dan pesanan jasa terlebih dahulu.</div>:<div className="space-y-3">{projects.map(p=><ProjectCard key={p.id} project={p} onUpdated={updateProject}/>)}</div>}
+   {projects.length===0?<div className="rounded-xl border border-dashed border-line p-8 text-center text-xs text-ink-quiet">Belum ada proyek produksi. Konfirmasi kesepakatan dari halaman Layanan dan pesanan jasa terlebih dahulu.</div>:<div className="space-y-3">{projects.map(p=><ProjectCard key={p.id} project={p} onUpdated={updateProject} members={members}/>)}</div>}
   </section>
  </div>
 }
