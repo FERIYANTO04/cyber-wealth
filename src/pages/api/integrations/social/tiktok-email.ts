@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { randomBytes } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 import { SignJWT } from 'jose'
 import { db } from '@/lib/db'
 import { ownerAccount } from '@/lib/db/schema'
@@ -32,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const [owner] = await db.select({ id: ownerAccount.id, email: ownerAccount.email })
       .from(ownerAccount)
-      .where((await import('drizzle-orm')).eq(ownerAccount.id, session.ownerId))
+      .where(eq(ownerAccount.id, session.ownerId))
       .limit(1)
     if (!owner?.email) return res.status(404).json({ error: 'Email owner tidak ditemukan.' })
 
