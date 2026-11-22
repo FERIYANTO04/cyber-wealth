@@ -19,7 +19,6 @@ import {
 import { SETTINGS_ID, getFinance, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
-import { emailConfigured, sendEmail } from './email'
 
 /**
  * The autopilot runs as request-driven work, never as a background timer: a
@@ -156,11 +155,11 @@ async function runCeo(trigger: string) {
 
   const offlineCeoAnalysis = [
     'KONDISI: ' + factualSummary,
-    'KEPUTUSAN CEO: Dahulukan penjualan layanan yang sudah terbit dan bisa dipesan sekarang; jangan menunggu produk digital baru jika layanan siap dijual. Produk berstatus draf atau berkas bertanda DRAF tidak boleh dipasarkan atau dijual. Uji satu kanal promosi dengan biaya Rp0 dan tindak lanjuti prospek yang sudah ada.',
+    'KEPUTUSAN CEO: Dahulukan penjualan layanan yang sudah terbit dan bisa dipesan sekarang; jangan menunggu email, domain, atau produk digital baru. Produk berstatus draf atau berkas bertanda DRAF tidak boleh dipasarkan atau dijual. Gunakan marketplace, halaman penjualan, SEO, direktori bisnis, formulir website, CRM, proposal di dashboard, dan kanal kemitraan. Email hanya kanal opsional, tidak boleh menjadi blocker.',
     'KEPEMILIKAN PRIVAT: jangan mencari investor ekuitas, menjual saham, menerima pendanaan dengan hak kepemilikan, atau membuat joint venture berbasis saham. Pertahankan kepemilikan Owner.',
     'KEMITRAAN: identifikasi perusahaan, universitas, profesor, laboratorium, teknisi, dan pemasok untuk kontrak jasa, riset, prototipe, manufaktur, distribusi, atau lisensi tanpa dilusi. Lindungi IP Cyber Wealth dan tetapkan hak IP, publikasi, kerahasiaan, data, dan biaya secara tertulis sebelum pekerjaan dimulai. Proposal kemitraan bukan persetujuan atau kontrak.',
     'PENGEMBANGAN AI: Evaluasi apakah agen perlu ditingkatkan, diganti modelnya, atau ditambah spesialis baru. Prioritaskan opsi gratis/termurah. Gunakan hanya anggaran operasional yang benar-benar tersedia dan sudah dialokasikan; jangan menghitung omzet belum diterima sebagai kas. Anda berwenang menetapkan prioritas dan alokasi anggaran dari kas operasional perusahaan yang benar-benar tersedia; lindungi kewajiban dan cadangan likuiditas. Catat biaya rencana, manfaat, risiko, dan alasan. Jangan menyatakan pembayaran terjadi jika transaksi belum dikonfirmasi.',
-    'TUGAS AGEN: AI Product Creator membangun produk digital yang benar-benar lengkap untuk katalog website; AI Marketing merapikan halaman produk dan layanan di marketplace Cyber Wealth; AI Sales menangani pesanan dan prospek masuk melalui website/email resmi yang terverifikasi; AI Finance hanya mencatat pembayaran terkonfirmasi.',
+    'TUGAS AGEN: AI Product Creator membangun produk digital lengkap dan siap jual; AI Marketing meningkatkan katalog, halaman penjualan, harga, dan konversi website; AI Sales mencari peluang pendapatan, menganalisis pasar dan calon pelanggan, menyiapkan penawaran serta tindak lanjut melalui CRM/dashboard dan kanal non-email; AI Finance hanya mencatat pembayaran terkonfirmasi. Email bukan prasyarat kerja atau penjualan.',
     'REKOMENDASI TUGAS: Seluruh pemasaran diarahkan ke marketplace dan halaman produk Cyber Wealth. Jangan membuat, menjadwalkan, atau menerbitkan konten media sosial. Fokus pada katalog website, gambar cover, deskripsi, harga, halaman detail, checkout, dan tindak lanjut pembeli. CEO dapat memutuskan biaya iklan atau layanan berbayar berdasarkan anggaran perusahaan yang tersedia; catat rencana dan jangan mengaku pembayaran telah terjadi sebelum ada bukti transaksi.',
     blockers.length ? 'HAMBATAN: ' + blockers.join('; ') : 'HAMBATAN: Tidak ada hambatan dasar yang terdeteksi.',
     'CATATAN: Ini analisis aturan berbasis database, bukan jawaban model AI.'
@@ -190,7 +189,7 @@ async function runCeo(trigger: string) {
       'Hambatan:', blockers.length ? blockers.join('; ') : 'Tidak ada hambatan dasar yang tercatat.',
       `Roster agen yang dapat Anda delegasikan: ${TASKS.filter((task) => task.task !== 'ceo').map((task) => task.task + ' = ' + task.agentRole).join('; ')}. Semua agen ini berada di bawah keputusan AI CEO.`,
       `Layanan yang sudah terbit: ${publishedServices?.n ?? 0}. Produk yang sudah terbit: ${publishedProducts?.n ?? 0}.`,
-      'Tentukan sendiri strategi dan urutan kerja terbaik untuk dua jalur: (1) marketplace Cyber Wealth — produk, jasa, checkout, pelanggan, pendapatan; (2) Future Technology R&D Lab — kandidat penemuan yang dapat diuji, kebaruan yang harus diperiksa terhadap paten/publikasi, spesifikasi, validasi, dossier akademik, dan peluang lisensi. R&D penemuan orisinal adalah misi strategis perusahaan: jadwalkan riset ilmiah dan pemeriksaan prior-art secara berkala, lalu delegasikan rekayasa, prototipe, kemitraan akademik, dan transfer teknologi saat hasil tahap sebelumnya mendukungnya. Anda sendiri yang menentukan agen dan urutan berdasarkan bukti serta hasil terakhir. Semua hasil komersial yang siap jual masuk ke website Cyber Wealth. Jangan membuat, menjadwalkan, atau menerbitkan konten media sosial. Jangan mengabaikan layanan terbit. Prioritaskan dampak terbesar dan biaya terendah. Wajib membaca laporan rekan, memberi tugas lintas fungsi, dan meminta validasi silang.',
+      'Tentukan sendiri strategi dan urutan kerja terbaik untuk dua jalur: (1) marketplace Cyber Wealth — produk, jasa, checkout, pelanggan, pendapatan; (2) Future Technology R&D Lab — kandidat penemuan yang dapat diuji, kebaruan yang harus diperiksa terhadap paten/publikasi, spesifikasi, validasi, dossier akademik, dan peluang lisensi. R&D penemuan orisinal adalah misi strategis perusahaan: jadwalkan riset ilmiah dan pemeriksaan prior-art secara berkala, lalu delegasikan rekayasa, prototipe, kemitraan akademik, dan transfer teknologi saat hasil tahap sebelumnya mendukungnya. Anda sendiri yang menentukan agen dan urutan berdasarkan bukti serta hasil terakhir. Semua hasil komersial yang siap jual masuk ke website Cyber Wealth. Email tidak boleh menjadi prasyarat atau blocker bagi riset, penjualan, layanan, ataupun pendapatan. Gunakan website, marketplace, SEO, CRM, dashboard, proposal, direktori bisnis, dan kemitraan kontraktual. Jangan membuat, menjadwalkan, atau menerbitkan konten media sosial. Jangan mengabaikan layanan terbit. Prioritaskan dampak terbesar dan biaya terendah. Wajib membaca laporan rekan, memberi tugas lintas fungsi, dan meminta validasi silang.',
       'Strategi kemitraan harus mempercepat riset dan penjualan tanpa melepas saham atau kendali: siapkan shortlist mitra, alasan kecocokan, keahlian yang dibutuhkan, biaya indikatif yang belum diverifikasi, manfaat, risiko, dan rancangan ruang lingkup kerja. Utamakan kontrak jasa/riset, pengadaan, pilot, manufaktur, distribusi, dan lisensi yang melindungi IP; jangan membuat JV ekuitas atau mengklaim mitra sudah setuju sebelum ada bukti.',
     ].join('\\n'),
     maxTokens: 1800,
@@ -714,8 +713,8 @@ async function runMarketing(trigger: string) {
 async function runSales(trigger: string) {
   const run = await startRun('AI Sales', 'sales', trigger)
 
-  // Work every open lead, preserve existing copy, and distinguish a real send
-  // from a CRM draft. Never mark a lead contacted unless the provider accepts it.
+  // Email is deliberately not part of the sales execution path. Sales works
+  // from the website CRM and creates actionable on-dashboard outreach material.
   const openLeads = await db
     .select()
     .from(revenueLeads)
@@ -734,89 +733,59 @@ async function runSales(trigger: string) {
 
   let drafted = 0
   let existingDrafts = 0
-  let sent = 0
-  let queued = 0
-  const canSend = emailConfigured()
 
   for (const lead of openLeads) {
     let body = lead.outreachBody ?? ''
     if (body) {
       existingDrafts += 1
-    } else {
-      const outcome = aiConfigured()
-        ? await askAi({
-            system:
-              'Anda penulis pesan pendekatan penjualan B2B yang sopan dan jujur. Tulis dalam bahasa yang sama dengan minat calon pelanggan. Jangan mengarang portofolio, klien, harga, atau janji hasil. Maksimal 110 kata, mudah dibaca di ponsel.',
-            prompt: [
-              `Calon pelanggan: ${lead.name} (${lead.email})`,
-              `Pasar: ${lead.market}`,
-              `Kebutuhan yang dicatat: ${lead.interest}`,
-              'Tulis satu pesan pembuka yang menyebut kebutuhannya, menawarkan satu langkah kecil yang jelas, dan menutup dengan pertanyaan sederhana. Jangan menyertakan tautan yang tidak diketahui.',
-            ].join('\\n'),
-            maxTokens: 400,
-          })
-        : null
-
-      body = outcome?.ok
-        ? outcome.text
-        : [
-            `Halo ${lead.name},`,
-            '',
-            `Saya mencatat kebutuhan Anda soal: ${lead.interest}. Saya bisa bantu menyiapkan langkah awalnya dan mengirim rincian singkat bila Anda berminat.`,
-            '',
-            'Apakah minggu ini waktu yang baik untuk membahasnya sebentar?',
-          ].join('\\n')
-
-      await db
-        .update(revenueLeads)
-        .set({ outreachBody: body, outreachSource: outcome?.ok ? `ai:${outcome.model}` : 'template' })
-        .where(eq(revenueLeads.id, lead.id))
-      drafted += 1
+      continue
     }
 
-    // Conservative daily-pass cap. External messages are sent only through the
-    // configured, verified sender; queued messages are never counted as contact.
-    if (canSend && sent < 3) {
-      const firstLine = body.split(/\\r?\\n/).find((line) => line.trim()) ?? ''
-      const subjectMatch = firstLine.match(/^Subjek\\s*:\\s*(.+)$/i)
-      const emailBody = subjectMatch ? body.slice(body.indexOf(firstLine) + firstLine.length).trim() : body
-      const result = await sendEmail({
-        to: lead.email,
-        subject: subjectMatch?.[1]?.trim() || `Penjajakan kerja sama — ${lead.name}`,
-        body: emailBody,
-        kind: 'sales-outreach',
-        relatedType: 'revenue-lead',
-        relatedId: lead.id,
-        dataSource: 'live',
-      })
-      if (result.sent) {
-        await db
-          .update(revenueLeads)
-          .set({ status: 'contacted', lastContactedAt: new Date() })
-          .where(eq(revenueLeads.id, lead.id))
-        sent += 1
-      } else {
-        queued += 1
-      }
-    }
+    const outcome = aiConfigured()
+      ? await askAi({
+          system:
+            'Anda adalah spesialis penjualan B2B. Buat naskah pendekatan yang bisa dipakai tim melalui CRM/dashboard, formulir website, panggilan, atau kanal bisnis yang tersedia. Jangan menganggap email tersedia. Jangan mengarang portofolio, klien, harga, atau janji hasil. Maksimal 110 kata, jelas dan sopan.',
+          prompt: [
+            `Calon pelanggan: ${lead.name}`,
+            `Pasar: ${lead.market}`,
+            `Kebutuhan yang dicatat: ${lead.interest}`,
+            'Susun naskah pendekatan untuk CRM/dashboard: sebut kebutuhan calon pelanggan, tawarkan satu langkah kecil yang jelas, dan ajukan ajakan tindak lanjut. Jangan membuat subjek email atau bergantung pada alamat email.',
+          ].join('\\n'),
+          maxTokens: 400,
+        })
+      : null
+
+    body = outcome?.ok
+      ? outcome.text
+      : [
+          `Calon pelanggan: ${lead.name}`,
+          `Kebutuhan: ${lead.interest}`,
+          '',
+          'Naskah tindak lanjut:',
+          `Halo ${lead.name}, kami melihat kebutuhan Anda terkait ${lead.interest}. Cyber Wealth dapat meninjau kebutuhan tersebut dan menyiapkan langkah awal yang sesuai. Silakan lanjutkan melalui formulir atau dashboard layanan kami.`,
+        ].join('\\n')
+
+    await db
+      .update(revenueLeads)
+      .set({ outreachBody: body, outreachSource: outcome?.ok ? `ai:${outcome.model}` : 'template' })
+      .where(eq(revenueLeads.id, lead.id))
+    drafted += 1
   }
 
   const leadCount = newJobs[0]?.n ?? 0
   const orderCount = waitingOrders[0]?.n ?? 0
   const summary =
-    `${sent} email penawaran diterima penyedia, ${drafted} draf baru dibuat, ${existingDrafts} draf lama dipertahankan, ${queued} email belum terkirim, ${leadCount} permintaan jasa baru, ${orderCount} pesanan menunggu pembayaran.`
+    `${drafted} naskah tindak lanjut baru disiapkan di CRM, ${existingDrafts} draf lama dipertahankan, ${openLeads.length} prospek ditinjau, ${leadCount} permintaan jasa baru, ${orderCount} pesanan menunggu pembayaran.`
 
   await finishRun(
     run.id,
-    sent + drafted + existingDrafts + leadCount + orderCount > 0 ? 'ok' : 'skipped',
+    drafted + existingDrafts + leadCount + orderCount > 0 ? 'ok' : 'skipped',
     summary,
-    canSend
-      ? 'Email penjualan dikirim maksimal 3 prospek per siklus. Status kontak diperbarui hanya setelah penyedia email menerima pesan; penerimaan penyedia bukan bukti email dibaca atau penjualan terjadi.'
-      : 'Draf pendekatan disimpan di CRM. Pengiriman otomatis menunggu EMAIL_API_KEY dan EMAIL_FROM dari domain pengirim yang sudah diverifikasi. Tidak ada pesan eksternal yang dikirim selama konfigurasi pengirim belum siap.',
-    drafted + sent
+    'Sales bekerja tanpa ketergantungan email: prospek ditinjau dan naskah tindak lanjut disimpan di CRM/dashboard. Status prospek tidak diubah menjadi contacted tanpa bukti kontak nyata. Agen juga harus mengembangkan kanal akuisisi website, marketplace, SEO, direktori bisnis, dan kemitraan; draf bukan bukti penjualan.',
+    drafted
   )
-  await noteAgent('AI Sales', sent > 0 ? 'Penawaran email dikirim ke penyedia' : 'CRM dan prospek ditinjau', summary)
-  return { summary, created: drafted + sent }
+  await noteAgent('AI Sales', 'Prospek dan peluang pendapatan ditinjau tanpa email', summary)
+  return { summary, created: drafted }
 }
 
 async function runFinance(trigger: string) {
