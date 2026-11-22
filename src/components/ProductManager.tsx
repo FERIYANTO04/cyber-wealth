@@ -34,6 +34,10 @@ const CATEGORIES = [
   { value: 'desain', label: 'Aset desain' },
   { value: 'materi', label: 'Materi bisnis' },
   { value: 'toolkit', label: 'Toolkit' },
+  { value: 'video', label: 'Video siap jual' },
+  { value: 'motion', label: 'Motion graphics & footage' },
+  { value: 'audio', label: 'Audio & sound pack' },
+  { value: 'social', label: 'Paket konten sosial media' },
 ]
 
 export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
@@ -311,7 +315,7 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
                       <input
                         type="file"
                         className="sr-only"
-                        accept=".zip,.pdf,.epub,.doc,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg,.webp,.svg"
+                        accept=".zip,.pdf,.epub,.doc,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg,.webp,.svg,.mp4,.mov,.m4v,.webm,.mkv,.avi,.3gp"
                         onChange={(e) => upload(row, e)}
                         disabled={uploadingFor === row.id}
                       />
