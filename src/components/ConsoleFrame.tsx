@@ -19,6 +19,7 @@ import {
   Store,
   UserPlus,
   Users,
+  UserRoundCog,
   Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -31,6 +32,7 @@ const NAV = [
   { href: '/jasa-admin', label: 'Jasa digital', short: 'Jasa', icon: BriefcaseBusiness },
   { href: '/studio', label: 'Studio produksi', short: 'Studio', icon: Clapperboard },
   { href: '/talent-admin', label: 'Rekrutmen kreatif', short: 'Talenta', icon: UserPlus },
+  { href: '/team', label: 'Tim & onboarding', short: 'Tim', icon: UserRoundCog },
   { href: '/produk', label: 'Produk digital', short: 'Produk', icon: Package },
   { href: '/affiliate', label: 'Affiliate', short: 'Affiliate', icon: Link2 },
   { href: '/admin/pelanggan', label: 'Pelanggan & pesan', short: 'Pelanggan', icon: Users },
