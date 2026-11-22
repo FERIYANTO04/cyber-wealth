@@ -2,7 +2,7 @@ import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { desc, eq } from 'drizzle-orm'
-import { Activity, ArrowDownLeft, ArrowUpRight, Boxes, CircleDollarSign, LayoutDashboard, LogOut, Package, Settings2, ShieldCheck, Wallet, ExternalLink } from 'lucide-react'
+import { Activity, ArrowDownLeft, ArrowUpRight, Boxes, CircleDollarSign, Clapperboard, LayoutDashboard, LogOut, Package, Settings2, ShieldCheck, Wallet, ExternalLink } from 'lucide-react'
 import { requireOwnerPage } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { activity as activityTable, agents, assets, ownerAccount, products, transactions } from '@/lib/db/schema'
@@ -70,6 +70,7 @@ function OwnerDashboard({ owner, revenue, expenses, netCash, assets, netWorth, t
         <Link href="/finance" className="mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] text-[#929ba8] transition hover:bg-white/[0.04] hover:text-white"><Wallet size={16}/> Financial ledger</Link>
         <Link href="/produk" className="mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] text-[#929ba8] transition hover:bg-white/[0.04] hover:text-white"><Boxes size={16}/> Products & assets</Link>
         <Link href="/agents" className="mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] text-[#929ba8] transition hover:bg-white/[0.04] hover:text-white"><Settings2 size={16}/> AI workforce</Link>
+        <Link href="/studio" className="mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] text-[#929ba8] transition hover:bg-white/[0.04] hover:text-white"><Clapperboard size={16}/> Creative production</Link>
       </div>
       <div className="mt-auto p-4">
         <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#121a22] to-[#0c1118] p-4">
