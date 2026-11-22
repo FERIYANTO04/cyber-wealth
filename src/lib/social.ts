@@ -2,7 +2,6 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from './db'
 import { activity, orders, postTracks, products, revenueLeads, services, socialAccounts, socialPosts } from './db/schema'
 import { askAi, aiConfigured } from './ai'
-import { publishToTelegram } from './telegram'
 import { xReady, publishToX } from './x'
 import { fileUrl } from './storage'
 import { publishToYouTube } from './youtube-publisher'
@@ -69,10 +68,6 @@ export function toPostItem(row: typeof socialPosts.$inferSelect, mediaUrl: strin
 /** Which channels have a stored, accepted account right now. */
 export async function connectedChannels(): Promise<Set<string>> {
   const connected = new Set<string>()
-  if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-    const { telegramReady } = await import('./telegram')
-    if (await telegramReady()) connected.add('telegram')
-  }
   if (await xReady()) connected.add('x')
   const rows = await db
     .select({ channel: socialAccounts.channel })
@@ -288,9 +283,7 @@ export async function generatePosts(args: { markets?: string[]; channels?: Chann
                 ? 'Buat paket produksi video YouTube Shorts 9:16 berdurasi 30–45 detik: judul yang memancing rasa ingin tahu tanpa clickbait, hook 0–2 detik, naskah narasi lengkap, storyboard per adegan dengan timestamp, visual/B-roll yang harus direkam atau dibuat, teks layar, arahan musik/suara tanpa memakai lagu berhak cipta yang tidak berlisensi, CTA, deskripsi, dan 3–5 kata kunci. Pastikan video tetap bernilai walau penonton belum mengenal merek. Jangan mengklaim video sudah dibuat.'
                 : channel === 'tiktok'
                   ? 'Buat paket produksi TikTok vertikal 9:16 berdurasi 20–35 detik: 3 alternatif hook 0–2 detik, pilih hook terbaik, naskah narasi lengkap, storyboard per adegan dengan timestamp, visual/B-roll spesifik, teks layar singkat yang sinkron, ritme potongan, arahan suara/musik bebas lisensi, CTA natural, caption terpisah, dan 3–5 hashtag relevan. Utamakan retensi, kejelasan, dan nilai tontonan; jangan membuat klaim bahwa video sudah dirender.'
-                  : channel === 'telegram'
-                    ? 'Buat pesan kanal yang informatif, mudah dipindai, dengan paragraf pendek dan CTA.'
-                    : channel === 'x'
+                  : channel === 'x'
                       ? 'Buat satu gagasan tajam, sangat ringkas, tanpa basa-basi.'
                       : 'Sesuaikan gaya dan struktur dengan kebiasaan audiens kanal; jangan menulis seperti iklan generik.',
             ]
@@ -561,40 +554,6 @@ export async function publishDuePosts(): Promise<{
       await db.insert(activity).values({
         actor: 'system',
         action: 'Publikasi X gagal',
-        detail: `${post.headline} — ${result.reason}`,
-        dataSource: 'live',
-      })
-      notes.push(result.reason)
-      failed += 1
-      continue
-    }
-
-    if (post.channel === 'telegram') {
-      const result = await publishToTelegram(post.body)
-      if (result.ok) {
-        await db.update(socialPosts).set({
-          publishState: 'published',
-          externalId: result.messageId,
-          externalUrl: result.url,
-          publishedAt: new Date(),
-          publishNote: `Dikirim ke Telegram pada ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC.`,
-        }).where(eq(socialPosts.id, post.id))
-        await db.insert(activity).values({
-          actor: 'system',
-          action: 'Konten terbit di Telegram',
-          detail: `${post.headline} — message id ${result.messageId}, ${result.url}. Dikonfirmasi Telegram Bot API.`,
-          dataSource: 'live',
-        })
-        published += 1
-        continue
-      }
-      await db.update(socialPosts).set({
-        publishState: 'failed',
-        publishNote: `Telegram menolak publikasi: ${result.reason}`,
-      }).where(eq(socialPosts.id, post.id))
-      await db.insert(activity).values({
-        actor: 'system',
-        action: 'Publikasi Telegram gagal',
         detail: `${post.headline} — ${result.reason}`,
         dataSource: 'live',
       })
