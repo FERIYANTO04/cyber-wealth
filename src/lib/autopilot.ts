@@ -1127,6 +1127,34 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     }
   }
 
+  // Run newly registered specialist agents through a generic, mandate-bound executor.
+  const customAgents = await db.select().from(agents)
+    .where(and(sql`${agents.role} like 'AI Custom:%'`, eq(agents.status, 'active')))
+    .orderBy(agents.sortOrder).limit(3)
+  for (const custom of customAgents) {
+    const taskKey = 'custom:' + custom.role
+    const workerRun = await startRun(custom.role, taskKey, trigger)
+    const peerRows = await db.select({ agentName: agentRuns.agentName, task: agentRuns.task, summary: agentRuns.summary, detail: agentRuns.detail })
+      .from(agentRuns).where(sql`${agentRuns.status} <> 'running'`).orderBy(desc(agentRuns.startedAt)).limit(8)
+    const handoff = peerRows.filter((row) => row.task !== taskKey)
+      .map((row) => row.agentName + ': ' + (row.summary ?? '') + ' ' + (row.detail ?? '').slice(0, 250)).join('\\n')
+    const customResult = await askAi({
+      system: 'Anda agen spesialis Cyber Wealth. Patuhi mandat. Baca laporan rekan untuk koordinasi dan koreksi silang. Jangan mengklaim tindakan eksternal, eksperimen fisik, atau hasil yang belum diverifikasi. Berikan temuan, tindakan, dependensi, risiko, dan serah-terima yang dapat diperiksa.',
+      prompt: 'Mandat: ' + custom.mandate + '\\nLaporan rekan:\\n' + handoff + '\\nLakukan pekerjaan spesialis yang paling relevan dan sebutkan agen penerima serah-terima.',
+      maxTokens: 1000,
+    })
+    if (customResult.ok) {
+      const summary = custom.name + ' menyelesaikan laporan spesialis.'
+      await finishRun(workerRun.id, 'ok', summary, customResult.text, 0)
+      await noteAgent(custom.role, 'Tugas spesialis diselesaikan', summary)
+      outcomes.push({ task: 'ceo', label: custom.name, summary })
+    } else {
+      const summary = custom.name + ' belum dapat berjalan: ' + customResult.reason
+      await finishRun(workerRun.id, 'failed', summary, summary, 0)
+      outcomes.push({ task: 'ceo', label: custom.name, summary })
+    }
+  }
+
   await db
     .update(settings)
     .set({ updatedAt: new Date() })
