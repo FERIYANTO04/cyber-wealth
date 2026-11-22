@@ -1,5 +1,6 @@
 import { chatWithAi } from './ai'
 import { putFile, deleteFile } from './storage'
+import { isPlaceholder } from './env'
 
 /**
  * Live checks for every outside service the app depends on. Each one actually calls
@@ -91,4 +92,12 @@ export async function storageStatus(): Promise<{ state: CheckState; message: str
     const message = error instanceof Error ? error.message : 'tidak diketahui'
     return { state: 'error', message: `Penyimpanan berkas belum siap: ${message}.` }
   }
+}
+
+/** Midtrans is the active checkout provider; a configured key still needs a real test transaction. */
+export function midtransStatus(): { state: CheckState; message: string } {
+  const key = process.env.MIDTRANS_SERVER_KEY?.trim() ?? ''
+  if (!key || isPlaceholder(key)) return { state: 'missing', message: 'MIDTRANS_SERVER_KEY belum dikonfigurasi. Checkout berbayar belum dapat membuat tagihan.' }
+  const mode = process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'Production' : 'Sandbox'
+  return { state: 'unverified', message: `Server key Midtrans tersedia (${mode}). Koneksi baru terbukti setelah checkout uji berhasil dan webhook mengonfirmasi pembayaran.` }
 }
