@@ -573,15 +573,3 @@ export const moneyAllocationPolicy = pgTable('money_allocation_policy', {
 
 
 
-// Privacy-conscious first-party page analytics. Visitor identity is a daily salted hash;
-// raw IP addresses and user-agent strings are never persisted.
-export const siteVisit = pgTable('site_visit', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  visitorHash: text('visitor_hash').notNull(),
-  path: text('path').notNull(),
-  viewedAt: timestamp('viewed_at').notNull().defaultNow(),
-}, (t) => ({
-  viewedAtIdx: index('site_visit_viewed_at_idx').on(t.viewedAt),
-  visitorDayIdx: index('site_visit_visitor_day_idx').on(t.visitorHash, t.viewedAt),
-  pathIdx: index('site_visit_path_idx').on(t.path, t.viewedAt),
-}))
