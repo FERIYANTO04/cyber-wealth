@@ -211,6 +211,11 @@ async function runCeo(trigger: string) {
       dispatch = [...new Set(parsed.dispatch.filter((task): task is Exclude<AutopilotTask, 'ceo'> => typeof task === 'string' && task !== 'ceo' && allowed.has(task as Exclude<AutopilotTask, 'ceo'>)))]
     }
   } catch { dispatch = [] }
+  // Standing company missions: workforce gap review, scientific discovery, and prior-art diligence.
+  // The CEO still chooses the remaining sequence and all other operational priorities.
+  for (const standing of ['workforce', 'science', 'patents'] as const) {
+    if (!dispatch.includes(standing)) dispatch.push(standing)
+  }
   const fallbackPlan = await buildCeoDispatchPlan()
   const aiDispatchValid = dispatch.length > 0
   if (!aiDispatchValid) dispatch = fallbackPlan
@@ -907,7 +912,7 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
   let report = out.text
   if (task === 'workforce') {
     try {
-      const raw = out.text.match(/\\{[\\s\\S]*\\}/)?.[0]
+      const raw = out.text.match(/\{[\s\S]*\}/)?.[0]
       const parsed = raw ? JSON.parse(raw) as { new_agents?: unknown } : null
       const proposals = Array.isArray(parsed?.new_agents) ? parsed.new_agents.slice(0, 3) : []
       const created: string[] = []
@@ -924,13 +929,13 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
         await db.insert(agents).values({ name, role: dynamicRole, mandate, status: 'active', dataSource: 'live', sortOrder: 40 })
         created.push(name + ' — ' + role)
       }
-      report += '\\nAgen baru yang benar-benar didaftarkan: ' + (created.join('; ') || 'Tidak ada; tidak ditemukan kebutuhan baru yang memenuhi syarat.')
+      report += '\nAgen baru yang benar-benar didaftarkan: ' + (created.join('; ') || 'Tidak ada; tidak ditemukan kebutuhan baru yang memenuhi syarat.')
     } catch {
-      report += '\\nSpesifikasi agen tidak valid; tidak ada agen baru yang didaftarkan.'
+      report += '\nSpesifikasi agen tidak valid; tidak ada agen baru yang didaftarkan.'
     }
   }
   const summary = spec[0] + ' menyusun audit fondasi dan koordinasi lintas agen.'
-  await finishRun(run.id, 'ok', summary, report + '\\n\\nRekomendasi AI; belum merupakan audit eksternal atau sertifikasi.', 0)
+  await finishRun(run.id, 'ok', summary, report + '\n\nRekomendasi AI; belum merupakan audit eksternal atau sertifikasi.', 0)
   await noteAgent(spec[0], 'Audit fondasi lintas agen', summary)
   return { summary }
 }
