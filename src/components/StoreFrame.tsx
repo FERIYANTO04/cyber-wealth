@@ -11,6 +11,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
   const links = [
     { href: '/', label: 'Beranda' },
     { href: '/tentang', label: 'Tentang' },
+    { href: '/marketplace', label: 'Marketplace' },
     { href: '/jasa', label: 'Layanan' },
     { href: '/toko', label: 'Produk' },
     { href: '/harga', label: 'Paket' },
