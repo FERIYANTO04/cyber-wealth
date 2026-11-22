@@ -40,6 +40,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!current) return res.status(404).json({ error: 'Proyek tidak ditemukan.' })
 
   const patch = parsed.data
+  const allowed: Record<string, string[]> = {
+    queued: ['assigned','in_production','cancelled'],
+    assigned: ['in_production','cancelled'],
+    in_production: ['internal_review','cancelled'],
+    internal_review: ['client_review','in_production','cancelled'],
+    client_review: ['revision','approved','cancelled'],
+    revision: ['in_production','cancelled'],
+    approved: ['delivered','cancelled'],
+    delivered: [],
+    cancelled: [],
+  }
+  if (patch.status && patch.status !== current.status && !allowed[current.status]?.includes(patch.status)) {
+    return res.status(409).json({ error: 'Perpindahan tahap tidak diizinkan. Ikuti alur produksi dan pemeriksaan kualitas.' })
+  }
+  if (['delivered','cancelled'].includes(current.status) && Object.keys(patch).some(k => k !== 'status')) {
+    return res.status(409).json({ error: 'Proyek yang sudah ditutup tidak dapat diedit.' })
+  }
   const next = {
     status: patch.status ?? current.status,
     priority: patch.priority ?? current.priority,
@@ -71,10 +88,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (next.status === 'revision' && next.revisionsUsed > next.revisionLimit) {
     return res.status(409).json({ error: 'Batas revisi yang disepakati sudah habis. Minta persetujuan biaya tambahan sebelum revisi baru.' })
   }
-  if (next.status === 'approved' && !next.clientApprovedAt) {
+  if (next.status === 'approved' && (current.status !== 'client_review' || !next.clientApprovedAt)) {
     return res.status(409).json({ error: 'Catat persetujuan klien terlebih dahulu setelah konfirmasi benar-benar diterima.' })
   }
-  if (next.status === 'delivered' && (!next.clientApprovedAt || !next.deliverableUrl)) {
+  if (next.status === 'delivered' && (current.status !== 'approved' || !next.clientApprovedAt || !next.deliverableUrl)) {
     return res.status(409).json({ error: 'Penyerahan final memerlukan persetujuan klien dan tautan hasil.' })
   }
 
