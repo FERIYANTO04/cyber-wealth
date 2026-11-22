@@ -905,9 +905,10 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
   const spec = roles[task]
   const run = await startRun(spec[0], task, trigger)
   const peers = await db.select({ agentName: agentRuns.agentName, task: agentRuns.task, summary: agentRuns.summary, detail: agentRuns.detail }).from(agentRuns).where(sql`${agentRuns.status} <> 'running'`).orderBy(desc(agentRuns.startedAt)).limit(10)
+  const currentRoster = await db.select({ name: agents.name, role: agents.role, mandate: agents.mandate }).from(agents).orderBy(agents.sortOrder)
   const handoff = peers.filter((row) => row.task !== task).map((row) => row.agentName + ' [' + row.task + ']: ' + (row.summary ?? '') + ' ' + (row.detail ?? '').slice(0, 300)).join('\n')
   if (!aiConfigured()) { const summary = 'Spesialis terdaftar, tetapi model AI belum terhubung.'; await finishRun(run.id, 'skipped', summary, summary, 0); await noteAgent(spec[0], 'Audit dilewati', summary); return { summary } }
-  const out = await askAi({ system: 'Anda spesialis senior. Baca laporan rekan, lakukan koreksi silang, tunjukkan dependensi, risiko, dan tindakan yang harus diserahkan ke agen lain. Pisahkan fakta, dugaan, rekomendasi, dan kebutuhan ahli manusia.', prompt: 'Peran: ' + spec[0] + '. Fokus: ' + spec[1] + '. Pemicu: ' + trigger + '.\nLaporan rekan:\n' + handoff + '\nBuat audit fondasi dan daftar tindakan prioritas serta agen penanggung jawab.' + (task === 'workforce' ? ' Untuk membuat agen, keluarkan JSON valid: {"new_agents":[{"name":"...","role":"...","mandate":"..."}],"skill_gaps":[...],"handoffs":[...]}. Maksimal 3 agen baru. Buat hanya spesialisasi yang belum ada dalam roster; mandat minimal 40 karakter.' : ''), maxTokens: 1300 })
+  const out = await askAi({ system: 'Anda spesialis senior. Baca laporan rekan, lakukan koreksi silang, tunjukkan dependensi, risiko, dan tindakan yang harus diserahkan ke agen lain. Pisahkan fakta, dugaan, rekomendasi, dan kebutuhan ahli manusia.', prompt: 'Peran: ' + spec[0] + '. Fokus: ' + spec[1] + '. Pemicu: ' + trigger + '.\nLaporan rekan:\n' + handoff + '\nRoster agen saat ini: ' + currentRoster.map((agent) => agent.name + ' [' + agent.role + ']: ' + agent.mandate.slice(0, 160)).join('; ') + '\nBuat audit fondasi dan daftar tindakan prioritas serta agen penanggung jawab.' + (task === 'workforce' ? ' Untuk membuat agen, keluarkan JSON valid: {"new_agents":[{"name":"...","role":"...","mandate":"..."}],"skill_gaps":[...],"handoffs":[...]}. Maksimal 3 agen baru. Buat hanya spesialisasi yang belum ada dalam roster; mandat minimal 40 karakter.' : ''), maxTokens: 1300 })
   if (!out.ok) { const summary = 'Audit gagal: ' + out.reason; await finishRun(run.id, 'failed', summary, summary, 0); await noteAgent(spec[0], 'Audit gagal', summary); return { summary } }
   let report = out.text
   if (task === 'workforce') {
@@ -923,6 +924,9 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
         const mandate = typeof spec.mandate === 'string' ? spec.mandate.trim().slice(0, 1200) : ''
         const name = typeof spec.name === 'string' ? spec.name.trim().slice(0, 90) : ''
         if (!role || !mandate || !name || role.length < 5 || mandate.length < 40) continue
+        const normalizedRole = role.toLowerCase().replace(/[^a-z0-9]+/g, '')
+        const duplicate = currentRoster.some((agent) => agent.role.replace(/^AI Custom:\\s*/i, '').toLowerCase().replace(/[^a-z0-9]+/g, '') === normalizedRole)
+        if (duplicate) continue
         const dynamicRole = 'AI Custom: ' + role
         const [existing] = await db.select({ id: agents.id }).from(agents).where(eq(agents.role, dynamicRole)).limit(1)
         if (existing) continue
