@@ -35,8 +35,8 @@ const Page = JasaPage as PageWithFrame<Props>
 Page.getLayout = (page, props) => (
   <StoreFrame
     eyebrow="Layanan digital"
-    title="Jasa desain, website, konten, dan pemasaran"
-    intent="Kirim brief singkat, lalu penjual meninjau dan membalas dengan penawaran. Tidak ada biaya sebelum Anda menyetujui penawaran."
+    title="Video, desain, konten, dan solusi digital"
+    intent="Studio kreatif untuk video editing, motion graphics, desain grafis, branding, konten media sosial, website, dan produksi berbantuan AI. Kirim brief untuk mendapatkan ruang lingkup dan penawaran yang sesuai."
     actions={
       props.isOwner ? (
         <SignalLink href="/jasa-admin">Kelola layanan</SignalLink>
