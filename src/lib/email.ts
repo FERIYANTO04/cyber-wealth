@@ -24,9 +24,19 @@ function smtpConfigured() {
   return !isPlaceholder(c.smtpUser) && !isPlaceholder(c.smtpPassword)
 }
 
-export function emailConfigured(): boolean {
+function apiKeyConfigured() {
+  return !isPlaceholder(emailConfig().key)
+}
+
+function apiConfigured() {
   const c = emailConfig()
-  return smtpConfigured() || (!isPlaceholder(c.key) && !isPlaceholder(c.from))
+  return apiKeyConfigured() && !isPlaceholder(c.from)
+}
+
+export function emailConfigured(): boolean {
+  // Prefer the transactional API whenever its key exists. Do not silently
+  // fall back to a broken personal Gmail SMTP account when sender setup is incomplete.
+  return apiKeyConfigured() ? apiConfigured() : smtpConfigured()
 }
 
 export type EmailInput = {
@@ -135,16 +145,15 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
   if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
     status = 'failed'
     detail = 'Alamat email penerima tidak valid.'
+  } else if (apiKeyConfigured() && !apiConfigured()) {
+    status = 'queued'
+    detail = 'Kunci API email tersedia, tetapi EMAIL_FROM belum diatur ke alamat pada domain pengirim yang sudah diverifikasi.'
   } else if (!emailConfigured()) {
     status = 'queued'
-    detail = 'Email belum terkirim. Hubungkan Gmail dengan App Password atau isi konfigurasi penyedia email.'
+    detail = 'Email belum terkirim. Penyedia email belum dikonfigurasi.'
   } else {
     try {
-      if (smtpConfigured()) {
-        await gmailSmtp(input)
-        status = 'sent'
-        detail = 'Gmail menerima pesan melalui SMTP.'
-      } else {
+      if (apiConfigured()) {
         const response = await fetch(`${c.baseUrl}/emails`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
@@ -160,6 +169,10 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
           status = 'failed'
           detail = `Penyedia email menjawab ${response.status}${payload?.message ? `: ${payload.message}` : ''}.`
         }
+      } else {
+        await gmailSmtp(input)
+        status = 'sent'
+        detail = 'Gmail menerima pesan melalui SMTP.'
       }
     } catch (error) {
       status = 'failed'
@@ -197,33 +210,42 @@ export async function getEmailLog(limit = 40) {
 
 export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'invalid' | 'error' | 'unverified'; message: string }> {
   const c = emailConfig()
+
+  // Check the transactional API first. The API key is already provisioned in
+  // Railway; this makes Gmail SMTP irrelevant unless no API key exists.
+  if (apiKeyConfigured()) {
+    try {
+      const response = await fetch(`${c.baseUrl}/domains`, {
+        headers: { Authorization: `Bearer ${c.key}` },
+        cache: 'no-store',
+      })
+      if (response.status === 401 || response.status === 403) {
+        return { state: 'invalid', message: 'Penyedia email menolak kunci API.' }
+      }
+      if (!response.ok) return { state: 'error', message: `Penyedia email menjawab ${response.status}.` }
+      const payload = (await response.json().catch(() => null)) as { data?: { name?: string; status?: string }[] } | null
+      if (isPlaceholder(c.from)) {
+        return { state: 'missing', message: 'Kunci API email valid. EMAIL_FROM belum diisi dengan alamat pada domain pengirim yang terverifikasi.' }
+      }
+      const senderDomain = c.from.split('@').pop()?.trim().toLowerCase() ?? ''
+      const verified = (payload?.data ?? []).some(d => d.name?.trim().toLowerCase() === senderDomain && d.status?.toLowerCase() === 'verified')
+      return verified
+        ? { state: 'ready', message: `Domain pengirim terverifikasi. Pengirim: ${c.from}.` }
+        : { state: 'unverified', message: `Domain pengirim ${senderDomain || '(tidak valid)'} belum terverifikasi.` }
+    } catch {
+      return { state: 'error', message: 'Tidak bisa menghubungi penyedia email API.' }
+    }
+  }
+
   if (smtpConfigured()) {
     try {
       await gmailSmtp()
       return { state: 'ready', message: `Gmail SMTP berhasil diautentikasi untuk ${c.smtpUser}.` }
     } catch (error) {
       const detail = error instanceof Error ? error.message.trim() : String(error ?? '').trim()
-      return { state: 'invalid', message: detail ? `Gmail SMTP: ${detail.slice(0, 300)}` : 'Gmail SMTP gagal merespons. Periksa SMTP_USER, App Password Gmail, SMTP_HOST, dan SMTP_PORT.' }
+      return { state: 'invalid', message: detail ? `Gmail SMTP: ${detail.slice(0, 300)}` : 'Gmail SMTP gagal merespons.' }
     }
   }
-  if (isPlaceholder(c.key)) {
-    return { state: 'missing', message: 'Email belum terhubung. Gmail SMTP membutuhkan SMTP_USER dan SMTP_APP_PASSWORD (App Password Google).' }
-  }
-  try {
-    const response = await fetch(`${c.baseUrl}/domains`, {
-      headers: { Authorization: `Bearer ${c.key}` },
-      cache: 'no-store',
-    })
-    if (response.status === 401 || response.status === 403) return { state: 'invalid', message: 'Penyedia email menolak kunci API.' }
-    if (!response.ok) return { state: 'error', message: `Penyedia email menjawab ${response.status}.` }
-    const payload = (await response.json().catch(() => null)) as { data?: { name?: string; status?: string }[] } | null
-    if (isPlaceholder(c.from)) return { state: 'missing', message: 'EMAIL_FROM belum diisi.' }
-    const senderDomain = c.from.split('@').pop()?.trim().toLowerCase() ?? ''
-    const verified = (payload?.data ?? []).some(d => d.name?.trim().toLowerCase() === senderDomain && d.status?.toLowerCase() === 'verified')
-    return verified
-      ? { state: 'ready', message: `Domain pengirim terverifikasi. Pengirim: ${c.from}.` }
-      : { state: 'unverified', message: `Domain pengirim ${senderDomain || '(tidak valid)'} belum terverifikasi.` }
-  } catch {
-    return { state: 'error', message: 'Tidak bisa menghubungi penyedia email.' }
-  }
+
+  return { state: 'missing', message: 'Email belum terhubung. Tambahkan kunci API email atau konfigurasi SMTP.' }
 }
