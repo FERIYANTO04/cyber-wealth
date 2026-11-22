@@ -23,6 +23,12 @@ const TASK_LABEL: Record<string, string> = {
   sales: 'Penjualan',
   finance: 'Keuangan',
   intelligence: 'Intelijen bisnis',
+  science: 'Riset penemuan',
+  patents: 'Intelijen paten',
+  engineering: 'Rekayasa sistem',
+  prototype: 'Prototipe & validasi',
+  academic: 'Kemitraan akademik',
+  transfer: 'Transfer teknologi',
 }
 
 const STATUS_TONE: Record<string, 'signal' | 'hold' | 'danger' | 'neutral'> = {
