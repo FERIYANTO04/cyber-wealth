@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { desc, eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { talentApplications } from '@/lib/db/schema'
+import { sqlClient, db } from '@/lib/db'
+import { activity } from '@/lib/db/schema'
 import { requireOwnerSession } from '@/lib/auth'
 import { notifyOwner, sendEmail } from '@/lib/email'
 import { logActivity } from '@/lib/data'
@@ -22,7 +22,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const parsed = Application.safeParse(req.body)
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Data lamaran belum lengkap.' })
     const { consent, ...data } = parsed.data
-    const [row] = await db.insert(talentApplications).values({ ...data, portfolio: data.portfolio || null }).returning()
+    const id = randomUUID()
+    const [row] = await sqlClient`
+      INSERT INTO "talent_application" ("id","name","email","role","portfolio","experience","message","status")
+      VALUES (${id},${data.name},${data.email},${data.role},${data.portfolio || null},${data.experience},${data.message},'new')
+      RETURNING *
+    `
     await logActivity({ actor: 'system', action: 'Lamaran talenta masuk', detail: `${row.name} — ${row.role}. Menunggu peninjauan owner.` })
     await notifyOwner({
       subject: `Lamaran talenta baru: ${row.role}`,
@@ -46,13 +51,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PATCH') {
     const parsed = z.object({ id: z.string().uuid(), status: z.enum(['new', 'reviewing', 'interview', 'accepted', 'rejected']) }).safeParse(req.body)
     if (!parsed.success) return res.status(400).json({ error: 'Status lamaran tidak valid.' })
-    const [row] = await db.update(talentApplications).set({ status: parsed.data.status }).where(eq(talentApplications.id, parsed.data.id)).returning()
+    const [row] = await sqlClient`UPDATE "talent_application" SET "status"=${parsed.data.status},"updated_at"=now() WHERE "id"=${parsed.data.id} RETURNING "id","name","status"`
     if (!row) return res.status(404).json({ error: 'Lamaran tidak ditemukan.' })
-    await logActivity({ actor: 'owner', action: 'Status kandidat diperbarui', detail: `${row.name} — ${parsed.data.status}.` })
+    await logActivity({ actor: 'owner', action: 'Status kandidat diperbarui', detail: `${row.name} — ${row.status}.` })
     return res.status(200).json({ ok: true })
   }
   if (req.method === 'GET') {
-    const rows = await db.select().from(talentApplications).orderBy(desc(talentApplications.createdAt)).limit(100)
+    const rows = await sqlClient`SELECT * FROM "talent_application" ORDER BY "created_at" DESC LIMIT 100`
     return res.status(200).json({ applications: rows })
   }
   res.setHeader('Allow', 'GET, POST, PATCH')
