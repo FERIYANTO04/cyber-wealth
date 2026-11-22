@@ -3,7 +3,6 @@ import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { runAutopilot, autopilotDue } from '@/lib/autopilot'
 import { logActivity } from '@/lib/data'
 import { runBillingPass } from '@/lib/billing'
-import { publishDuePosts } from '@/lib/social'
 import { isPlaceholder } from '@/lib/env'
 import { runHousekeeping } from '@/lib/housekeeping'
 import { testAi, storageStatus } from '@/lib/integrations'
@@ -80,12 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return { error: 'Pembersihan gagal; periksa log server.' }
     })
 
-    // Publishing has its own schedule and must not depend on whether the AI
-    // autopilot's slower strategy cadence is due on this particular cron tick.
-    const social = await publishDuePosts().catch((error) => {
-      console.error('[cron social]', error)
-      return { error: 'Publikasi sosial gagal; periksa log server.' }
-    })
+    // Cyber Wealth is website-first: the scheduled autopilot never publishes social posts.
 
     // Move the two approved catalogue Markdown deliverables into private object storage.
     // This runs only inside the authenticated cron, never from a public endpoint.
@@ -110,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const due = await autopilotDue()
     if (!due) {
-      return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, social, housekeeping, productFileMigration, integrations })
+      return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, housekeeping, productFileMigration, integrations })
     }
 
     const result = await runAutopilot('schedule')
