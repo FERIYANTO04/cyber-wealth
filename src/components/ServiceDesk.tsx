@@ -259,7 +259,13 @@ export function ServiceDesk({
             <div className="grid gap-stack sm:grid-cols-3">
               <Field label="Kategori">
                 <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-                  <option value="desain">Desain</option>
+                  <option value="video">Produksi & editing video</option>
+                  <option value="editing">Video editing</option>
+                  <option value="motion">Motion graphics</option>
+                  <option value="desain">Desain grafis</option>
+                  <option value="branding">Brand identity</option>
+                  <option value="social">Konten media sosial</option>
+                  <option value="ai">Produksi kreatif berbantuan AI</option>
                   <option value="website">Website</option>
                   <option value="konten">Konten</option>
                   <option value="pemasaran">Pemasaran digital</option>
