@@ -20,12 +20,12 @@ function HomePage() {
         <div className="absolute -right-24 -top-20 size-[420px] rounded-full border border-[#c5a66a]/20" /><div className="absolute -right-12 -top-8 size-[300px] rounded-full border border-[#c5a66a]/20" />
         <div className="relative grid min-h-[540px] items-end gap-12 p-7 sm:p-12 lg:grid-cols-[1.3fr_.7fr] lg:p-16">
           <div className="pb-3">
-            <p className="font-mono text-[10px] uppercase tracking-[.28em] text-[#c5a66a]">A considered approach to digital business</p>
-            <h2 className="mt-7 max-w-4xl text-5xl font-medium leading-[.98] tracking-[-.06em] text-[#f3f0e9] sm:text-6xl lg:text-[76px]">Clarity in strategy.<br/><span className="text-[#c5a66a]">Precision in execution.</span></h2>
-            <p className="mt-7 max-w-xl text-sm leading-7 text-[#aaa69e] sm:text-base">Cyber Wealth menghadirkan solusi digital, layanan kreatif, dan produk siap pakai untuk membantu pekerjaan dan bisnis berjalan lebih terarah.</p>
+            <p className="font-mono text-[10px] uppercase tracking-[.28em] text-[#c5a66a]">Layanan digital untuk bisnis Indonesia</p>
+            <h2 className="mt-7 max-w-4xl text-5xl font-medium leading-[.98] tracking-[-.06em] text-[#f3f0e9] sm:text-6xl lg:text-[76px]">Promosi bisnis lebih konsisten.<br/><span className="text-[#c5a66a]">Konten siap dijalankan.</span></h2>
+            <p className="mt-7 max-w-xl text-sm leading-7 text-[#aaa69e] sm:text-base">Bantu usaha Anda tampil konsisten di TikTok, YouTube Shorts, dan WhatsApp Business dengan kalender konten, caption promosi, serta konsep video yang siap diproduksi.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/jasa" className="inline-flex items-center gap-3 bg-[#c5a66a] px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#101010] transition hover:bg-[#dfc58f]">Explore our services <ArrowUpRight className="size-4"/></Link>
-              <Link href="/tentang" className="inline-flex items-center gap-3 border border-white/20 px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#e9e5db] hover:border-[#c5a66a] hover:text-[#c5a66a]">Discover Cyber Wealth <ArrowRight className="size-4"/></Link>
+              <Link href="/jasa/paket-konten-umkm-30-hari" className="inline-flex items-center gap-3 bg-[#c5a66a] px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#101010] transition hover:bg-[#dfc58f]">Lihat paket konten <ArrowUpRight className="size-4"/></Link>
+              <Link href="/toko" className="inline-flex items-center gap-3 border border-white/20 px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#e9e5db] hover:border-[#c5a66a] hover:text-[#c5a66a]">Lihat produk digital <ArrowRight className="size-4"/></Link>
             </div>
           </div>
           <div className="hidden border-l border-[#c5a66a]/30 pl-8 pb-4 lg:block">
@@ -40,6 +40,15 @@ function HomePage() {
         <div className="relative grid grid-cols-2 border-t border-[#c5a66a]/20 sm:grid-cols-4">
           {['Digital solutions','Creative services','Ready-to-use products','Business systems'].map((x,i)=><div key={x} className="border-r border-[#c5a66a]/15 px-5 py-5 last:border-r-0 sm:px-7"><p className="font-mono text-[9px] text-[#c5a66a]">0{i+1}</p><p className="mt-2 text-[11px] tracking-[.06em] text-[#c5c0b5]">{x}</p></div>)}
         </div>
+      </section>
+      <section className="grid gap-7 border border-[#b99a5b]/30 bg-[#101113] p-7 sm:grid-cols-[1fr_auto] sm:items-center sm:p-10">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#c5a66a]">Layanan unggulan · untuk UMKM</p>
+          <h3 className="mt-3 text-2xl font-medium tracking-tight text-[#f3f0e9]">Paket Konten UMKM 30 Hari</h3>
+          <p className="mt-3 max-w-2xl text-xs leading-6 text-[#aaa69e]">Kalender konten 30 hari, 30 caption promosi, dan 10 konsep video pendek lengkap dengan hook, naskah, storyboard, teks layar, CTA, serta hashtag. Satu kali revisi; estimasi pengerjaan 2 hari kerja setelah brief lengkap.</p>
+          <p className="mt-4 text-sm font-semibold text-[#d8bd83]">Mulai Rp149.000</p>
+        </div>
+        <Link href="/jasa/paket-konten-umkm-30-hari" className="inline-flex items-center justify-center gap-3 bg-[#c5a66a] px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#101010] transition hover:bg-[#dfc58f]">Pesan paket <ArrowUpRight className="size-4"/></Link>
       </section>
       <section className="grid gap-12 py-10 lg:grid-cols-[.8fr_1.2fr] lg:py-16">
         <div><p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#c5a66a]">What we do</p><h3 className="mt-4 max-w-md text-3xl font-medium leading-tight tracking-[-.04em] text-[#f3f0e9] sm:text-4xl">A connected ecosystem for modern work.</h3></div>
@@ -60,7 +69,7 @@ function HomePage() {
 
 const Page = HomePage as PageWithFrame
 Page.getLayout = (page) => (
-  <StoreFrame eyebrow="Cyber Wealth / Official website" title="Digital business, thoughtfully built." intent="Strategi, layanan, dan produk digital yang dirancang untuk membuat pekerjaan lebih jelas dan bisnis bergerak lebih jauh." variant="wide" description="Cyber Wealth — digital solutions, creative services, and products for modern business.">
+  <StoreFrame eyebrow="Cyber Wealth / Official website" title="Layanan konten dan digital untuk UMKM." intent="Pesan paket konten, desain, dan produk digital yang membantu usaha Anda tampil lebih konsisten." variant="wide" description="Paket konten UMKM 30 hari, layanan kreatif, dan produk digital dari Cyber Wealth.">
     {page}
   </StoreFrame>
 )
