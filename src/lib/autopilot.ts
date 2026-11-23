@@ -19,6 +19,7 @@ import {
 import { SETTINGS_ID, getFinance, getSettings } from './data'
 import { askAi, aiConfigured } from './ai'
 import { TASKS, type AutopilotTask } from './labels'
+import { inspectProductDeliverable } from './quality'
 
 /**
  * The autopilot runs as request-driven work, never as a background timer: a
@@ -878,6 +879,35 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
   } as const
   const spec = roles[task]
   const run = await startRun(spec[0], task, trigger)
+  if (task === 'quality') {
+    const publishedProducts = await db.select().from(products)
+      .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
+    const publishedServices = await db.select().from(services)
+      .where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
+    const productChecks = await Promise.all(publishedProducts.map(async (product) => ({
+      name: product.name,
+      inspection: await inspectProductDeliverable(product.fileKey, product.fileName),
+    })))
+    const productIssues = productChecks.filter((item) => !item.inspection.passed)
+    const unclearPricing = publishedServices.filter((service) => Number(service.priceFromIdr) <= 0)
+    const weakServicePages = publishedServices.filter((service) => service.summary.trim().length < 80 || service.detail.trim().length < 300)
+    const lines = [
+      'AUDIT OTOMATIS BERBASIS DATA PRODUKSI',
+      `Produk terbit diperiksa: ${publishedProducts.length}`,
+      `Produk lolos pemeriksaan integritas file: ${productChecks.length - productIssues.length}`,
+      `Produk tertahan karena masalah file/isi: ${productIssues.length}`,
+      ...productChecks.map((item) => `${item.inspection.passed ? 'LULUS' : 'TAHAN'} — ${item.name}: ${item.inspection.wordCount} kata, ${item.inspection.headingCount} bagian, ${item.inspection.byteCount} byte. ${item.inspection.issues.join(' ')}`),
+      `Layanan terbit diperiksa: ${publishedServices.length}`,
+      `Layanan tanpa harga mulai yang jelas: ${unclearPricing.length} (${unclearPricing.map((item) => item.name).join(', ') || 'tidak ada'})`,
+      `Halaman layanan dengan deskripsi/ruang lingkup pendek: ${weakServicePages.length} (${weakServicePages.map((item) => item.name).join(', ') || 'tidak ada'})`,
+      'BATAS AUDIT: pemeriksaan otomatis ini memverifikasi akses berkas, format, panjang, struktur dasar, dan placeholder. Ini bukan penilaian editorial penuh, uji hasil kreatif, atau jaminan kepuasan klien.',
+      'ATURAN: produk yang gagal pemeriksaan tidak boleh dibeli melalui checkout. Permintaan jasa tetap boleh masuk, tetapi harga final, ruang lingkup, dan tenggat harus disepakati sebelum pekerjaan dimulai.',
+    ]
+    const summary = `${publishedProducts.length} produk diperiksa: ${productChecks.length - productIssues.length} lolos integritas berkas, ${productIssues.length} perlu perbaikan; ${unclearPricing.length} dari ${publishedServices.length} layanan belum menampilkan harga mulai yang jelas.`
+    await finishRun(run.id, 'ok', summary, lines.join('\\n'), 0)
+    await noteAgent(spec[0], 'Audit kualitas deterministik selesai', summary)
+    return { summary }
+  }
   const peers = await db.select({ agentName: agentRuns.agentName, task: agentRuns.task, summary: agentRuns.summary, detail: agentRuns.detail }).from(agentRuns).where(sql`${agentRuns.status} <> 'running'`).orderBy(desc(agentRuns.startedAt)).limit(10)
   const currentRoster = await db.select({ name: agents.name, role: agents.role, mandate: agents.mandate }).from(agents).orderBy(agents.sortOrder)
   const handoff = peers.filter((row) => row.task !== task).map((row) => row.agentName + ' [' + row.task + ']: ' + (row.summary ?? '') + ' ' + (row.detail ?? '').slice(0, 300)).join('\n')
