@@ -28,6 +28,21 @@ export type AccountOrder = {
   deliverableNote: string | null
 }
 
+export type AccountService = {
+  id: string
+  code: string
+  serviceName: string
+  requestStatus: string
+  amountIdr: number
+  paymentStatus: string | null
+  invoiceUrl: string | null
+  projectCode: string | null
+  projectStatus: string | null
+  dueAt: string | null
+  deliverableUrl: string | null
+  createdAt: string
+}
+
 export type AccountSubscription = {
   planName: string
   amountIdr: number
@@ -62,11 +77,13 @@ export function AccountDesk({
   name,
   email,
   orders,
+  services,
   subscriptions,
 }: {
   name: string
   email: string
   orders: AccountOrder[]
+  services: AccountService[]
   subscriptions: AccountSubscription[]
 }) {
   const router = useRouter()
@@ -163,6 +180,53 @@ export function AccountDesk({
                 </li>
               )
             })}
+            </List>
+          </Panel>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-block">
+        <SectionHead title="Layanan & proyek" link={{ href: '/jasa', label: 'Lihat layanan' }} />
+        {services.length === 0 ? (
+          <Panel>
+            <EmptyState
+              title="Belum ada proyek layanan"
+              body="Penawaran dan proyek layanan yang dibuat menggunakan email akun ini akan tampil di sini."
+              action={<SignalLink href="/jasa">Jelajahi layanan</SignalLink>}
+            />
+          </Panel>
+        ) : (
+          <Panel>
+            <List>
+              {services.map((service) => {
+                const delivered = service.projectStatus === 'delivered'
+                const paid = service.paymentStatus === 'paid'
+                const stage = delivered ? 'Selesai' : service.projectStatus ? service.projectStatus.replaceAll('_', ' ') : service.requestStatus.replaceAll('_', ' ')
+                return (
+                  <li key={service.id} className="flex flex-col gap-2 px-page py-block">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="heading-tight text-[0.9375rem]">{service.serviceName}</p>
+                        <p className="text-xs text-ink-quiet"><span className="font-mono">{service.projectCode ?? service.code}</span> · {dateTime(service.createdAt)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {service.amountIdr > 0 && <span className="figure text-sm">{money(service.amountIdr)}</span>}
+                        <Badge tone={delivered || paid ? 'signal' : service.paymentStatus === 'expired' ? 'danger' : 'hold'}>{delivered ? 'Selesai' : paid ? 'Lunas' : service.paymentStatus === 'expired' ? 'Tagihan kedaluwarsa' : stage}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {service.requestStatus === 'proposal_sent' && !paid && (
+                        <SignalLink href={`/layanan/pembayaran/${service.id}`}>Tinjau penawaran & bayar</SignalLink>
+                      )}
+                      {service.invoiceUrl && service.paymentStatus === 'pending' && (
+                        <SignalLink href={service.invoiceUrl}>Lanjutkan pembayaran</SignalLink>
+                      )}
+                      {service.dueAt && !delivered && <span className="text-xs text-ink-quiet">Target selesai: {dateTime(service.dueAt)}</span>}
+                      {service.deliverableUrl && delivered && <a href={service.deliverableUrl} target="_blank" rel="noreferrer"><Button size="sm"><Download className="size-3.5" aria-hidden="true" />Buka hasil akhir</Button></a>}
+                    </div>
+                  </li>
+                )
+              })}
             </List>
           </Panel>
         )}
