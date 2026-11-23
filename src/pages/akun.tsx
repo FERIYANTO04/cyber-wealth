@@ -1,8 +1,8 @@
 import type { GetServerSideProps } from 'next'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { AccountFrame } from '@/components/AccountFrame'
-import { AccountDesk, type AccountOrder, type AccountSubscription } from '@/components/AccountDesk'
-import { db } from '@/lib/db'
+import { AccountDesk, type AccountOrder, type AccountService, type AccountSubscription } from '@/components/AccountDesk'
+import { db, sqlClient } from '@/lib/db'
 import { customerAccounts, orders, products, subscriptions } from '@/lib/db/schema'
 import { requireCustomerPage } from '@/lib/customer-auth'
 import { fileUrl } from '@/lib/storage'
@@ -71,6 +71,35 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     .orderBy(desc(subscriptions.createdAt))
     .limit(20)
 
+  const serviceRows = await sqlClient`
+    SELECT sr.id, sr.code, sr.service_name, sr.status AS request_status,
+      sr.created_at, sr.proposal_amount_idr,
+      sp.status AS payment_status, sp.invoice_url,
+      cp.project_code, cp.status AS project_status, cp.due_at, cp.deliverable_url
+    FROM service_request sr
+    LEFT JOIN LATERAL (
+      SELECT status, invoice_url FROM service_payment
+      WHERE service_request_id=sr.id ORDER BY created_at DESC LIMIT 1
+    ) sp ON true
+    LEFT JOIN creative_project cp ON cp.service_request_id=sr.id
+    WHERE lower(sr.email)=${email} AND sr.status <> 'lost'
+    ORDER BY sr.created_at DESC LIMIT 50
+  `
+  const accountServices: AccountService[] = serviceRows.map((row) => ({
+    id: row.id,
+    code: row.code,
+    serviceName: row.service_name,
+    requestStatus: row.request_status,
+    amountIdr: Number(row.proposal_amount_idr ?? 0),
+    paymentStatus: row.payment_status ?? null,
+    invoiceUrl: row.invoice_url ?? null,
+    projectCode: row.project_code ?? null,
+    projectStatus: row.project_status ?? null,
+    dueAt: row.due_at ? new Date(row.due_at).toISOString() : null,
+    deliverableUrl: row.project_status === 'delivered' ? row.deliverable_url ?? null : null,
+    createdAt: new Date(row.created_at).toISOString(),
+  }))
+
   const accountSubscriptions: AccountSubscription[] = subRows.map((row) => ({
     planName: row.planName,
     amountIdr: Number(row.amountIdr),
@@ -86,6 +115,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       name: account.name,
       email: account.email,
       orders: accountOrders,
+      services: accountServices,
       subscriptions: accountSubscriptions,
     },
   }
@@ -95,6 +125,7 @@ function AkunPage(props: {
   name: string
   email: string
   orders: AccountOrder[]
+  services: AccountService[]
   subscriptions: AccountSubscription[]
 }) {
   return <AccountDesk {...props} />
@@ -104,6 +135,7 @@ const Page = AkunPage as PageWithFrame<{
   name: string
   email: string
   orders: AccountOrder[]
+  services: AccountService[]
   subscriptions: AccountSubscription[]
 }>
 Page.getLayout = (page) => (
