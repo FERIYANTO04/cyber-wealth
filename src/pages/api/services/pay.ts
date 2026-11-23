@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transaction_details: { order_id: code, gross_amount: amount },
         customer_details: { first_name: request.name, email: request.email },
         item_details: [{ id: request.service_id ?? request.id, price: amount, quantity: 1, name: String(request.service_name).slice(0,50) }],
-        callbacks: { finish: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cyber-wealth-web-production.up.railway.app') + '/layanan/pembayaran/' + code },
+        callbacks: { finish: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cyber-wealth-web-production.up.railway.app') + '/layanan/pembayaran/' + request.id + '?status=returned' },
       }),
       signal: AbortSignal.timeout(15000),
     })
