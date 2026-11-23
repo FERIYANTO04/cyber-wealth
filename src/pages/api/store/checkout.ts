@@ -5,6 +5,7 @@ import { activity, orders, products } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { orderCode } from '@/lib/revenue'
 import { sendOrderRecordedEmail } from '@/lib/saas'
+import { inspectProductDeliverable } from '@/lib/quality'
 
 const Body = z.object({
   slug: z.string().trim().min(1).max(120),
@@ -61,8 +62,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const product = rows[0]
   if (!product) return res.status(404).json({ error: 'Produk tidak ditemukan atau belum dijual.' })
 
-  if (!product.fileKey || /^https?:\/\//i.test(product.fileKey) || /(?:draft|draf)/i.test(product.fileName ?? '')) {
-    return res.status(409).json({ error: 'Berkas produk belum tersimpan secara privat atau masih dalam pemeriksaan.' })
+  const inspection = await inspectProductDeliverable(product.fileKey, product.fileName)
+  if (!inspection.passed) {
+    return res.status(409).json({
+      error: 'Produk sedang ditahan pemeriksaan kualitas. Silakan coba kembali setelah berkas diperbaiki.',
+      checks: inspection.issues,
+    })
   }
 
   const code = orderCode()
