@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { ArrowUpRight, MessageCircle } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 
 export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'reading', description, children }: {
   title: string; eyebrow?: string; intent?: string; actions?: ReactNode
@@ -40,13 +40,12 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
             {links.map(({href,label}) => <Link key={href} href={href} className="text-[11px] tracking-[.08em] text-[#aaa69e] transition hover:text-[#d8bd83]">{label}</Link>)}
           </nav>
           <div className="flex shrink-0 items-center gap-3">
-            <a href="https://wa.me/6285934541989?text=Halo%20Cyber%20Wealth%2C%20saya%20ingin%20bertanya%20tentang%20layanan%20dan%20produk." target="_blank" rel="noreferrer" className="hidden items-center gap-2 border border-[#b99a5b]/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[.16em] text-[#d8bd83] transition hover:bg-[#b99a5b] hover:text-[#101010] sm:inline-flex"><MessageCircle className="size-3.5"/> WhatsApp kami</a>
+            <Link href="/kontak" className="hidden items-center gap-2 border border-[#b99a5b]/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[.16em] text-[#d8bd83] transition hover:bg-[#b99a5b] hover:text-[#101010] sm:inline-flex">Konsultasi</Link>
             <Link href="/masuk" className="text-[10px] uppercase tracking-[.16em] text-[#aaa69e] hover:text-white">Masuk</Link>
           </div>
         </div>
         <nav className="flex gap-6 overflow-x-auto border-t border-white/[.06] px-5 py-3 text-[10px] tracking-[.1em] text-[#aaa69e] lg:hidden sm:px-8">
           {links.map(({href,label}) => <Link key={href} href={href} className="shrink-0 hover:text-[#d8bd83]">{label}</Link>)}
-          <a href="https://wa.me/6285934541989?text=Halo%20Cyber%20Wealth%2C%20saya%20ingin%20bertanya%20tentang%20layanan%20dan%20produk." target="_blank" rel="noreferrer" className="shrink-0 text-[#d8bd83]">WhatsApp</a>
         </nav>
       </header>
       <main className="mx-auto w-full max-w-[1440px] px-5 pb-24 pt-9 sm:px-8 sm:pt-12 lg:px-12">
@@ -61,7 +60,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
         <div className="mx-auto grid max-w-[1440px] gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr] lg:px-12">
           <div><div className="text-xs font-semibold tracking-[.2em]">CYBER WEALTH</div><p className="mt-3 max-w-sm text-xs leading-6 text-[#969187]">Membangun pengalaman digital yang terarah, fungsional, dan dirancang untuk mendukung perkembangan bisnis.</p></div>
           <div><p className="text-[10px] uppercase tracking-[.2em] text-[#c5a66a]">Explore</p><div className="mt-4 grid gap-3 text-xs text-[#aaa69e]"><Link href="/tentang">Tentang perusahaan</Link><Link href="/jasa">Layanan digital</Link><Link href="/toko">Produk digital</Link><Link href="/harga">Paket & harga</Link></div></div>
-          <div><p className="text-[10px] uppercase tracking-[.2em] text-[#c5a66a]">Information</p><div className="mt-4 grid gap-3 text-xs text-[#aaa69e]"><Link href="/faq">Pusat bantuan</Link><Link href="/karier">Karier & kolaborasi</Link><Link href="/kontak">Formulir kontak</Link><a href="https://wa.me/6285934541989?text=Halo%20Cyber%20Wealth%2C%20saya%20ingin%20bertanya%20tentang%20layanan%20dan%20produk." target="_blank" rel="noreferrer">WhatsApp perusahaan</a><Link href="/privasi">Kebijakan privasi</Link><Link href="/syarat">Syarat layanan</Link></div></div>
+          <div><p className="text-[10px] uppercase tracking-[.2em] text-[#c5a66a]">Information</p><div className="mt-4 grid gap-3 text-xs text-[#aaa69e]"><Link href="/faq">Pusat bantuan</Link><Link href="/karier">Karier & kolaborasi</Link><Link href="/kontak">Formulir kontak</Link><Link href="/privasi">Kebijakan privasi</Link><Link href="/syarat">Syarat layanan</Link></div></div>
         </div>
         <div className="border-t border-white/[.06]"><div className="mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 px-5 py-5 text-[10px] tracking-[.08em] text-[#77736b] sm:px-8 lg:px-12"><span>© 2026 CYBER WEALTH. ALL RIGHTS RESERVED.</span><span>DESIGNED WITH INTENTION.</span></div></div>
       </footer>
