@@ -26,7 +26,7 @@ function limited(ip: string): boolean {
   return entry.n > 5
 }
 
-/** Paid plans stay disabled until recurring Paddle checkout and webhooks are ready. */
+/** Paid plans stay disabled until recurring payments are implemented and verified through Midtrans. */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
 
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const amount = Number(plan.priceIdr)
   if (amount > 0) {
     return res.status(503).json({
-      error: 'Pembayaran langganan berbayar belum tersedia melalui Paddle. Pendaftaran tidak dibuat dan tidak ada pembayaran yang diminta.',
+      error: 'Pembayaran langganan berbayar melalui Midtrans belum diaktifkan. Pendaftaran tidak dibuat dan tidak ada pembayaran yang diminta.',
     })
   }
 
