@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { activity, orders, servicePayments, serviceRequests, transactions } from '@/lib/db/schema'
+import { db, sqlClient } from '@/lib/db'
+import { activity, orders } from '@/lib/db/schema'
 import { settlePaidOrder } from '@/lib/revenue'
 
 type Notification = { order_id?: string; transaction_id?: string }
@@ -20,16 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     eq(orders.provider, 'midtrans'),
     eq(orders.dataSource, 'live')
   )).limit(1)
+  const [servicePayment] = order ? [] : await sqlClient`SELECT * FROM service_payment
+    WHERE code=${orderCode} AND provider='midtrans' AND data_source='live' LIMIT 1`
 
-  let servicePayment: typeof servicePayments.$inferSelect | undefined
-  if (!order) {
-    const [found] = await db.select().from(servicePayments).where(and(
-      eq(servicePayments.code, orderCode),
-      eq(servicePayments.provider, 'midtrans'),
-      eq(servicePayments.dataSource, 'live')
-    )).limit(1)
-    servicePayment = found
-  }
   if (!order && !servicePayment) return res.status(404).json({ error: 'Order not found' })
   if (order?.status === 'paid' || servicePayment?.status === 'paid') {
     return res.status(200).json({ received: true, duplicate: true })
@@ -59,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (status.order_id !== orderCode) return res.status(400).json({ error: 'Transaction reference mismatch' })
 
     const paidAmount = Number(status.gross_amount)
-    const expectedAmount = Number(order?.amountIdr ?? servicePayment?.amountIdr)
+    const expectedAmount = Number(order?.amountIdr ?? servicePayment?.amount_idr)
     if (!Number.isFinite(paidAmount) || paidAmount !== expectedAmount) {
       return res.status(400).json({ error: 'Payment amount mismatch' })
     }
@@ -78,37 +72,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (isPaid && servicePayment) {
-      const [settled] = await db.update(servicePayments).set({
-        status: 'paid',
-        paidAt: new Date(),
-        invoiceId: status.transaction_id ?? notification.transaction_id ?? servicePayment.invoiceId,
-      }).where(and(eq(servicePayments.id, servicePayment.id), eq(servicePayments.status, 'pending'))).returning()
-
-      if (!settled) return res.status(200).json({ received: true, duplicate: true })
-      await db.update(serviceRequests).set({ status: 'won', updatedAt: new Date() })
-        .where(and(eq(serviceRequests.id, servicePayment.serviceRequestId), eq(serviceRequests.status, 'proposal_sent')))
-      await db.insert(transactions).values({
-        kind: 'revenue',
-        category: 'Layanan digital',
-        description: 'Pembayaran layanan ' + servicePayment.code,
-        amountIdr: paidAmount,
-        dataSource: 'live',
+      let settled = false
+      await sqlClient.begin(async (tx) => {
+        const updated = await tx`UPDATE service_payment SET status='paid', paid_at=now(),
+          invoice_id=${status.transaction_id ?? notification.transaction_id ?? servicePayment.invoice_id}
+          WHERE id=${servicePayment.id} AND status='pending' RETURNING id`
+        if (updated.length === 0) return
+        await tx`UPDATE service_request SET status='won', updated_at=now()
+          WHERE id=${servicePayment.service_request_id} AND status='proposal_sent'`
+        await tx`INSERT INTO "transaction" (id,kind,category,description,amount_idr,data_source)
+          VALUES (${randomUUID()},'revenue','Layanan digital',${'Pembayaran layanan '+servicePayment.code},${paidAmount},'live')`
+        await tx`INSERT INTO activity_entry (id,actor,action,detail,data_source)
+          VALUES (${randomUUID()},'system','Pembayaran layanan terverifikasi',
+            ${servicePayment.code+' — '+servicePayment.buyer_email+'. Dikonfirmasi oleh Midtrans; proyek kini boleh dijadwalkan.'},'live')`
+        settled = true
       })
-      await db.insert(activity).values({
-        actor: 'system',
-        action: 'Pembayaran layanan terverifikasi',
-        detail: servicePayment.code + ' — ' + servicePayment.buyerEmail + '. Dikonfirmasi oleh Midtrans; proyek kini boleh dijadwalkan.',
-        dataSource: 'live',
-      })
-      return res.status(200).json({ received: true, settled: true, type: 'service-payment' })
+      return res.status(200).json({ received: true, settled, type: 'service-payment' })
     }
 
     if (['expire', 'cancel', 'deny'].includes(status.transaction_status ?? '')) {
       if (order) {
         await db.update(orders).set({ status: 'expired' }).where(and(eq(orders.id, order.id), eq(orders.status, 'pending')))
       } else if (servicePayment) {
-        await db.update(servicePayments).set({ status: 'expired' })
-          .where(and(eq(servicePayments.id, servicePayment.id), eq(servicePayments.status, 'pending')))
+        await sqlClient`UPDATE service_payment SET status='expired' WHERE id=${servicePayment.id} AND status='pending'`
       }
     }
     return res.status(200).json({ received: true, settled: false, transactionStatus: status.transaction_status ?? 'unknown' })
