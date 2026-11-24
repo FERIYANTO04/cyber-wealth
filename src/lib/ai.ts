@@ -168,9 +168,20 @@ export async function chatWithAi(args: {
 
   if (!FALLBACK_ENABLED || !canFailOver(result.reason)) return result
 
-  // Kiosapi is already configured for this company and offers free models with
-  // a daily request quota. Try it before the optional Neon/Groq alternate route.
   const fallbackProviders: Provider[] = []
+
+  // First try a different Groq model: it has a separate model limit and a
+  // higher request-rate ceiling than the free Kiosapi tier.
+  if (fallbackKey && FALLBACK_MODEL !== PRIMARY_MODEL) {
+    fallbackProviders.push({
+      baseUrl: FALLBACK_BASE_URL,
+      model: FALLBACK_MODEL,
+      key: fallbackKey,
+      label: 'Groq model cadangan',
+    })
+  }
+
+  // Kiosapi remains a free third route when its configured key is valid.
   const kiosapiKey = (process.env.KIOSAPI_API_KEY || '').trim()
   if (kiosapiKey) {
     fallbackProviders.push({
@@ -178,17 +189,6 @@ export async function chatWithAi(args: {
       model: process.env.AI_KIOSAPI_FALLBACK_MODEL || 'google/gemma-4-26b',
       key: kiosapiKey,
       label: 'Kiosapi gratis',
-    })
-  }
-
-  // Keep a different Groq model as a zero-cost fallback. Model-specific
-  // limits can differ, so GPT-OSS 20B can still answer when 120B is throttled.
-  if (fallbackKey && FALLBACK_MODEL !== PRIMARY_MODEL) {
-    fallbackProviders.push({
-      baseUrl: FALLBACK_BASE_URL,
-      model: FALLBACK_MODEL,
-      key: fallbackKey,
-      label: 'Groq model cadangan',
     })
   }
 
