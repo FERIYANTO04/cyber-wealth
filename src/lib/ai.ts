@@ -172,7 +172,7 @@ export async function chatWithAi(args: {
   // a daily request quota. Try it before the optional Neon/Groq alternate route.
   const fallbackProviders: Provider[] = []
   const kiosapiKey = (process.env.KIOSAPI_API_KEY || '').trim()
-  if (kiosapiKey && !isPlaceholder(kiosapiKey)) {
+  if (kiosapiKey) {
     fallbackProviders.push({
       baseUrl: 'https://api.kiosapi.id/v1',
       model: process.env.AI_KIOSAPI_FALLBACK_MODEL || 'google/gemma-4-26b',
