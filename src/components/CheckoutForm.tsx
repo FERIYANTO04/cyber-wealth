@@ -24,10 +24,6 @@ export function CheckoutForm({ slug, priceIdr }: { slug: string; priceIdr: numbe
         body: JSON.stringify({ slug, name, email }),
       })
       const data = await response.json().catch(() => ({}))
-      if (data.token && !response.ok) {
-        router.push(`/pesanan/${data.token}`)
-        return
-      }
       if (!response.ok) {
         setError(data.error ?? 'Pesanan tidak dapat dibuat. Coba lagi.')
         return
@@ -40,8 +36,7 @@ export function CheckoutForm({ slug, priceIdr }: { slug: string; priceIdr: numbe
         window.location.assign(data.paymentUrl)
         return
       }
-      setNote('Pesanan dibuat. Buka halaman pesanan untuk melihat metode pembayaran.')
-      router.push(`/pesanan/${data.token}`)
+      setError('Tautan pembayaran belum tersedia. Pesanan tidak dilanjutkan. Silakan coba kembali nanti.')
     } catch {
       setError('Koneksi terputus. Coba lagi.')
     } finally {
@@ -81,7 +76,7 @@ export function CheckoutForm({ slug, priceIdr }: { slug: string; priceIdr: numbe
         {!busy && <ArrowRight className="size-4" aria-hidden="true" />}
       </Button>
       <p className="text-xs leading-relaxed text-ink-quiet">
-        Metode pembayaran akan ditampilkan setelah pesanan dibuat. Produk dikirim setelah pembayaran terverifikasi.
+        Pembayaran diproses melalui gerbang pembayaran resmi. Produk dikirim setelah pembayaran terverifikasi.
       </p>
     </form>
   )
