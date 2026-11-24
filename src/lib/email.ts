@@ -235,7 +235,8 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
       if (isPlaceholder(c.from)) {
         return { state: 'missing', message: 'Kunci API email valid. EMAIL_FROM belum diisi dengan alamat pada domain pengirim yang terverifikasi.' }
       }
-      const senderDomain = c.from.split('@').pop()?.trim().toLowerCase() ?? ''
+      const senderAddress = c.from.match(/<([^>]+)>/)?.[1] ?? c.from
+      const senderDomain = senderAddress.split('@').pop()?.trim().toLowerCase() ?? ''
       const verified = (payload?.data ?? []).some(d => d.name?.trim().toLowerCase() === senderDomain && d.status?.toLowerCase() === 'verified')
       return verified
         ? { state: 'ready', message: `Domain pengirim terverifikasi. Pengirim: ${c.from}.` }
@@ -260,7 +261,8 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
           })
           if (response.ok) {
             const payload = (await response.json().catch(() => null)) as { data?: { name?: string; status?: string }[] } | null
-            const senderDomain = c.from.split('@').pop()?.trim().toLowerCase() ?? ''
+            const senderAddress = c.from.match(/<([^>]+)>/)?.[1] ?? c.from
+            const senderDomain = senderAddress.split('@').pop()?.trim().toLowerCase() ?? ''
             const verified = (payload?.data ?? []).some(d => d.name?.trim().toLowerCase() === senderDomain && d.status?.toLowerCase() === 'verified')
             if (verified) return { state: 'ready', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); Resend domain terverifikasi dan siap menjadi jalur cadangan untuk ${c.from}.` }
             return { state: 'unverified', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); domain Resend ${senderDomain || '(tidak valid)'} belum terverifikasi.` }
