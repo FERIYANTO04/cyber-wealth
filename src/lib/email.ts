@@ -348,14 +348,35 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
             const payload = (await response.json().catch(() => null)) as { data?: { id?: string; name?: string; status?: string }[] } | null
             const senderAddress = c.from.match(/<([^>]+)>/)?.[1] ?? c.from
             const senderDomain = senderAddress.split('@').pop()?.trim().toLowerCase() ?? ''
-            const domain = (payload?.data ?? []).find(d => d.name?.trim().toLowerCase() === senderDomain)
+            let domain = (payload?.data ?? []).find(d => d.name?.trim().toLowerCase() === senderDomain)
+            if (!domain && senderDomain) {
+              try {
+                const createResponse = await fetch(`${c.baseUrl}/domains`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
+                  body: JSON.stringify({ name: senderDomain, region: 'us-east-1' }),
+                  cache: 'no-store',
+                  signal: AbortSignal.timeout(10000),
+                })
+                const created = await createResponse.json().catch(() => null) as { id?: string; name?: string; status?: string; message?: string; data?: { id?: string; name?: string; status?: string } } | null
+                const createdDomain = created?.data ?? created
+                if (createResponse.ok && createdDomain?.id) {
+                  domain = { id: createdDomain.id, name: createdDomain.name ?? senderDomain, status: createdDomain.status }
+                } else {
+                  dnsHint = ' Resend gagal mendaftarkan domain (HTTP ' + createResponse.status + '): ' + String(created?.message ?? 'periksa konfigurasi domain di Resend').slice(0, 120)
+                }
+              } catch (createError) {
+                const detail = createError instanceof Error ? createError.message : 'timeout'
+                dnsHint = ' Gagal mendaftarkan domain ke Resend: ' + detail.slice(0, 120)
+              }
+            }
             const verified = domain?.status?.toLowerCase() === 'verified'
             if (verified) return { state: 'ready', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); Resend domain terverifikasi dan siap menjadi jalur cadangan untuk ${c.from}.` }
-            let dnsHint = ''
+            if (!dnsHint) dnsHint = ''
             if (!domain) {
-              dnsHint = ' Domain tidak ditemukan dalam daftar Resend.'
+              dnsHint += ' Domain tidak ditemukan dalam daftar Resend.'
             } else if (!domain.id) {
-              dnsHint = ' Resend tidak mengembalikan ID domain.'
+              dnsHint += ' Resend tidak mengembalikan ID domain.'
             } else {
               try {
                 const detailResponse = await fetch(`${c.baseUrl}/domains/${encodeURIComponent(domain.id)}`, {
