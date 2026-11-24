@@ -54,7 +54,7 @@ async function finishRun(
   await db
     .update(agentRuns)
     .set({ status, summary, detail, itemsCreated, finishedAt: new Date() })
-    .where(eq(agentRuns.id, id))
+    .where(and(eq(agentRuns.id, id), eq(agentRuns.status, 'running')))
 }
 
 async function noteAgent(agentRole: string, action: string, detail: string) {
@@ -1203,10 +1203,34 @@ export async function getLastRun() {
 export async function autopilotDue(): Promise<boolean> {
   const current = await getSettings()
   if (current.aiPaused) return false
+
+  // Recover a request-driven agent left running after a crashed/502 web request.
+  // The app does not run background work after its response, so a 10-minute
+  // running record is stale and must not block the next complete cycle.
+  const activeRuns = await db.select().from(agentRuns)
+    .where(eq(agentRuns.status, 'running'))
+    .orderBy(asc(agentRuns.startedAt))
+  if (activeRuns.length) {
+    const now = Date.now()
+    const staleRuns = activeRuns.filter(run => now - run.startedAt.getTime() >= 10 * 60 * 1000)
+    if (staleRuns.length === 0) return false
+    for (const run of staleRuns) {
+      await db.update(agentRuns)
+        .set({
+          status: 'failed',
+          summary: 'Run otomatis dihentikan karena tidak selesai dalam 10 menit.',
+          detail: 'Permintaan server sebelumnya terputus atau macet. Tugas akan dicoba kembali pada siklus autopilot berikutnya.',
+          finishedAt: new Date(),
+        })
+        .where(and(eq(agentRuns.id, run.id), eq(agentRuns.status, 'running')))
+    }
+    return true
+  }
+
   const last = await getLastRun()
   if (!last) return true
-  // The Railway cron normally runs every six hours. A configurable guard also
-  // permits an owner-approved immediate cycle without rewriting the run history.
+  // The Railway cron normally runs every five hours. A configurable guard
+  // limits completed cycles while allowing a recovered stale run to retry now.
   const configuredHours = Number(process.env.AUTOPILOT_MIN_INTERVAL_HOURS ?? 5)
   const intervalHours = Number.isFinite(configuredHours) && configuredHours >= 1
     ? Math.min(configuredHours, 24)
