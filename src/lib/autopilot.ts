@@ -1230,9 +1230,19 @@ export async function autopilotDue(): Promise<boolean> {
 
   const last = await getLastRun()
   if (!last) return true
-  // Retry a failed cycle after 30 minutes; a healthy completed cycle uses the
-  // normal interval. This avoids leaving the company idle for five hours after
-  // a transient provider or network failure.
+  // A cycle may finish with a successful final agent after earlier specialists
+  // failed. Treat nearby failures as a partial-cycle failure and retry after
+  // 30 minutes instead of waiting the full five-hour healthy-cycle interval.
+  const [latestFailure] = await db.select().from(agentRuns)
+    .where(eq(agentRuns.status, 'failed'))
+    .orderBy(desc(agentRuns.startedAt))
+    .limit(1)
+  if (
+    latestFailure &&
+    latestFailure.startedAt.getTime() >= last.startedAt.getTime() - 15 * 60 * 1000
+  ) {
+    return Date.now() - latestFailure.startedAt.getTime() > 30 * 60 * 1000
+  }
   if (last.status === 'failed') {
     return Date.now() - last.startedAt.getTime() > 30 * 60 * 1000
   }
