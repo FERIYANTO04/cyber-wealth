@@ -34,9 +34,8 @@ function apiConfigured() {
 }
 
 export function emailConfigured(): boolean {
-  // Prefer the transactional API whenever its key exists. Do not silently
-  // fall back to a broken personal Gmail SMTP account when sender setup is incomplete.
-  return apiKeyConfigured() ? apiConfigured() : smtpConfigured()
+  // Prefer the configured Gmail SMTP mailbox; use the API only when SMTP is absent.
+  return smtpConfigured() || apiConfigured()
 }
 
 export type EmailInput = {
@@ -145,7 +144,7 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
   if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
     status = 'failed'
     detail = 'Alamat email penerima tidak valid.'
-  } else if (apiKeyConfigured() && !apiConfigured()) {
+  } else if (!smtpConfigured() && apiKeyConfigured() && !apiConfigured()) {
     status = 'queued'
     detail = 'Kunci API email tersedia, tetapi EMAIL_FROM belum diatur ke alamat pada domain pengirim yang sudah diverifikasi.'
   } else if (!emailConfigured()) {
@@ -153,7 +152,7 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
     detail = 'Email belum terkirim. Penyedia email belum dikonfigurasi.'
   } else {
     try {
-      if (apiConfigured()) {
+      if (!smtpConfigured() && apiConfigured()) {
         const response = await fetch(`${c.baseUrl}/emails`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
@@ -213,7 +212,7 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
 
   // Check the transactional API first. The API key is already provisioned in
   // Railway; this makes Gmail SMTP irrelevant unless no API key exists.
-  if (apiKeyConfigured()) {
+  if (!smtpConfigured() && apiKeyConfigured()) {
     try {
       const response = await fetch(`${c.baseUrl}/domains`, {
         headers: { Authorization: `Bearer ${c.key}` },
