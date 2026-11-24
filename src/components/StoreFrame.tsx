@@ -25,7 +25,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
     <div data-frame="store" data-frame-variant={variant} className="min-h-screen bg-[#080b11] text-[#edf2fa]">
       <Head>
         <title>{title} — Cyber Wealth</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=1280" />
         <meta name="theme-color" content="#080b11" />
         <meta name="description" content={description ?? intent ?? 'Cyber Wealth — digital business solutions'} />
       </Head>
