@@ -187,7 +187,7 @@ export async function chatWithAi(args: {
   if (!fallbackProvider) return result
   const fallback = await requestProvider(fallbackProvider, governedArgs)
   if (fallback.ok) return fallback
-  return { ok: false, reason: `${result.reason} Jalur cadangan juga gagal: `${fallback.reason}` }
+  return { ok: false, reason: result.reason + ' Jalur cadangan juga gagal: ' + fallback.reason }
 }
 
 export async function askAi(args: { system: string; prompt: string; maxTokens?: number }): Promise<AiOutcome> {
