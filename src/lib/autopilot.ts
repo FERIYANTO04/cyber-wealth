@@ -88,6 +88,25 @@ async function runCeo(trigger: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(services)
     .where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
+  const [unpricedServices] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(services)
+    .where(and(
+      eq(services.status, 'published'),
+      eq(services.dataSource, 'live'),
+      sql`coalesce(${services.priceFromIdr}, 0) <= 0`
+    ))
+  const paymentConfigured = Boolean(
+    (process.env.MIDTRANS_SERVER_KEY && process.env.MIDTRANS_SERVER_KEY.trim()) ||
+    (process.env.BANK_NAME && process.env.BANK_NAME.trim() &&
+      process.env.BANK_ACCOUNT_NAME && process.env.BANK_ACCOUNT_NAME.trim() &&
+      process.env.BANK_ACCOUNT_NUMBER && process.env.BANK_ACCOUNT_NUMBER.trim())
+  )
+  const emailConfigured = Boolean(
+    (process.env.EMAIL_API_KEY && process.env.EMAIL_API_KEY.trim()) ||
+    (process.env.SMTP_USER && process.env.SMTP_USER.trim() &&
+      process.env.SMTP_APP_PASSWORD && process.env.SMTP_APP_PASSWORD.trim())
+  )
   const [liveProducts] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(products)
@@ -130,6 +149,9 @@ async function runCeo(trigger: string) {
   if ((liveProducts?.n ?? 0) === 0) blockers.push('belum ada produk dengan berkas privat yang siap dijual')
   if ((draftProducts?.n ?? 0) > 0) blockers.push(`${draftProducts.n} produk masih berstatus draf dan belum siap dijual`)
   if ((publishedNeedsReview?.n ?? 0) > 0) blockers.push(`${publishedNeedsReview.n} produk berstatus terbit tetapi berkasnya belum layak jual (belum ada file atau nama berkas masih DRAF)`)
+  if ((unpricedServices?.n ?? 0) > 0) blockers.push(`${unpricedServices.n} layanan terbit belum memiliki harga mulai yang jelas`)
+  if (!paymentConfigured) blockers.push('belum ada jalur pembayaran aktif yang terkonfigurasi (Midtrans atau transfer bank lengkap)')
+  if (!emailConfigured) blockers.push('email transaksi/verifikasi belum aktif; penjualan manual masih mungkin tetapi verifikasi otomatis terhambat')
 
   const facts = [
     `Pesanan lunas: ${paidOrders?.n ?? 0}`,
@@ -138,6 +160,9 @@ async function runCeo(trigger: string) {
     `Permintaan jasa baru: ${newJobs?.n ?? 0}`,
     `Produk berstatus terbit: ${publishedProducts?.n ?? 0}`,
     `Layanan berstatus terbit: ${publishedServices?.n ?? 0}`,
+    `Layanan terbit tanpa harga mulai: ${unpricedServices?.n ?? 0}`,
+    `Jalur pembayaran terkonfigurasi: ${paymentConfigured ? 'ya' : 'tidak'}`,
+    `Email transaksi/verifikasi terkonfigurasi: ${emailConfigured ? 'ya' : 'tidak'}`,
     `Produk siap dijual (berkas privat dan nama berkas lolos pemeriksaan): ${liveProducts?.n ?? 0}`,
     `Produk draf: ${draftProducts?.n ?? 0}`,
     `Produk terbit yang berkasnya perlu diperiksa: ${publishedNeedsReview?.n ?? 0}`,
