@@ -138,7 +138,7 @@ async function gmailSmtp(input?: EmailInput, portOverride?: number): Promise<voi
   try {
     if (port === 465) {
       await new Promise<void>((resolve, reject) => {
-        socket.once('secureConnect', resolve)
+        (socket as TLSSocket).once('secureConnect', resolve)
         socket.once('error', reject)
       })
     } else {
