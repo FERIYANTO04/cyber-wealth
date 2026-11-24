@@ -19,7 +19,7 @@ const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || 'openai/gpt-oss-120b'
 const FALLBACK_ENABLED = true
 const GATEWAY_BASE_URL = NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : ''
 const GATEWAY_KEY = isPlaceholder(process.env.NEON_AI_GATEWAY_TOKEN) ? '' : (process.env.NEON_AI_GATEWAY_TOKEN || '')
-const GATEWAY_MODEL = process.env.AI_GATEWAY_MODEL || 'openai/gpt-oss-120b'
+const GATEWAY_MODEL = process.env.AI_GATEWAY_MODEL || 'gpt-5-mini'
 
 export function aiConfig() {
   return { baseUrl: PRIMARY_BASE_URL, model: PRIMARY_MODEL, key: PRIMARY_KEY }
