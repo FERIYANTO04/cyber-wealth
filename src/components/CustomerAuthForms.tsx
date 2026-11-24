@@ -10,6 +10,7 @@ export function CustomerAuthForm({ mode }: { mode: 'masuk' | 'daftar' }) {
   const [notice, setNotice] = useState<string | null>(null)
   const [needsVerification, setNeedsVerification] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [resending, setResending] = useState(false)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -49,14 +50,26 @@ export function CustomerAuthForm({ mode }: { mode: 'masuk' | 'daftar' }) {
   }
 
   async function resend() {
+    if (resending) return
     setError(null)
-    const response = await fetch('/api/customer/resend-verification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: form.email }),
-    })
-    const data = await response.json().catch(() => ({}))
-    setNotice(data.message ?? 'Permintaan dikirim.')
+    setResending(true)
+    try {
+      const response = await fetch('/api/customer/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(data.error ?? 'Tautan konfirmasi belum bisa dikirim. Coba lagi.')
+        return
+      }
+      setNotice(data.message ?? 'Permintaan diterima.')
+    } catch {
+      setError('Koneksi terputus. Periksa jaringan lalu coba lagi.')
+    } finally {
+      setResending(false)
+    }
   }
 
   return (
@@ -116,8 +129,8 @@ export function CustomerAuthForm({ mode }: { mode: 'masuk' | 'daftar' }) {
         </form>
 
         {needsVerification && (
-          <Button variant="secondary" onClick={resend}>
-            Kirim ulang tautan konfirmasi
+          <Button variant="secondary" onClick={resend} disabled={resending}>
+            {resending ? 'Mengirim…' : 'Kirim ulang tautan konfirmasi'}
           </Button>
         )}
 
