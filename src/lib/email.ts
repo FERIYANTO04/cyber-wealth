@@ -260,12 +260,31 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
             signal: AbortSignal.timeout(10000),
           })
           if (response.ok) {
-            const payload = (await response.json().catch(() => null)) as { data?: { name?: string; status?: string }[] } | null
+            const payload = (await response.json().catch(() => null)) as { data?: { id?: string; name?: string; status?: string }[] } | null
             const senderAddress = c.from.match(/<([^>]+)>/)?.[1] ?? c.from
             const senderDomain = senderAddress.split('@').pop()?.trim().toLowerCase() ?? ''
-            const verified = (payload?.data ?? []).some(d => d.name?.trim().toLowerCase() === senderDomain && d.status?.toLowerCase() === 'verified')
+            const domain = (payload?.data ?? []).find(d => d.name?.trim().toLowerCase() === senderDomain)
+            const verified = domain?.status?.toLowerCase() === 'verified'
             if (verified) return { state: 'ready', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); Resend domain terverifikasi dan siap menjadi jalur cadangan untuk ${c.from}.` }
-            return { state: 'unverified', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); domain Resend ${senderDomain || '(tidak valid)'} belum terverifikasi.` }
+            let dnsHint = ''
+            if (domain?.id) {
+              try {
+                const detailResponse = await fetch(`${c.baseUrl}/domains/${encodeURIComponent(domain.id)}`, {
+                  headers: { Authorization: `Bearer ${c.key}` },
+                  cache: 'no-store',
+                  signal: AbortSignal.timeout(10000),
+                })
+                if (detailResponse.ok) {
+                  const detailPayload = await detailResponse.json().catch(() => null) as { records?: { type?: string; name?: string; value?: string; status?: string }[]; data?: { records?: { type?: string; name?: string; value?: string; status?: string }[] } } | null
+                  const records = detailPayload?.records ?? detailPayload?.data?.records ?? []
+                  const pending = records.filter(record => record.status?.toLowerCase() !== 'verified')
+                  if (pending.length) dnsHint = ' DNS yang belum lolos: ' + pending.map(record => [record.type, record.name, record.value, record.status].filter(Boolean).join(' ')).join(' | ').slice(0, 260)
+                }
+              } catch {
+                // Keep the domain status useful even when record details time out.
+              }
+            }
+            return { state: 'unverified', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); domain Resend ${senderDomain || '(tidak valid)'} belum terverifikasi.${dnsHint}` }
           }
           return { state: 'error', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); Resend menjawab ${response.status}.` }
         } catch {
