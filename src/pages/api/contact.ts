@@ -49,12 +49,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     detail: `${parsed.data.name} — ${parsed.data.subject}`,
   })
 
-  await notifyOwner({
+  const notifiedOwners = await notifyOwner({
     subject: `Pesan baru dari ${parsed.data.name}`,
     lines: [parsed.data.subject, '', parsed.data.body, '', `Balas ke: ${parsed.data.email}`],
     kind: 'contact-message',
     relatedId: row.id,
-  }).catch(() => undefined)
+  }).catch(() => 0)
 
-  return res.status(201).json({ ok: true, message: 'Pesan terkirim. Kami membalas lewat email Anda.' })
+  return res.status(201).json({
+    ok: true,
+    emailSent: notifiedOwners > 0,
+    message: notifiedOwners > 0
+      ? 'Pesan berhasil disimpan dan notifikasi email diterima penyedia email.'
+      : 'Pesan berhasil disimpan, tetapi notifikasi email belum berhasil dikirim. Tim kami dapat melihat pesan ini di dashboard.',
+  })
 }
