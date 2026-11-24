@@ -25,7 +25,8 @@ export function aiConfig() {
 export function aiConfigured(): boolean {
   const primaryReady = Boolean(PRIMARY_KEY) && !isPlaceholder(PRIMARY_KEY)
   const fallbackReady = Boolean(FALLBACK_KEY) && !isPlaceholder(FALLBACK_KEY)
-  return primaryReady || fallbackReady
+  const kiosapiReady = Boolean(process.env.KIOSAPI_API_KEY) && !isPlaceholder(process.env.KIOSAPI_API_KEY || '')
+  return primaryReady || fallbackReady || kiosapiReady
 }
 
 export type AiMessage = { role: 'system' | 'user' | 'assistant'; content: string }
@@ -167,27 +168,52 @@ export async function chatWithAi(args: {
 
   if (!FALLBACK_ENABLED || !canFailOver(result.reason)) return result
 
-  // Route around Groq quota outages through the independently configured Neon
-  // AI Gateway. When the gateway is primary, retain Groq as the alternate route.
+  // Kiosapi is already configured for this company and offers free models with
+  // a daily request quota. Try it before the optional Neon/Groq alternate route.
+  const fallbackProviders: Provider[] = []
+  const kiosapiKey = (process.env.KIOSAPI_API_KEY || '').trim()
+  if (kiosapiKey && !isPlaceholder(kiosapiKey)) {
+    fallbackProviders.push({
+      baseUrl: 'https://api.kiosapi.id/v1',
+      model: process.env.AI_KIOSAPI_FALLBACK_MODEL || 'google/gemma-4-26b',
+      key: kiosapiKey,
+      label: 'Kiosapi gratis',
+    })
+  }
+
+  // Retain an independent Neon route when the account plan supports it. When
+  // the gateway is primary, Groq remains an alternate provider.
   const gatewayKey = (process.env.NEON_AI_GATEWAY_TOKEN || '').trim()
   const gatewayBase = NEON_BASE_URL
     ? (NEON_BASE_URL.endsWith('/v1') ? NEON_BASE_URL : NEON_BASE_URL + '/v1')
     : ''
-  const fallbackProvider: Provider | null = primaryIsGroq && gatewayBase && gatewayKey && !isPlaceholder(gatewayKey)
-    ? {
-        baseUrl: gatewayBase,
-        model: process.env.NEON_AI_GATEWAY_MODEL || 'gpt-5-mini',
-        key: gatewayKey,
-        label: 'Neon AI Gateway cadangan',
-      }
-    : !primaryIsGroq && fallbackKey
-      ? { baseUrl: FALLBACK_BASE_URL, model: FALLBACK_MODEL, key: fallbackKey, label: 'Groq cadangan' }
-      : null
+  if (primaryIsGroq && gatewayBase && gatewayKey && !isPlaceholder(gatewayKey)) {
+    fallbackProviders.push({
+      baseUrl: gatewayBase,
+      model: process.env.NEON_AI_GATEWAY_MODEL || 'gpt-5-mini',
+      key: gatewayKey,
+      label: 'Neon AI Gateway cadangan',
+    })
+  } else if (!primaryIsGroq && fallbackKey) {
+    fallbackProviders.push({
+      baseUrl: FALLBACK_BASE_URL,
+      model: FALLBACK_MODEL,
+      key: fallbackKey,
+      label: 'Groq cadangan',
+    })
+  }
 
-  if (!fallbackProvider) return result
-  const fallback = await requestProvider(fallbackProvider, governedArgs)
-  if (fallback.ok) return fallback
-  return { ok: false, reason: result.reason + ' Jalur cadangan juga gagal: ' + fallback.reason }
+  if (!fallbackProviders.length) return result
+  const failures: string[] = []
+  for (const provider of fallbackProviders) {
+    const fallback = await requestProvider(provider, governedArgs)
+    if (fallback.ok) return fallback
+    failures.push(provider.label + ': ' + fallback.reason)
+  }
+  return {
+    ok: false,
+    reason: result.reason + ' Jalur cadangan juga gagal: ' + failures.join(' | '),
+  }
 }
 
 export async function askAi(args: { system: string; prompt: string; maxTokens?: number }): Promise<AiOutcome> {
