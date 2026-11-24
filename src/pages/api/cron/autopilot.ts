@@ -5,7 +5,7 @@ import { logActivity } from '@/lib/data'
 import { runBillingPass } from '@/lib/billing'
 import { isPlaceholder } from '@/lib/env'
 import { runHousekeeping } from '@/lib/housekeeping'
-import { testAi, storageStatus } from '@/lib/integrations'
+import { testAi, storageStatus, testMidtrans } from '@/lib/integrations'
 import { testEmail } from '@/lib/email'
 import { db } from '@/lib/db'
 import { products } from '@/lib/db/schema'
@@ -90,12 +90,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Provider checks are read-only except for a temporary storage probe file that is
     // deleted immediately. This gives the owner verified status rather than just key presence.
-    const [aiCheck, emailCheck, storageCheck] = await Promise.all([
+    const [aiCheck, emailCheck, storageCheck, paymentCheck] = await Promise.all([
       testAi().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'AI check failed' })),
       testEmail().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Email check failed' })),
       storageStatus().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Storage check failed' })),
+      testMidtrans().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Midtrans check failed' })),
     ])
-    const integrations = { ai: aiCheck, email: emailCheck, storage: storageCheck }
+    const integrations = { ai: aiCheck, email: emailCheck, storage: storageCheck, midtrans: paymentCheck }
     await logActivity({
       actor: 'system',
       action: 'Pemeriksaan integrasi terjadwal',
