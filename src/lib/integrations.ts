@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { chatWithAi } from './ai'
 import { putFile, deleteFile } from './storage'
 import { isPlaceholder } from './env'
@@ -11,7 +12,7 @@ import { isPlaceholder } from './env'
 export type CheckState = 'ready' | 'missing' | 'invalid' | 'error' | 'unverified'
 
 export type IntegrationCheck = {
-  key: 'ai' | 'bank' | 'email' | 'storage'
+  key: 'ai' | 'bank' | 'email' | 'storage' | 'midtrans'
   label: string
   state: CheckState
   headline: string
@@ -91,6 +92,45 @@ export async function storageStatus(): Promise<{ state: CheckState; message: str
   } catch (error) {
     const message = error instanceof Error ? error.message : 'tidak diketahui'
     return { state: 'error', message: `Penyimpanan berkas belum siap: ${message}.` }
+  }
+}
+
+/** Read-only Midtrans status lookup. A random nonexistent order ID verifies auth without creating a charge. */
+export async function testMidtrans(): Promise<{ state: CheckState; message: string }> {
+  const key = process.env.MIDTRANS_SERVER_KEY?.trim() ?? ''
+  if (!key || isPlaceholder(key)) {
+    return { state: 'missing', message: 'MIDTRANS_SERVER_KEY belum dikonfigurasi.' }
+  }
+  const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
+  const baseUrl = production ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com'
+  const probeOrderId = 'cw-health-' + randomUUID()
+  try {
+    const response = await fetch(baseUrl + '/v2/' + encodeURIComponent(probeOrderId) + '/status', {
+      method: 'GET',
+      headers: {
+        Authorization: 'Basic ' + Buffer.from(key + ':').toString('base64'),
+        Accept: 'application/json',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
+    })
+    if (response.status === 404) {
+      return {
+        state: 'ready',
+        message: 'Midtrans ' + (production ? 'Production' : 'Sandbox') + ' menerima autentikasi server key. Lookup order uji acak mendapat 404 sesuai harapan; tidak ada transaksi atau tagihan dibuat.',
+      }
+    }
+    if (response.status === 401 || response.status === 403) {
+      return { state: 'invalid', message: 'Midtrans menolak server key (' + response.status + '). Periksa pasangan key dan mode Production/Sandbox.' }
+    }
+    if (response.ok) {
+      return { state: 'ready', message: 'Midtrans ' + (production ? 'Production' : 'Sandbox') + ' menerima autentikasi server key. Pemeriksaan hanya membaca status order acak; tidak ada pembayaran dibuat.' }
+    }
+    const body = await response.text().catch(() => '')
+    return { state: 'error', message: 'Midtrans menjawab HTTP ' + response.status + (body ? ': ' + body.slice(0, 180) : '.') }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'koneksi gagal'
+    return { state: 'error', message: 'Pemeriksaan Midtrans gagal: ' + message.slice(0, 200) }
   }
 }
 
