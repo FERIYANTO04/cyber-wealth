@@ -62,7 +62,7 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
             const angle = (index * (360 / Math.max(samples.length, 1))) + 12
             return (
               <div key={sample.id} className="cw-exhibit" style={{ transform: `rotateY(${angle}deg) translateZ(365px)` }}>
-                <div className="cw-object">
+                <div className={`cw-object cw-object-${index % 4}` }>
                   <div className="cw-object-top"/>
                   <div className="cw-object-front"/>
                   <div className="cw-object-side"/>
@@ -111,6 +111,18 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
         .cw-object-front:after { content:'CW'; position:absolute; inset:0; display:grid; place-items:center; color:rgba(220,189,131,.75); font:600 21px ui-monospace,monospace; letter-spacing:.12em; }
         .cw-object-side { position:absolute; left:97px; top:17px; width:18px; height:78px; transform:skewY(-32deg); transform-origin:left top; background:#10151d; border:1px solid rgba(197,166,106,.25); }
         .cw-object-glow { position:absolute; left:34px; top:44px; width:44px; height:18px; background:rgba(85,214,181,.14); filter:blur(14px); }
+        .cw-object-1 { width:90px; height:118px; }
+        .cw-object-1 .cw-object-top { left:9px; width:70px; height:25px; transform:rotateX(58deg) translateY(-5px); }
+        .cw-object-1 .cw-object-front { left:9px; top:12px; width:70px; height:98px; border-radius:3px; background:linear-gradient(145deg,#514638,#151a21); }
+        .cw-object-1 .cw-object-side { left:79px; top:12px; height:98px; }
+        .cw-object-2 { width:116px; height:110px; }
+        .cw-object-2 .cw-object-front { left:20px; top:10px; width:76px; height:76px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#77818a,#25313a 45%,#0c1219 78%); }
+        .cw-object-2 .cw-object-front:after { content:'◈'; color:rgba(220,189,131,.8); font-size:30px; }
+        .cw-object-2 .cw-object-side { display:none; }
+        .cw-object-3 { width:120px; height:105px; }
+        .cw-object-3 .cw-object-front { left:8px; top:25px; width:96px; height:62px; transform:skewY(-8deg); background:linear-gradient(135deg,#3e5a5a,#101a22); }
+        .cw-object-3 .cw-object-front:after { content:'PREVIEW'; font-size:10px; letter-spacing:.16em; }
+        .cw-object-3 .cw-object-side { left:104px; top:25px; height:62px; }
         .cw-plinth { position:relative; width:126px; height:36px; margin:-1px auto 0; transform:perspective(180px) rotateX(15deg); border:1px solid rgba(197,166,106,.48); background:linear-gradient(180deg,#3a3a35,#141820); box-shadow:0 16px 30px rgba(0,0,0,.65),0 0 22px rgba(197,166,106,.12); }
         .cw-plinth span { position:absolute; bottom:-26px; width:1px; height:25px; background:rgba(197,166,106,.45); }
         .cw-plinth span:nth-child(1){left:14px}.cw-plinth span:nth-child(2){left:50%}.cw-plinth span:nth-child(3){right:14px}
