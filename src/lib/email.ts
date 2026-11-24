@@ -348,6 +348,7 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
             const payload = (await response.json().catch(() => null)) as { data?: { id?: string; name?: string; status?: string }[] } | null
             const senderAddress = c.from.match(/<([^>]+)>/)?.[1] ?? c.from
             const senderDomain = senderAddress.split('@').pop()?.trim().toLowerCase() ?? ''
+            let dnsHint = ''
             let domain = (payload?.data ?? []).find(d => d.name?.trim().toLowerCase() === senderDomain)
             if (!domain && senderDomain) {
               try {
