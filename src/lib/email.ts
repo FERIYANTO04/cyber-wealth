@@ -278,10 +278,12 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
 export async function notifyOwner(input: { subject: string; lines: string[]; kind: string; relatedId?: string }) {
   const body = ['Ringkasan dari Cyber Wealth Autopilot:', '', ...input.lines].join('\n')
   const owners = await db.select({ email: ownerAccount.email }).from(ownerAccount)
+  let sent = 0
   for (const owner of owners) {
-    await sendEmail({ to: owner.email, subject: input.subject, body, kind: input.kind, relatedType: 'owner', relatedId: input.relatedId })
+    const result = await sendEmail({ to: owner.email, subject: input.subject, body, kind: input.kind, relatedType: 'owner', relatedId: input.relatedId })
+    if (result.sent) sent += 1
   }
-  return owners.length
+  return sent
 }
 
 export async function getEmailLog(limit = 40) {
