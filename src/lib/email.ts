@@ -1,4 +1,5 @@
 import { desc } from 'drizzle-orm'
+import { connect as netConnect, type Socket } from 'node:net'
 import { connect as tlsConnect, type TLSSocket } from 'node:tls'
 import { db } from './db'
 import { emailMessages, ownerAccount } from './db/schema'
@@ -65,74 +66,127 @@ export type EmailInput = {
 
 export type EmailResult = { sent: boolean; status: string; detail: string }
 
-async function gmailSmtp(input?: EmailInput): Promise<void> {
+async function gmailSmtp(input?: EmailInput, portOverride?: number): Promise<void> {
   const c = emailConfig()
+  const port = portOverride ?? c.smtpPort
   if (!smtpConfigured()) throw new Error('SMTP_USER atau SMTP_APP_PASSWORD belum diatur.')
-  const socket: TLSSocket = tlsConnect({
-    host: c.smtpHost,
-    port: c.smtpPort,
-    servername: c.smtpHost,
-    rejectUnauthorized: true,
-  })
-  socket.setTimeout(15000, () => socket.destroy(new Error('SMTP timeout')))
-  let buffer = ''
-  const replies: string[] = []
-  const waiters: Array<(reply: string) => void> = []
-  socket.on('data', (chunk: Buffer) => {
-    buffer += chunk.toString('utf8')
-    const lines = buffer.split(/\r?\n/)
-    buffer = lines.pop() ?? ''
-    let current = ''
-    for (const line of lines) {
-      current += (current ? '\n' : '') + line
-      if (/^\d{3} /.test(line)) {
-        const waiter = waiters.shift()
-        if (waiter) waiter(current)
-        else replies.push(current)
-        current = ''
+  if (port !== 465 && port !== 587) throw new Error('Port Gmail SMTP harus 465 atau 587.')
+
+  let socket: Socket | TLSSocket = port === 465
+    ? tlsConnect({ host: c.smtpHost, port, servername: c.smtpHost, rejectUnauthorized: true })
+    : netConnect({ host: c.smtpHost, port })
+
+  const attachReader = (target: Socket | TLSSocket) => {
+    let buffer = ''
+    const replies: string[] = []
+    const waiters: { resolve: (reply: string) => void; reject: (error: Error) => void }[] = []
+    let pendingError: Error | null = null
+    const onData = (chunk: Buffer) => {
+      buffer += chunk.toString('utf8')
+      const lines = buffer.split(/\r?\n/)
+      buffer = lines.pop() ?? ''
+      let current = ''
+      for (const line of lines) {
+        current += (current ? '\n' : '') + line
+        if (/^\d{3} /.test(line)) {
+          const waiter = waiters.shift()
+          if (waiter) waiter.resolve(current)
+          else replies.push(current)
+          current = ''
+        }
       }
     }
-  })
-  const readReply = () => replies.length
-    ? Promise.resolve(replies.shift() as string)
-    : new Promise<string>((resolve, reject) => {
-        waiters.push(resolve)
-        socket.once('error', reject)
-        socket.once('close', () => reject(new Error('Koneksi SMTP terputus.')))
-      })
-  const command = async (value: string, accepted: number[]) => {
-    socket.write(value + '\r\n')
-    const reply = await readReply()
-    const code = Number(reply.slice(0, 3))
-    if (!accepted.includes(code)) throw new Error('SMTP ' + code + ': ' + reply.slice(0, 300))
-    return reply
+    const onError = (error: Error) => {
+      pendingError = error
+      const waiter = waiters.shift()
+      if (waiter) waiter.reject(error)
+    }
+    const onClose = () => {
+      const error = new Error('Koneksi SMTP terputus.')
+      pendingError = error
+      const waiter = waiters.shift()
+      if (waiter) waiter.reject(error)
+    }
+    target.on('data', onData)
+    target.on('error', onError)
+    target.on('close', onClose)
+    const readReply = () => {
+      if (replies.length) return Promise.resolve(replies.shift() as string)
+      if (pendingError) return Promise.reject(pendingError)
+      return new Promise<string>((resolve, reject) => waiters.push({ resolve, reject }))
+    }
+    const command = async (value: string, accepted: number[]) => {
+      target.write(value + '\r\n')
+      const reply = await readReply()
+      const code = Number(reply.slice(0, 3))
+      if (!accepted.includes(code)) throw new Error('SMTP ' + code + ': ' + reply.slice(0, 300))
+      return reply
+    }
+    return {
+      readReply,
+      command,
+      detach: () => {
+        target.removeListener('data', onData)
+        target.removeListener('error', onError)
+        target.removeListener('close', onClose)
+      },
+    }
   }
+
+  socket.setTimeout(15000, () => socket.destroy(new Error('SMTP timeout')))
+  let reader = attachReader(socket)
   try {
-    await new Promise<void>((resolve, reject) => {
-      socket.once('secureConnect', resolve)
-      socket.once('error', reject)
-    })
-    const greeting = await readReply()
+    if (port === 465) {
+      await new Promise<void>((resolve, reject) => {
+        socket.once('secureConnect', resolve)
+        socket.once('error', reject)
+      })
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        socket.once('connect', resolve)
+        socket.once('error', reject)
+      })
+    }
+
+    const greeting = await reader.readReply()
     if (!greeting.startsWith('220')) throw new Error('Server Gmail tidak menerima koneksi SMTP.')
-    await command('EHLO cyber-wealth.local', [250])
-    await command('AUTH LOGIN', [334])
-    await command(Buffer.from(c.smtpUser).toString('base64'), [334])
-    await command(Buffer.from(c.smtpPassword).toString('base64'), [235])
+    await reader.command('EHLO cyber-wealth.local', [250])
+
+    if (port === 587) {
+      await reader.command('STARTTLS', [220])
+      reader.detach()
+      socket = tlsConnect({
+        socket: socket as Socket,
+        servername: c.smtpHost,
+        rejectUnauthorized: true,
+      })
+      socket.setTimeout(15000, () => socket.destroy(new Error('SMTP TLS timeout')))
+      reader = attachReader(socket)
+      await new Promise<void>((resolve, reject) => {
+        socket.once('secureConnect', resolve)
+        socket.once('error', reject)
+      })
+      await reader.command('EHLO cyber-wealth.local', [250])
+    }
+
+    await reader.command('AUTH LOGIN', [334])
+    await reader.command(Buffer.from(c.smtpUser).toString('base64'), [334])
+    await reader.command(Buffer.from(c.smtpPassword).toString('base64'), [235])
     if (!input) {
-      await command('QUIT', [221])
+      await reader.command('QUIT', [221])
       return
     }
     const from = c.smtpUser
     const to = input.to.trim().toLowerCase()
     const safeSubject = input.subject.replace(/[\r\n]+/g, ' ').trim()
-    await command(`MAIL FROM:<${from}> `, [250])
-    await command(`RCPT TO:<${to}>`, [250, 251])
-    await command('DATA', [354])
+    await reader.command('MAIL FROM:<' + from + '>', [250])
+    await reader.command('RCPT TO:<' + to + '>', [250, 251])
+    await reader.command('DATA', [354])
     const encodedBody = Buffer.from(input.body, 'utf8').toString('base64').match(/.{1,76}/g)?.join('\r\n') ?? ''
     const message = [
-      `From: Cyber Wealth <${from}>`,
-      `To: <${to}>`,
-      `Subject: =?UTF-8?B?${Buffer.from(safeSubject).toString('base64')}?=`,
+      'From: Cyber Wealth <' + from + '>',
+      'To: <' + to + '>',
+      'Subject: =?UTF-8?B?' + Buffer.from(safeSubject).toString('base64') + '?=',
       'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
@@ -142,14 +196,13 @@ async function gmailSmtp(input?: EmailInput): Promise<void> {
       '',
     ].join('\r\n')
     socket.write(message)
-    const sent = await readReply()
+    const sent = await reader.readReply()
     if (!sent.startsWith('250')) throw new Error('Gmail menolak pesan: ' + sent.slice(0, 300))
-    await command('QUIT', [221])
+    await reader.command('QUIT', [221])
   } finally {
     socket.end()
   }
 }
-
 export async function sendEmail(input: EmailInput): Promise<EmailResult> {
   const c = emailConfig()
   const to = input.to.trim().toLowerCase()
