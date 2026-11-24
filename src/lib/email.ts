@@ -352,21 +352,34 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
             const verified = domain?.status?.toLowerCase() === 'verified'
             if (verified) return { state: 'ready', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); Resend domain terverifikasi dan siap menjadi jalur cadangan untuk ${c.from}.` }
             let dnsHint = ''
-            if (domain?.id) {
+            if (!domain) {
+              dnsHint = ' Domain tidak ditemukan dalam daftar Resend.'
+            } else if (!domain.id) {
+              dnsHint = ' Resend tidak mengembalikan ID domain.'
+            } else {
               try {
                 const detailResponse = await fetch(`${c.baseUrl}/domains/${encodeURIComponent(domain.id)}`, {
                   headers: { Authorization: `Bearer ${c.key}` },
                   cache: 'no-store',
                   signal: AbortSignal.timeout(10000),
                 })
-                if (detailResponse.ok) {
+                if (!detailResponse.ok) {
+                  dnsHint = ' Detail DNS Resend menjawab HTTP ' + detailResponse.status + '.'
+                } else {
                   const detailPayload = await detailResponse.json().catch(() => null) as { records?: { type?: string; name?: string; value?: string; status?: string }[]; data?: { records?: { type?: string; name?: string; value?: string; status?: string }[] } } | null
                   const records = detailPayload?.records ?? detailPayload?.data?.records ?? []
                   const pending = records.filter(record => record.status?.toLowerCase() !== 'verified')
-                  if (pending.length) dnsHint = ' DNS yang belum lolos: ' + pending.map(record => [record.type, record.name, record.value, record.status].filter(Boolean).join(' ')).join(' | ').slice(0, 260)
+                  if (pending.length) {
+                    dnsHint = ' DNS belum lolos: ' + pending.map(record => [record.type, record.name, record.value, record.status].filter(Boolean).join(' ')).join(' | ').slice(0, 300)
+                  } else if (!records.length) {
+                    dnsHint = ' Resend tidak mengembalikan daftar DNS records untuk domain ini.'
+                  } else {
+                    dnsHint = ' Resend mengembalikan ' + records.length + ' records, tetapi status domain belum verified.'
+                  }
                 }
-              } catch {
-                // Keep the domain status useful even when record details time out.
+              } catch (detailError) {
+                const detail = detailError instanceof Error ? detailError.message : 'timeout'
+                dnsHint = ' Gagal membaca DNS Resend: ' + detail.slice(0, 120)
               }
             }
             return { state: 'unverified', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); domain Resend ${senderDomain || '(tidak valid)'} belum terverifikasi.${dnsHint}` }
