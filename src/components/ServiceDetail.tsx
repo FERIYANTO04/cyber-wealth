@@ -17,7 +17,9 @@ export function ServiceDetail({
       <Panel>
         <PanelBody>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="signal">Mulai {money(service.priceFromIdr)}</Badge>
+            {service.priceFromIdr > 0
+              ? <Badge tone="signal">Mulai {money(service.priceFromIdr)}</Badge>
+              : <Badge tone="signal">Harga berdasarkan brief</Badge>}
             <Badge>{service.deliveryDays} hari kerja</Badge>
           </div>
           <p className="text-[0.9375rem] leading-relaxed text-ink">{service.detail}</p>
