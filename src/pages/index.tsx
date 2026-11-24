@@ -48,17 +48,17 @@ function HomePage({ serviceCount, productCount }: Props) {
     <PageStack>
       <section className="relative isolate overflow-hidden rounded-[28px] border border-white/[.09] bg-[#0b1420]">
         <div className="pointer-events-none absolute inset-0 -z-10" style={{backgroundImage:'radial-gradient(circle at 78% 24%, rgba(62,171,224,.20), transparent 34%), radial-gradient(circle at 12% 90%, rgba(76,113,172,.14), transparent 36%), linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px)',backgroundSize:'auto, auto, 54px 54px, 54px 54px'}} />
-        <div className="relative grid min-h-[500px] items-center gap-10 px-7 py-12 sm:px-10 lg:grid-cols-[1.1fr_.9fr] lg:px-14 lg:py-16">
+        <div className="relative grid items-center gap-7 px-4 py-8 sm:gap-10 sm:px-10 sm:py-12 lg:min-h-[500px] lg:grid-cols-[1.1fr_.9fr] lg:px-14 lg:py-16">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[#6dcfff]/25 bg-[#6dcfff]/[.08] px-3 py-2 font-mono text-[9px] font-semibold tracking-[.18em] text-[#8bd9ff]">
               <span className="size-1.5 rounded-full bg-[#73d4ff] shadow-[0_0_12px_#73d4ff]" />
               GLOBAL DIGITAL ECOSYSTEM
             </div>
-            <h2 className="mt-7 max-w-3xl text-5xl font-semibold leading-[.98] tracking-[-.065em] text-white sm:text-6xl lg:text-[72px]">
+            <h2 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.02] tracking-[-.06em] text-white sm:mt-7 sm:text-6xl lg:text-[72px]">
               One platform.<br />
               <span className="bg-gradient-to-r from-[#8bd9ff] via-[#b7dfff] to-[#8a9dff] bg-clip-text text-transparent">Multiple economies.</span>
             </h2>
-            <p className="mt-7 max-w-xl text-sm leading-7 text-[#a8b8c9] sm:text-base">
+            <p className="mt-5 max-w-xl text-xs leading-6 text-[#a8b8c9] sm:mt-7 sm:text-base sm:leading-7">
               Cyber Wealth menghubungkan layanan kreatif, teknologi, AI, produk digital, dan hiburan dalam satu tempat. Temukan solusi, pilih layanan, kelola pesanan, dan berkembang melalui satu akun.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
@@ -113,13 +113,13 @@ function HomePage({ serviceCount, productCount }: Props) {
           <div><p className="font-mono text-[9px] tracking-[.2em] text-[#80d4ff]">THE ECOSYSTEM / 01—04</p><h3 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-white sm:text-4xl">Explore what you can build.</h3><p className="mt-3 max-w-2xl text-xs leading-6 text-slate-400">Empat pintu utama menuju layanan dan pengalaman di dalam Cyber Wealth.</p></div>
           <Link href="/marketplace" className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.13em] text-[#80d4ff] hover:text-white">Open marketplace <ArrowUpRight className="size-3.5" /></Link>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {ecosystems.map(({number,title,tag,description,icon:Icon,href}) => (
-            <Link key={number} href={href} className="group rounded-2xl border border-white/[.09] bg-[#0d131d] p-5 transition duration-200 hover:-translate-y-1 hover:border-[#80d4ff]/35 hover:bg-[#111e2d]">
+            <Link key={number} href={href} className="group min-w-0 rounded-2xl border border-white/[.09] bg-[#0d131d] p-3 transition duration-200 hover:-translate-y-1 hover:border-[#80d4ff]/35 hover:bg-[#111e2d] sm:p-5">
               <div className="flex items-center justify-between"><div className="flex size-11 items-center justify-center rounded-xl border border-[#80d4ff]/15 bg-[#80d4ff]/[.07] text-[#80d4ff]"><Icon className="size-5" /></div><span className="font-mono text-[9px] text-slate-600">{number}</span></div>
-              <p className="mt-6 text-lg font-semibold tracking-tight text-white">{title}</p>
+              <p className="mt-4 text-base font-semibold tracking-tight text-white sm:mt-6 sm:text-lg">{title}</p>
               <p className="mt-1 font-mono text-[8px] tracking-[.13em] text-[#80d4ff]">{tag}</p>
-              <p className="mt-4 min-h-[72px] text-xs leading-6 text-slate-400">{description}</p>
+              <p className="mt-3 text-[10px] leading-5 text-slate-400 sm:mt-4 sm:min-h-[72px] sm:text-xs sm:leading-6">{description}</p>
               <span className="mt-5 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.12em] text-slate-300 group-hover:text-[#80d4ff]">Explore <ArrowUpRight className="size-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
             </Link>
           ))}
