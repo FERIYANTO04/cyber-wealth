@@ -396,7 +396,21 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
                   } else if (!records.length) {
                     dnsHint = ' Resend tidak mengembalikan daftar DNS records untuk domain ini.'
                   } else {
-                    dnsHint = ' Resend mengembalikan ' + records.length + ' records, tetapi status domain belum verified.'
+                    const verifyResponse = await fetch(`${c.baseUrl}/domains/${encodeURIComponent(domain.id)}/verify`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${c.key}` },
+                      cache: 'no-store',
+                      signal: AbortSignal.timeout(10000),
+                    })
+                    if (verifyResponse.ok) {
+                      const verifyPayload = await verifyResponse.json().catch(() => null) as { status?: string } | null
+                      if (verifyPayload?.status?.toLowerCase() === 'verified') {
+                        return { state: 'ready', message: 'Semua ' + records.length + ' DNS records Resend terverifikasi; pengiriman email siap melalui Resend.' }
+                      }
+                      dnsHint = 'Semua ' + records.length + ' DNS records sudah verified; permintaan verifikasi domain dikirim ke Resend. Status: ' + String(verifyPayload?.status ?? domain.status ?? 'pending') + '.'
+                    } else {
+                      dnsHint = 'Semua DNS records terlihat verified, tetapi Resend verify menjawab HTTP ' + verifyResponse.status + '.'
+                    }
                   }
                 }
               } catch (detailError) {
