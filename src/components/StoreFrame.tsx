@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { ArrowUpRight, BadgeDollarSign, CircleHelp, Compass, Grid2X2, Home, Info, Layers3, Mail, Package, Sparkles } from 'lucide-react'
+import { ArrowUpRight, BadgeDollarSign, CircleHelp, Clapperboard, Compass, Grid2X2, Home, Info, Layers3, Mail, Package, Sparkles } from 'lucide-react'
 
 export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'reading', description, children }: {
   title: string; eyebrow?: string; intent?: string; actions?: ReactNode
@@ -12,6 +12,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
     { label: 'WORKSPACE', links: [
       { href: '/', label: 'Overview', icon: Home },
       { href: '/marketplace', label: 'Marketplace', icon: Grid2X2 },
+      { href: '/kreator', label: 'Creator & Media', icon: Clapperboard },
       { href: '/showroom', label: '3D Studio', icon: Sparkles },
       { href: '/jasa', label: 'Layanan digital', icon: Layers3 },
       { href: '/toko', label: 'Produk digital', icon: Package },
