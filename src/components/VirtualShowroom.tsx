@@ -1,26 +1,33 @@
 import { useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Compass, Eye, RotateCcw, ShieldCheck } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Compass, Eye, RotateCcw, ShieldCheck } from 'lucide-react'
 
 export type ShowroomSample = { id: string; name: string; kind: 'PRODUCT' | 'STUDIO' }
 
 export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
   const [yaw, setYaw] = useState(0)
+  const [pitch, setPitch] = useState(0)
   const [dragging, setDragging] = useState(false)
   const lastX = useRef<number | null>(null)
+  const lastY = useRef<number | null>(null)
 
   function pointerDown(event: React.PointerEvent<HTMLDivElement>) {
     lastX.current = event.clientX
+    lastY.current = event.clientY
     setDragging(true)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
   function pointerMove(event: React.PointerEvent<HTMLDivElement>) {
     if (lastX.current === null) return
-    const delta = event.clientX - lastX.current
+    const deltaX = event.clientX - lastX.current
+    const deltaY = event.clientY - (lastY.current ?? event.clientY)
     lastX.current = event.clientX
-    setYaw(value => (value + delta * 0.34) % 360)
+    lastY.current = event.clientY
+    setYaw(value => (value + deltaX * 0.34) % 360)
+    setPitch(value => Math.max(-55, Math.min(55, value - deltaY * 0.28)))
   }
   function pointerUp() {
     lastX.current = null
+    lastY.current = null
     setDragging(false)
   }
   function rotate(amount: number) {
@@ -45,10 +52,10 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
         onPointerCancel={pointerUp}
         onLostPointerCapture={pointerUp}
         role="application"
-        aria-label="Showroom 3D. Geser kiri atau kanan untuk melihat ruangan 360 derajat."
+        aria-label="Showroom 3D. Geser kiri-kanan untuk rotasi 360 derajat dan atas-bawah untuk melihat bagian atas atau bawah produk."
       >
         <div className="cw-horizon absolute inset-0"/>
-        <div className="cw-world" style={{ transform: `rotateY(${-yaw}deg)` }}>
+        <div className="cw-world" style={{ transform: `rotateX(${pitch}deg) rotateY(${-yaw}deg)` }}>
           <div className="cw-floor"/>
           <div className="cw-ceiling"/>
           {Array.from({ length: 6 }, (_, index) => (
@@ -80,7 +87,7 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
           <div className="cw-center-mark"><span>CW</span><small>PRIVATE EXHIBITION</small></div>
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-between px-4 pb-4 sm:px-6">
-          <span className="rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[9px] tracking-[.14em] text-white/55 backdrop-blur">DRAG TO ROTATE 360°</span>
+          <span className="rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[9px] tracking-[.14em] text-white/55 backdrop-blur">DRAG: 360° + UP / DOWN</span>
           <span className="rounded-full border border-[#c5a66a]/25 bg-black/45 px-3 py-2 text-[9px] tracking-[.14em] text-[#d8bd83] backdrop-blur">NO INTERNAL DETAILS</span>
         </div>
       </div>
@@ -89,7 +96,9 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
         <p className="max-w-xl text-[11px] leading-5 text-slate-500"><ShieldCheck className="mr-1 inline size-3.5 text-[#c5a66a]"/>Sampel dilindungi. File asli, spesifikasi, struktur, dan detail produksi tidak ditampilkan di showroom.</p>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => rotate(-35)} className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 transition hover:border-[#c5a66a]/50 hover:text-[#d8bd83]" aria-label="Putar ke kiri"><ArrowLeft className="size-4"/></button>
-          <button type="button" onClick={() => setYaw(0)} className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 transition hover:border-[#c5a66a]/50 hover:text-[#d8bd83]" aria-label="Atur ulang pandangan"><RotateCcw className="size-3.5"/></button>
+          <button type="button" onClick={() => setPitch(value => Math.max(-55, value - 12))} className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 transition hover:border-[#c5a66a]/50 hover:text-[#d8bd83]" aria-label="Lihat lebih ke atas"><ArrowUp className="size-4"/></button>
+          <button type="button" onClick={() => { setYaw(0); setPitch(0) }} className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 transition hover:border-[#c5a66a]/50 hover:text-[#d8bd83]" aria-label="Atur ulang pandangan"><RotateCcw className="size-3.5"/></button>
+          <button type="button" onClick={() => setPitch(value => Math.min(55, value + 12))} className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 transition hover:border-[#c5a66a]/50 hover:text-[#d8bd83]" aria-label="Lihat lebih ke bawah"><ArrowDown className="size-4"/></button>
           <button type="button" onClick={() => rotate(35)} className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 transition hover:border-[#c5a66a]/50 hover:text-[#d8bd83]" aria-label="Putar ke kanan"><ArrowRight className="size-4"/></button>
         </div>
       </div>
