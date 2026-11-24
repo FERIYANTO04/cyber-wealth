@@ -77,6 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const serverKey = process.env.MIDTRANS_SERVER_KEY?.trim() ?? ''
   const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
 
+  if (!isFree && !serverKey) {
+    return res.status(503).json({ error: 'Pembayaran online sedang belum aktif. Pesanan belum dibuat dan tidak ada dana yang ditagihkan. Silakan coba kembali nanti.' })
+  }
+
   const [order] = await db.insert(orders).values({
     code,
     accessToken,
@@ -86,8 +90,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     buyerName: parsed.data.name,
     buyerEmail: parsed.data.email,
     amountIdr: amount,
-    status: isFree ? 'pending' : serverKey ? 'pending' : 'unpaid',
-    provider: isFree ? 'free' : serverKey ? 'midtrans' : 'midtrans',
+    status: 'pending',
+    provider: isFree ? 'free' : 'midtrans',
     refCode: parsed.data.ref ?? refFromCookie(req) ?? null,
     dataSource: 'live',
   }).returning()
@@ -96,16 +100,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
     await db.insert(activity).values({ actor: 'system', action: 'Pesanan gratis dibuat', detail: product.name + ' — ' + code + '. Tidak ada pembayaran.', dataSource: 'live' })
     return res.status(201).json({ ok: true, token: accessToken, free: true })
-  }
-
-  if (!serverKey) {
-    await db.insert(activity).values({
-      actor: 'system',
-      action: 'Checkout menunggu aktivasi Midtrans',
-      detail: product.name + ' — ' + code + '. Kunci merchant Midtrans belum terpasang; tidak ada tagihan atau pembayaran dibuat.',
-      dataSource: 'live',
-    })
-    return res.status(201).json({ ok: true, token: accessToken, provider: 'midtrans', paymentUnavailable: true })
   }
 
   const base = production ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
