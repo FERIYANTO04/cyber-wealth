@@ -26,7 +26,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
           eq(subscriptions.accountEmail, email),
           eq(subscriptions.status, 'active'),
           eq(subscriptions.dataSource, 'live'),
-          gt(subscriptions.periodEnd, new Date())
+          gt(subscriptions.periodEnd, new Date()),
+          gt(subscriptions.amountIdr, 0)
         ))
         .limit(1)
     : []
