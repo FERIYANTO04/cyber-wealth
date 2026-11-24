@@ -16,20 +16,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const orderCode = notification?.order_id
   if (!orderCode || typeof orderCode !== 'string') return res.status(400).json({ error: 'Missing order_id' })
 
+  const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
   const [order] = await db.select().from(orders).where(and(
     eq(orders.code, orderCode),
     eq(orders.provider, 'midtrans'),
     eq(orders.dataSource, 'live')
   )).limit(1)
   const [servicePayment] = order ? [] : await sqlClient`SELECT * FROM service_payment
-    WHERE code=${orderCode} AND provider='midtrans' AND data_source='live' LIMIT 1`
+    WHERE code=${orderCode} AND provider='midtrans' AND data_source=${production ? 'live' : 'test'} LIMIT 1`
 
   if (!order && !servicePayment) return res.status(404).json({ error: 'Order not found' })
   if (order?.status === 'paid' || servicePayment?.status === 'paid') {
     return res.status(200).json({ received: true, duplicate: true })
   }
 
-  const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
   const base = production ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com'
   try {
     // Never trust the webhook body alone. Confirm status and amount against Midtrans.
@@ -72,11 +72,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (isPaid && servicePayment) {
+      if (!production) {
+        const updated = await sqlClient`UPDATE service_payment SET status='paid', paid_at=now(),
+          invoice_id=${status.transaction_id ?? notification.transaction_id ?? servicePayment.invoice_id}
+          WHERE id=${servicePayment.id} AND status='pending' AND data_source='test' RETURNING id`
+        return res.status(200).json({ received: true, verified: updated.length > 0, settled: false, source: 'test', type: 'service-payment' })
+      }
+
       let settled = false
       await sqlClient.begin(async (tx) => {
         const updated = await tx`UPDATE service_payment SET status='paid', paid_at=now(),
           invoice_id=${status.transaction_id ?? notification.transaction_id ?? servicePayment.invoice_id}
-          WHERE id=${servicePayment.id} AND status='pending' RETURNING id`
+          WHERE id=${servicePayment.id} AND status='pending' AND data_source='live' RETURNING id`
         if (updated.length === 0) return
         await tx`UPDATE service_request SET status='won', updated_at=now()
           WHERE id=${servicePayment.service_request_id} AND status='proposal_sent'`
@@ -87,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ${servicePayment.code+' — '+servicePayment.buyer_email+'. Dikonfirmasi oleh Midtrans; proyek kini boleh dijadwalkan.'},'live')`
         settled = true
       })
-      return res.status(200).json({ received: true, settled, type: 'service-payment' })
+      return res.status(200).json({ received: true, settled, source: 'live', type: 'service-payment' })
     }
 
     if (['expire', 'cancel', 'deny'].includes(status.transaction_status ?? '')) {
