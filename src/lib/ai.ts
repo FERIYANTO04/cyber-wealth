@@ -17,6 +17,9 @@ const FALLBACK_KEY = process.env.GROQ_API_KEY || ''
 const FALLBACK_BASE_URL = 'https://api.groq.com/openai/v1'
 const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || 'openai/gpt-oss-120b'
 const FALLBACK_ENABLED = true
+const GATEWAY_BASE_URL = NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : ''
+const GATEWAY_KEY = isPlaceholder(process.env.NEON_AI_GATEWAY_TOKEN) ? '' : (process.env.NEON_AI_GATEWAY_TOKEN || '')
+const GATEWAY_MODEL = process.env.AI_GATEWAY_MODEL || 'openai/gpt-oss-120b'
 
 export function aiConfig() {
   return { baseUrl: PRIMARY_BASE_URL, model: PRIMARY_MODEL, key: PRIMARY_KEY }
@@ -165,16 +168,40 @@ export async function chatWithAi(args: {
   const result = await requestProvider(primary, governedArgs)
   if (result.ok) return result
 
-  const fallbackAvailable = FALLBACK_ENABLED && !primaryIsGroq && Boolean(fallbackKey)
-  if (!fallbackAvailable || !canFailOver(result.reason)) return result
+  if (!canFailOver(result.reason)) return result
 
+  // Groq is the primary provider today, but its quota can be exhausted.
+  // Route that failure through the already-configured Neon AI Gateway before
+  // giving up. This keeps the agent workforce from becoming idle on Groq 429.
+  if (primaryIsGroq && GATEWAY_BASE_URL && GATEWAY_KEY) {
+    const gateway = await requestProvider({
+      baseUrl: GATEWAY_BASE_URL,
+      model: GATEWAY_MODEL,
+      key: GATEWAY_KEY,
+      label: 'Neon AI Gateway',
+    }, governedArgs)
+    if (gateway.ok) return gateway
+    if (!fallbackKey || !FALLBACK_ENABLED) {
+      return { ok: false, reason: `${result.reason} Jalur Neon AI Gateway juga gagal: ${gateway.reason}` }
+    }
+    const finalFallback = await requestProvider({
+      baseUrl: FALLBACK_BASE_URL,
+      model: FALLBACK_MODEL,
+      key: fallbackKey,
+      label: 'Groq cadangan',
+    }, governedArgs)
+    if (finalFallback.ok) return finalFallback
+    return { ok: false, reason: `${result.reason} Neon AI Gateway: ${gateway.reason} Jalur cadangan: ${finalFallback.reason}` }
+  }
+
+  const fallbackAvailable = FALLBACK_ENABLED && !primaryIsGroq && Boolean(fallbackKey)
+  if (!fallbackAvailable) return result
   const fallback = await requestProvider({
     baseUrl: FALLBACK_BASE_URL,
     model: FALLBACK_MODEL,
     key: fallbackKey,
     label: 'Groq cadangan',
-  }, args)
-
+  }, governedArgs)
   if (fallback.ok) return fallback
   return { ok: false, reason: `${result.reason} Jalur cadangan juga gagal: ${fallback.reason}` }
 }
