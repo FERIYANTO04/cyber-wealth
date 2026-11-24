@@ -388,11 +388,11 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
                 if (!detailResponse.ok) {
                   dnsHint = ' Detail DNS Resend menjawab HTTP ' + detailResponse.status + '.'
                 } else {
-                  const detailPayload = await detailResponse.json().catch(() => null) as { records?: { type?: string; name?: string; value?: string; status?: string }[]; data?: { records?: { type?: string; name?: string; value?: string; status?: string }[] } } | null
+                  const detailPayload = await detailResponse.json().catch(() => null) as { records?: { record?: string; type?: string; name?: string; value?: string; status?: string; ttl?: string; priority?: number }[]; data?: { records?: { record?: string; type?: string; name?: string; value?: string; status?: string; ttl?: string; priority?: number }[] } } | null
                   const records = detailPayload?.records ?? detailPayload?.data?.records ?? []
                   const pending = records.filter(record => record.status?.toLowerCase() !== 'verified')
                   if (pending.length) {
-                    dnsHint = ' DNS belum lolos: ' + pending.map(record => [record.type, record.name, record.value, record.status].filter(Boolean).join(' ')).join(' | ').slice(0, 300)
+                    dnsHint = ' DNS belum lolos: ' + pending.map(record => [record.record, record.type, record.name, record.value, record.priority ? 'priority ' + record.priority : '', record.ttl ? 'TTL ' + record.ttl : '', record.status].filter(Boolean).join(' ')).join(' | ').slice(0, 300)
                   } else if (!records.length) {
                     dnsHint = ' Resend tidak mengembalikan daftar DNS records untuk domain ini.'
                   } else {
