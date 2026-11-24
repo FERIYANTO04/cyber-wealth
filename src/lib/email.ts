@@ -1,8 +1,8 @@
-import { desc } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { connect as netConnect, type Socket } from 'node:net'
 import { connect as tlsConnect, type TLSSocket } from 'node:tls'
 import { db } from './db'
-import { emailMessages, ownerAccount } from './db/schema'
+import { activity, emailMessages, ownerAccount } from './db/schema'
 import { isPlaceholder } from './env'
 
 /** Supports Gmail SMTP (App Password) and the existing Resend-compatible API. */
@@ -390,6 +390,28 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
                 } else {
                   const detailPayload = await detailResponse.json().catch(() => null) as { records?: { record?: string; type?: string; name?: string; value?: string; status?: string; ttl?: string; priority?: number }[]; data?: { records?: { record?: string; type?: string; name?: string; value?: string; status?: string; ttl?: string; priority?: number }[] } } | null
                   const records = detailPayload?.records ?? detailPayload?.data?.records ?? []
+                  for (const record of records) {
+                    const recordDetail = [
+                      record.record ?? record.type,
+                      record.name,
+                      record.value,
+                      record.priority ? 'priority ' + record.priority : '',
+                      record.ttl ? 'TTL ' + record.ttl : '',
+                      record.status,
+                    ].filter(Boolean).join(' | ')
+                    const [existing] = await db.select({ id: activity.id }).from(activity)
+                      .where(and(eq(activity.action, 'Resend DNS record'), eq(activity.detail, recordDetail)))
+                      .limit(1)
+                    if (!existing) {
+                      await db.insert(activity).values({
+                        actor: 'system',
+                        action: 'Resend DNS record',
+                        detail: recordDetail,
+                        agentName: 'Email',
+                        dataSource: 'live',
+                      })
+                    }
+                  }
                   const pending = records.filter(record => record.status?.toLowerCase() !== 'verified')
                   if (pending.length) {
                     dnsHint = ' DNS belum lolos: ' + pending.map(record => [record.record, record.type, record.name, record.value, record.priority ? 'priority ' + record.priority : '', record.ttl ? 'TTL ' + record.ttl : '', record.status].filter(Boolean).join(' ')).join(' | ').slice(0, 900)
