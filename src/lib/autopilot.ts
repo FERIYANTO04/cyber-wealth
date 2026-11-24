@@ -906,13 +906,14 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
           AND sr.status='proposal_sent')::int AS paid_not_started,
         count(*) FILTER (WHERE sp.status='paid' AND sp.data_source='live'
           AND sr.id IS NULL)::int AS paid_without_request,
-        count(*) FILTER (WHERE sr.status IN ('won','in_progress','delivered')
+        (SELECT count(*)::int FROM service_request sr2
+          WHERE sr2.status IN ('won','in_progress','delivered')
           AND NOT EXISTS (
             SELECT 1 FROM service_payment p
-            WHERE p.service_request_id=sr.id AND p.status='paid' AND p.data_source='live'
-          ))::int AS active_without_live_payment
-      FROM service_request sr
-      LEFT JOIN service_payment sp ON sp.service_request_id=sr.id
+            WHERE p.service_request_id=sr2.id AND p.status='paid' AND p.data_source='live'
+          )) AS active_without_live_payment
+      FROM service_payment sp
+      LEFT JOIN service_request sr ON sr.id=sp.service_request_id
     `
     const productChecks = await Promise.all(publishedProducts.map(async (product) => ({
       name: product.name,
