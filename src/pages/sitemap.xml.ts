@@ -29,6 +29,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
     '/jasa',
     '/harga',
     '/faq',
+    '/contoh-konten-umkm',
     '/kontak',
     '/privasi',
     '/syarat',
