@@ -181,25 +181,14 @@ export async function chatWithAi(args: {
     })
   }
 
-  // Retain an independent Neon route when the account plan supports it. When
-  // the gateway is primary, Groq remains an alternate provider.
-  const gatewayKey = (process.env.NEON_AI_GATEWAY_TOKEN || '').trim()
-  const gatewayBase = NEON_BASE_URL
-    ? (NEON_BASE_URL.endsWith('/v1') ? NEON_BASE_URL : NEON_BASE_URL + '/v1')
-    : ''
-  if (primaryIsGroq && gatewayBase && gatewayKey && !isPlaceholder(gatewayKey)) {
-    fallbackProviders.push({
-      baseUrl: gatewayBase,
-      model: process.env.NEON_AI_GATEWAY_MODEL || 'gpt-5-mini',
-      key: gatewayKey,
-      label: 'Neon AI Gateway cadangan',
-    })
-  } else if (!primaryIsGroq && fallbackKey) {
+  // Keep a different Groq model as a zero-cost fallback. Model-specific
+  // limits can differ, so GPT-OSS 20B can still answer when 120B is throttled.
+  if (fallbackKey && FALLBACK_MODEL !== PRIMARY_MODEL) {
     fallbackProviders.push({
       baseUrl: FALLBACK_BASE_URL,
       model: FALLBACK_MODEL,
       key: fallbackKey,
-      label: 'Groq cadangan',
+      label: 'Groq model cadangan',
     })
   }
 
