@@ -170,8 +170,24 @@ export async function chatWithAi(args: {
 
   const fallbackProviders: Provider[] = []
 
-  // First try a different Groq model: it has a separate model limit and a
-  // higher request-rate ceiling than the free Kiosapi tier.
+  // Use the branch-scoped Neon AI Gateway as an independent provider when it
+  // is configured. This avoids sending every retry back to the same exhausted
+  // Groq account. Keep it ahead of the Groq model fallback.
+  const neonGatewayKey = (process.env.NEON_AI_GATEWAY_TOKEN || '').trim()
+  if (
+    NEON_BASE_URL &&
+    neonGatewayKey &&
+    !PRIMARY_BASE_URL.startsWith(NEON_BASE_URL)
+  ) {
+    fallbackProviders.push({
+      baseUrl: `${NEON_BASE_URL}/v1`,
+      model: process.env.AI_NEON_FALLBACK_MODEL || 'gemini-3-flash',
+      key: neonGatewayKey,
+      label: 'Neon AI Gateway',
+    })
+  }
+
+  // A different Groq model is a final provider-specific fallback.
   if (fallbackKey && FALLBACK_MODEL !== PRIMARY_MODEL) {
     fallbackProviders.push({
       baseUrl: FALLBACK_BASE_URL,
@@ -181,7 +197,7 @@ export async function chatWithAi(args: {
     })
   }
 
-  // Kiosapi remains a free third route when its configured key is valid.
+  // Kiosapi remains an additional route when its configured key is valid.
   const kiosapiKey = (process.env.KIOSAPI_API_KEY || '').trim()
   if (kiosapiKey) {
     fallbackProviders.push({
