@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
+import { db, sqlClient } from '@/lib/db'
 import { serviceRequests } from '@/lib/db/schema'
 import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
@@ -27,6 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const id = String(req.query.id ?? '')
   const [current] = await db.select().from(serviceRequests).where(eq(serviceRequests.id, id)).limit(1)
   if (!current) return res.status(404).json({ error: 'Permintaan tidak ditemukan.' })
+
+  if (['won', 'in_progress', 'delivered'].includes(parsed.data.status)) {
+    const [verifiedPayment] = await sqlClient`SELECT id FROM service_payment
+      WHERE service_request_id=${id} AND status='paid' AND data_source='live' LIMIT 1`
+    if (!verifiedPayment) {
+      return res.status(409).json({ error: 'Pekerjaan premium hanya dapat dilanjutkan setelah pembayaran klien terverifikasi.' })
+    }
+  }
 
   await db
     .update(serviceRequests)

@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     })
 
-    await sendEmail({
+    const verificationEmail = await sendEmail({
       to: email,
       subject: 'Konfirmasi alamat email Anda',
       body: [
@@ -107,7 +107,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({
       ok: true,
       needsVerification: true,
-      message: 'Akun dibuat. Buka tautan konfirmasi di email Anda untuk mulai masuk.',
+      emailSent: verificationEmail.sent,
+      message: verificationEmail.sent
+        ? 'Akun dibuat. Buka tautan konfirmasi di email Anda untuk mulai masuk.'
+        : 'Akun sudah tercatat, tetapi email konfirmasi belum terkirim. Tim Cyber Wealth perlu mengaktifkan layanan email sebelum Anda bisa masuk. Jangan daftar ulang.' ,
     })
   }
 

@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
-import { db } from './db'
+import { db, sqlClient } from './db'
 import {
   activity,
   agentRuns,
@@ -88,6 +88,25 @@ async function runCeo(trigger: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(services)
     .where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
+  const [unpricedServices] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(services)
+    .where(and(
+      eq(services.status, 'published'),
+      eq(services.dataSource, 'live'),
+      sql`coalesce(${services.priceFromIdr}, 0) <= 0`
+    ))
+  const paymentConfigured = Boolean(
+    (process.env.MIDTRANS_SERVER_KEY && process.env.MIDTRANS_SERVER_KEY.trim()) ||
+    (process.env.BANK_NAME && process.env.BANK_NAME.trim() &&
+      process.env.BANK_ACCOUNT_NAME && process.env.BANK_ACCOUNT_NAME.trim() &&
+      process.env.BANK_ACCOUNT_NUMBER && process.env.BANK_ACCOUNT_NUMBER.trim())
+  )
+  const emailConfigured = Boolean(
+    (process.env.EMAIL_API_KEY && process.env.EMAIL_API_KEY.trim()) ||
+    (process.env.SMTP_USER && process.env.SMTP_USER.trim() &&
+      process.env.SMTP_APP_PASSWORD && process.env.SMTP_APP_PASSWORD.trim())
+  )
   const [liveProducts] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(products)
@@ -130,6 +149,9 @@ async function runCeo(trigger: string) {
   if ((liveProducts?.n ?? 0) === 0) blockers.push('belum ada produk dengan berkas privat yang siap dijual')
   if ((draftProducts?.n ?? 0) > 0) blockers.push(`${draftProducts.n} produk masih berstatus draf dan belum siap dijual`)
   if ((publishedNeedsReview?.n ?? 0) > 0) blockers.push(`${publishedNeedsReview.n} produk berstatus terbit tetapi berkasnya belum layak jual (belum ada file atau nama berkas masih DRAF)`)
+  if ((unpricedServices?.n ?? 0) > 0) blockers.push(`${unpricedServices.n} layanan terbit belum memiliki harga mulai yang jelas`)
+  if (!paymentConfigured) blockers.push('belum ada jalur pembayaran aktif yang terkonfigurasi (Midtrans atau transfer bank lengkap)')
+  if (!emailConfigured) blockers.push('email transaksi/verifikasi belum aktif; penjualan manual masih mungkin tetapi verifikasi otomatis terhambat')
 
   const facts = [
     `Pesanan lunas: ${paidOrders?.n ?? 0}`,
@@ -138,6 +160,9 @@ async function runCeo(trigger: string) {
     `Permintaan jasa baru: ${newJobs?.n ?? 0}`,
     `Produk berstatus terbit: ${publishedProducts?.n ?? 0}`,
     `Layanan berstatus terbit: ${publishedServices?.n ?? 0}`,
+    `Layanan terbit tanpa harga mulai: ${unpricedServices?.n ?? 0}`,
+    `Jalur pembayaran terkonfigurasi: ${paymentConfigured ? 'ya' : 'tidak'}`,
+    `Email transaksi/verifikasi terkonfigurasi: ${emailConfigured ? 'ya' : 'tidak'}`,
     `Produk siap dijual (berkas privat dan nama berkas lolos pemeriksaan): ${liveProducts?.n ?? 0}`,
     `Produk draf: ${draftProducts?.n ?? 0}`,
     `Produk terbit yang berkasnya perlu diperiksa: ${publishedNeedsReview?.n ?? 0}`,
@@ -898,6 +923,23 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
       .where(and(eq(products.status, 'published'), eq(products.dataSource, 'live')))
     const publishedServices = await db.select().from(services)
       .where(and(eq(services.status, 'published'), eq(services.dataSource, 'live')))
+    const [servicePaymentAudit] = await sqlClient`
+      SELECT
+        count(*) FILTER (WHERE sp.status='pending' AND sp.data_source='live'
+          AND sp.created_at < now() - interval '24 hours')::int AS stale_pending,
+        count(*) FILTER (WHERE sp.status='paid' AND sp.data_source='live'
+          AND sr.status='proposal_sent')::int AS paid_not_started,
+        count(*) FILTER (WHERE sp.status='paid' AND sp.data_source='live'
+          AND sr.id IS NULL)::int AS paid_without_request,
+        (SELECT count(*)::int FROM service_request sr2
+          WHERE sr2.status IN ('won','in_progress','delivered')
+          AND NOT EXISTS (
+            SELECT 1 FROM service_payment p
+            WHERE p.service_request_id=sr2.id AND p.status='paid' AND p.data_source='live'
+          )) AS active_without_live_payment
+      FROM service_payment sp
+      LEFT JOIN service_request sr ON sr.id=sp.service_request_id
+    `
     const productChecks = await Promise.all(publishedProducts.map(async (product) => ({
       name: product.name,
       inspection: await inspectProductDeliverable(product.fileKey, product.fileName),
@@ -914,10 +956,14 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
       `Layanan terbit diperiksa: ${publishedServices.length}`,
       `Layanan tanpa harga mulai yang jelas: ${unclearPricing.length} (${unclearPricing.map((item) => item.name).join(', ') || 'tidak ada'})`,
       `Halaman layanan dengan deskripsi/ruang lingkup pendek: ${weakServicePages.length} (${weakServicePages.map((item) => item.name).join(', ') || 'tidak ada'})`,
-      'BATAS AUDIT: pemeriksaan otomatis ini memverifikasi akses berkas, format, panjang, struktur dasar, dan placeholder. Ini bukan penilaian editorial penuh, uji hasil kreatif, atau jaminan kepuasan klien.',
-      'ATURAN: produk yang gagal pemeriksaan tidak boleh dibeli melalui checkout. Permintaan jasa tetap boleh masuk, tetapi harga final, ruang lingkup, dan tenggat harus disepakati sebelum pekerjaan dimulai.',
+      `Tagihan layanan live tertunda lebih dari 24 jam: ${servicePaymentAudit?.stale_pending ?? 0}`,
+      `Pembayaran live terverifikasi tetapi permintaan belum bergerak dari proposal_sent: ${servicePaymentAudit?.paid_not_started ?? 0}`,
+      `Pembayaran live tanpa permintaan layanan terkait: ${servicePaymentAudit?.paid_without_request ?? 0}`,
+      `Pekerjaan aktif/terkirim tanpa pembayaran live terverifikasi: ${servicePaymentAudit?.active_without_live_payment ?? 0}`,
+      'BATAS AUDIT: pemeriksaan otomatis ini memverifikasi akses berkas, format, panjang, struktur dasar, placeholder, dan konsistensi status pembayaran. Ini bukan penilaian editorial penuh, uji hasil kreatif, atau jaminan kepuasan klien.',
+      'ATURAN: produk yang gagal pemeriksaan tidak boleh dibeli melalui checkout. Pekerjaan premium tidak boleh dimulai atau ditandai selesai tanpa pembayaran live yang terverifikasi.',
     ]
-    const summary = `${publishedProducts.length} produk diperiksa: ${productChecks.length - productIssues.length} lolos integritas berkas, ${productIssues.length} perlu perbaikan; ${unclearPricing.length} dari ${publishedServices.length} layanan belum menampilkan harga mulai yang jelas.`
+    const summary = `${publishedProducts.length} produk diperiksa: ${productChecks.length - productIssues.length} lolos integritas berkas, ${productIssues.length} perlu perbaikan; ${unclearPricing.length} dari ${publishedServices.length} layanan belum menampilkan harga mulai yang jelas; audit pembayaran menemukan ${servicePaymentAudit?.active_without_live_payment ?? 0} pekerjaan aktif tanpa pembayaran live.`
     await finishRun(run.id, 'ok', summary, lines.join('\\n'), 0)
     await noteAgent(spec[0], 'Audit kualitas deterministik selesai', summary)
     return { summary }

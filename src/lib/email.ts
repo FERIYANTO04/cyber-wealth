@@ -211,8 +211,8 @@ export async function getEmailLog(limit = 40) {
 export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'invalid' | 'error' | 'unverified'; message: string }> {
   const c = emailConfig()
 
-  // Check the transactional API first. The API key is already provisioned in
-  // Railway; this makes Gmail SMTP irrelevant unless no API key exists.
+  // Check the transactional API first when a key is configured. Otherwise,
+  // allow the explicitly configured Gmail SMTP fallback.
   if (apiKeyConfigured()) {
     try {
       const response = await fetch(`${c.baseUrl}/domains`, {

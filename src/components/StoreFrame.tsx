@@ -44,10 +44,10 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
               <p className="mt-2 text-xs leading-5 text-slate-400">Satu tempat untuk layanan kreatif dan produk digital bisnis Anda.</p>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-7 lg:overflow-y-auto lg:px-4 lg:pb-5">
-            {groups.map(group => <div key={group.label} className="flex shrink-0 gap-1 lg:flex-col">
+          <nav className="grid grid-cols-2 gap-2 px-3 pb-3 lg:flex lg:flex-1 lg:flex-col lg:gap-7 lg:overflow-y-auto lg:px-4 lg:pb-5">
+            {groups.map(group => <div key={group.label} className="flex min-w-0 flex-col gap-1 lg:flex-col">
               <p className="hidden px-3 pb-2 font-mono text-[9px] font-semibold tracking-[.2em] text-slate-600 lg:block">{group.label}</p>
-              {group.links.map(({href,label,icon:Icon}) => <Link key={href} href={href} className="group flex min-h-10 shrink-0 items-center gap-3 rounded-lg border border-transparent px-3 text-[11px] font-medium text-slate-400 transition hover:border-white/[.06] hover:bg-white/[.05] hover:text-white lg:w-full lg:text-[12px]">
+              {group.links.map(({href,label,icon:Icon}) => <Link key={href} href={href} className="group flex min-h-10 w-full min-w-0 items-center gap-2 rounded-lg border border-transparent px-2 text-[10px] font-medium text-slate-400 transition hover:border-white/[.06] hover:bg-white/[.05] hover:text-white sm:px-3 sm:text-[11px] lg:text-[12px]">
                 <Icon className="size-4 shrink-0 text-slate-500 transition group-hover:text-[#55d6b5]"/><span>{label}</span><ArrowUpRight className="ml-auto hidden size-3 text-slate-600 group-hover:block"/>
               </Link>)}
             </div>)}
@@ -65,7 +65,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
             <div className="flex items-center gap-2 text-[10px] tracking-wide text-slate-500"><Compass className="size-3.5 text-[#55d6b5]"/> Cyber Wealth <span className="text-slate-700">/</span> <span className="text-slate-300">{eyebrow?.split('/').pop()?.trim() || 'Workspace'}</span></div>
             <div className="flex items-center gap-3"><span className="hidden text-[10px] text-slate-500 sm:block">Digital services & products</span><Link href="/kontak" className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-[10px] font-semibold text-slate-300 transition hover:border-[#55d6b5]/40 hover:text-[#55d6b5]">Contact <ArrowUpRight className="size-3"/></Link></div>
           </div>
-          <main className="mx-auto w-full max-w-[1500px] px-5 pb-20 pt-8 sm:px-8 sm:pt-10 lg:px-10 lg:pt-12">
+          <main className="mx-auto w-full max-w-[1500px] px-4 pb-16 pt-6 sm:px-8 sm:pt-10 lg:px-10 lg:pt-12">
             {back && <Link href={back.href} className="mb-6 inline-flex items-center gap-2 text-xs text-slate-400 hover:text-[#55d6b5]">← {back.label}</Link>}
             <div className={variant === 'wide' ? 'mb-9 flex flex-col gap-5 border-b border-white/10 pb-8 sm:flex-row sm:items-end sm:justify-between' : 'mb-8 flex flex-col gap-4 border-b border-white/10 pb-7 sm:flex-row sm:items-end sm:justify-between'}>
               <div>{eyebrow && <p className="mb-3 font-mono text-[10px] uppercase tracking-[.22em] text-[#55d6b5]">{eyebrow}</p>}<h1 className="max-w-4xl text-3xl font-semibold leading-[1.1] tracking-[-.045em] text-white sm:text-4xl lg:text-5xl">{title}</h1>{intent && <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">{intent}</p>}</div>
