@@ -226,10 +226,29 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
           status = 'sent'
           detail = 'Gmail menerima pesan melalui SMTP.'
         } catch (smtpError) {
-          if (!apiConfigured()) throw smtpError
-          const fallbackDetail = await sendViaEmailApi(input)
-          status = 'sent'
-          detail = 'Gmail SMTP gagal; jalur cadangan aktif. ' + fallbackDetail
+          const errorText = (error: unknown) => error instanceof Error
+            ? (error.message.trim() || error.name)
+            : (String(error ?? 'error tidak diketahui').trim() || 'error tidak diketahui')
+          let smtpFailure = 'Gmail SMTP port ' + c.smtpPort + ': ' + errorText(smtpError)
+          if (c.smtpPort === 465) {
+            try {
+              await gmailSmtp(input, 587)
+              status = 'sent'
+              detail = 'Gmail SMTP berhasil melalui STARTTLS port 587.'
+            } catch (starttlsError) {
+              smtpFailure += '; STARTTLS port 587: ' + errorText(starttlsError)
+            }
+          }
+          if (status !== 'sent') {
+            if (!apiConfigured()) throw new Error(smtpFailure)
+            try {
+              const fallbackDetail = await sendViaEmailApi(input)
+              status = 'sent'
+              detail = smtpFailure + '; jalur cadangan aktif. ' + fallbackDetail
+            } catch (apiError) {
+              throw new Error(smtpFailure + '; ' + errorText(apiError))
+            }
+          }
         }
       } else {
         detail = await sendViaEmailApi(input)
@@ -304,7 +323,20 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
       await gmailSmtp()
       return { state: 'ready', message: `Gmail SMTP berhasil diautentikasi untuk ${c.smtpUser}.` }
     } catch (error) {
-      const smtpDetail = error instanceof Error ? error.message.trim() : String(error ?? 'koneksi SMTP gagal').trim()
+      let smtpDetail = error instanceof Error
+        ? (error.message.trim() || error.name)
+        : (String(error ?? 'koneksi SMTP gagal').trim() || 'koneksi SMTP gagal')
+      if (c.smtpPort === 465) {
+        try {
+          await gmailSmtp(undefined, 587)
+          return { state: 'ready', message: 'Gmail SMTP berhasil diautentikasi melalui STARTTLS port 587 untuk ' + c.smtpUser + '.' }
+        } catch (starttlsError) {
+          const detail = starttlsError instanceof Error
+            ? (starttlsError.message.trim() || starttlsError.name)
+            : (String(starttlsError ?? 'error tidak diketahui').trim() || 'error tidak diketahui')
+          smtpDetail += '; STARTTLS port 587: ' + detail
+        }
+      }
       if (apiConfigured()) {
         try {
           const response = await fetch(`${c.baseUrl}/domains`, {
