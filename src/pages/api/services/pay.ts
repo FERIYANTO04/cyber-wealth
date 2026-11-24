@@ -37,9 +37,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const serverKey = process.env.MIDTRANS_SERVER_KEY?.trim() ?? ''
   if (!serverKey) return res.status(503).json({ error: 'Pembayaran online belum tersedia. Tim kami akan menghubungi Anda.' })
   const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
+  const dataSource = production ? 'live' : 'test'
 
   const [existing] = await sqlClient`SELECT * FROM service_payment
-    WHERE service_request_id=${request.id} AND status='pending'
+    WHERE service_request_id=${request.id} AND status='pending' AND data_source=${dataSource}
     ORDER BY created_at DESC LIMIT 1`
   if (existing?.invoice_url) {
     return res.status(200).json({ ok: true, paymentUrl: existing.invoice_url, code: existing.code })
@@ -49,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const id = randomUUID()
   await sqlClient`INSERT INTO service_payment
     (id,code,service_request_id,amount_idr,buyer_name,buyer_email,status,provider,data_source)
-    VALUES (${id},${code},${request.id},${amount},${request.name},${request.email},'pending','midtrans','live')`
+    VALUES (${id},${code},${request.id},${amount},${request.name},${request.email},'pending','midtrans',${dataSource})`
 
   try {
     const base = production ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
