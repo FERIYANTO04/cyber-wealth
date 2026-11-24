@@ -354,8 +354,8 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
               try {
                 const createResponse = await fetch(`${c.baseUrl}/domains`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
-                  body: JSON.stringify({ name: senderDomain, region: 'us-east-1' }),
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}`, 'User-Agent': 'CyberWealth/1.0' },
+                  body: JSON.stringify({ name: senderDomain, region: 'us-east-1', capabilities: { sending: 'enabled', receiving: 'disabled' }, open_tracking: false, click_tracking: false }),
                   cache: 'no-store',
                   signal: AbortSignal.timeout(10000),
                 })
