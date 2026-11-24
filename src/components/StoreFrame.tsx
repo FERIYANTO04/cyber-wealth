@@ -12,6 +12,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
     { label: 'WORKSPACE', links: [
       { href: '/', label: 'Overview', icon: Home },
       { href: '/marketplace', label: 'Marketplace', icon: Grid2X2 },
+      { href: '/showroom', label: '3D Studio', icon: Sparkles },
       { href: '/jasa', label: 'Layanan digital', icon: Layers3 },
       { href: '/toko', label: 'Produk digital', icon: Package },
     ]},
