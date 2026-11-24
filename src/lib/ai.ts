@@ -165,18 +165,29 @@ export async function chatWithAi(args: {
   const result = await requestProvider(primary, governedArgs)
   if (result.ok) return result
 
-  const fallbackAvailable = FALLBACK_ENABLED && !primaryIsGroq && Boolean(fallbackKey)
-  if (!fallbackAvailable || !canFailOver(result.reason)) return result
+  if (!FALLBACK_ENABLED || !canFailOver(result.reason)) return result
 
-  const fallback = await requestProvider({
-    baseUrl: FALLBACK_BASE_URL,
-    model: FALLBACK_MODEL,
-    key: fallbackKey,
-    label: 'Groq cadangan',
-  }, args)
+  // Route around Groq quota outages through the independently configured Neon
+  // AI Gateway. When the gateway is primary, retain Groq as the alternate route.
+  const gatewayKey = (process.env.NEON_AI_GATEWAY_TOKEN || '').trim()
+  const gatewayBase = NEON_BASE_URL
+    ? (NEON_BASE_URL.endsWith('/v1') ? NEON_BASE_URL : NEON_BASE_URL + '/v1')
+    : ''
+  const fallbackProvider: Provider | null = primaryIsGroq && gatewayBase && gatewayKey && !isPlaceholder(gatewayKey)
+    ? {
+        baseUrl: gatewayBase,
+        model: process.env.NEON_AI_GATEWAY_MODEL || 'gpt-5-mini',
+        key: gatewayKey,
+        label: 'Neon AI Gateway cadangan',
+      }
+    : !primaryIsGroq && fallbackKey
+      ? { baseUrl: FALLBACK_BASE_URL, model: FALLBACK_MODEL, key: fallbackKey, label: 'Groq cadangan' }
+      : null
 
+  if (!fallbackProvider) return result
+  const fallback = await requestProvider(fallbackProvider, governedArgs)
   if (fallback.ok) return fallback
-  return { ok: false, reason: `${result.reason} Jalur cadangan juga gagal: ${fallback.reason}` }
+  return { ok: false, reason: `${result.reason} Jalur cadangan juga gagal: `${fallback.reason}` }
 }
 
 export async function askAi(args: { system: string; prompt: string; maxTokens?: number }): Promise<AiOutcome> {
