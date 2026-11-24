@@ -1212,8 +1212,9 @@ export async function autopilotDue(): Promise<boolean> {
     .orderBy(asc(agentRuns.startedAt))
   if (activeRuns.length) {
     const now = Date.now()
-    const staleRuns = activeRuns.filter(run => now - run.startedAt.getTime() >= 10 * 60 * 1000)
-    if (staleRuns.length === 0) return false
+    const freshRuns = activeRuns.filter(run => now - run.startedAt.getTime() < 10 * 60 * 1000)
+    if (freshRuns.length > 0) return false
+    const staleRuns = activeRuns
     for (const run of staleRuns) {
       await db.update(agentRuns)
         .set({
@@ -1229,6 +1230,12 @@ export async function autopilotDue(): Promise<boolean> {
 
   const last = await getLastRun()
   if (!last) return true
+  // Retry a failed cycle after 30 minutes; a healthy completed cycle uses the
+  // normal interval. This avoids leaving the company idle for five hours after
+  // a transient provider or network failure.
+  if (last.status === 'failed') {
+    return Date.now() - last.startedAt.getTime() > 30 * 60 * 1000
+  }
   // The Railway cron normally runs every five hours. A configurable guard
   // limits completed cycles while allowing a recovered stale run to retry now.
   const configuredHours = Number(process.env.AUTOPILOT_MIN_INTERVAL_HOURS ?? 5)
