@@ -50,6 +50,10 @@ function HomePage() {
         </div>
         <Link href="/jasa/paket-konten-umkm-30-hari" className="inline-flex items-center justify-center gap-3 bg-[#c5a66a] px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#101010] transition hover:bg-[#dfc58f]">Pesan paket <ArrowUpRight className="size-4"/></Link>
       </section>
+      <section className="flex flex-col gap-5 border border-[#b99a5b]/25 bg-[#101113] p-7 sm:flex-row sm:items-center sm:justify-between sm:p-9">
+        <div><p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#c5a66a]">Gratis untuk dicoba</p><h3 className="mt-3 text-2xl font-medium text-[#f3f0e9]">Lihat contoh konten promosi UMKM.</h3><p className="mt-2 max-w-xl text-xs leading-6 text-[#aaa69e]">Baca contoh caption dan ide video sebelum memesan paket lengkap.</p></div>
+        <Link href="/contoh-konten-umkm" className="inline-flex shrink-0 items-center gap-3 border border-[#c5a66a]/60 px-6 py-4 text-[10px] font-semibold uppercase tracking-[.16em] text-[#d8bd83] hover:bg-[#c5a66a] hover:text-[#101010]">Lihat contoh gratis <ArrowUpRight className="size-4"/></Link>
+      </section>
       <section className="grid gap-12 py-10 lg:grid-cols-[.8fr_1.2fr] lg:py-16">
         <div><p className="font-mono text-[10px] uppercase tracking-[.22em] text-[#c5a66a]">What we do</p><h3 className="mt-4 max-w-md text-3xl font-medium leading-tight tracking-[-.04em] text-[#f3f0e9] sm:text-4xl">A connected ecosystem for modern work.</h3></div>
         <div className="grid gap-0 sm:grid-cols-2">
