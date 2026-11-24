@@ -15,7 +15,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const [owner, customer] = await Promise.all([getSession(ctx.req), getCustomer(ctx.req)])
   if (!owner && !customer) {
     const guard = await requireCustomerPage(ctx)
-    if ('redirectTo' in guard) return { redirect: { destination: guard.redirectTo, permanent: false } }
+    if ('redirectTo' in guard) return { redirect: { destination: guard.redirectTo || '/masuk', permanent: false } }
   }
 
   const email = customer?.email?.toLowerCase()
