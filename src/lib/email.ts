@@ -36,7 +36,7 @@ function apiConfigured() {
 async function sendViaEmailApi(input: EmailInput): Promise<string> {
   const c = emailConfig()
   if (!apiConfigured()) throw new Error('Resend belum dikonfigurasi dengan alamat pengirim.')
-  const response = await fetch(`${c.baseUrl} /emails`.replace(' /emails', '/emails'), {
+  const response = await fetch(`${c.baseUrl}/emails`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
     body: JSON.stringify({ from: c.from, to: [input.to.trim().toLowerCase()], subject: input.subject, text: input.body }),
@@ -49,7 +49,7 @@ async function sendViaEmailApi(input: EmailInput): Promise<string> {
 }
 
 export function emailConfigured(): boolean {
-  // Prefer the configured Gmail SMTP mailbox; use the API only when SMTP is absent.
+  // Prefer Gmail SMTP, with the configured email API as a delivery fallback.
   return smtpConfigured() || apiConfigured()
 }
 
@@ -250,8 +250,27 @@ export async function testEmail(): Promise<{ state: 'ready' | 'missing' | 'inval
       await gmailSmtp()
       return { state: 'ready', message: `Gmail SMTP berhasil diautentikasi untuk ${c.smtpUser}.` }
     } catch (error) {
-      const detail = error instanceof Error ? error.message.trim() : String(error ?? '').trim()
-      return { state: 'invalid', message: detail ? `Gmail SMTP: ${detail.slice(0, 300)}` : 'Gmail SMTP gagal merespons.' }
+      const smtpDetail = error instanceof Error ? error.message.trim() : String(error ?? 'koneksi SMTP gagal').trim()
+      if (apiConfigured()) {
+        try {
+          const response = await fetch(`${c.baseUrl}/domains`, {
+            headers: { Authorization: `Bearer ${c.key}` },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(10000),
+          })
+          if (response.ok) {
+            const payload = (await response.json().catch(() => null)) as { data?: { name?: string; status?: string }[] } | null
+            const senderDomain = c.from.split('@').pop()?.trim().toLowerCase() ?? ''
+            const verified = (payload?.data ?? []).some(d => d.name?.trim().toLowerCase() === senderDomain && d.status?.toLowerCase() === 'verified')
+            if (verified) return { state: 'ready', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); Resend domain terverifikasi dan siap menjadi jalur cadangan untuk ${c.from}.` }
+            return { state: 'unverified', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); domain Resend ${senderDomain || '(tidak valid)'} belum terverifikasi.` }
+          }
+          return { state: 'error', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); Resend menjawab ${response.status}.` }
+        } catch {
+          return { state: 'error', message: `Gmail SMTP gagal (${smtpDetail.slice(0, 120)}); jalur cadangan Resend tidak dapat diperiksa.` }
+        }
+      }
+      return { state: 'invalid', message: `Gmail SMTP: ${smtpDetail.slice(0, 300) || 'gagal merespons.'}` }
     }
   }
 
