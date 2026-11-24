@@ -33,6 +33,21 @@ function apiConfigured() {
   return apiKeyConfigured() && !isPlaceholder(c.from)
 }
 
+async function sendViaEmailApi(input: EmailInput): Promise<string> {
+  const c = emailConfig()
+  if (!apiConfigured()) throw new Error('Resend belum dikonfigurasi dengan alamat pengirim.')
+  const response = await fetch(`${c.baseUrl} /emails`.replace(' /emails', '/emails'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
+    body: JSON.stringify({ from: c.from, to: [input.to.trim().toLowerCase()], subject: input.subject, text: input.body }),
+    signal: AbortSignal.timeout(15000),
+    cache: 'no-store',
+  })
+  const payload = (await response.json().catch(() => null)) as { id?: string; message?: string } | null
+  if (!response.ok) throw new Error(`Resend menjawab ${response.status}${payload?.message ? ': ' + payload.message : '.'}`)
+  return payload?.id ? `Resend menerima pesan (id ${payload.id}).` : 'Resend menerima pesan.'
+}
+
 export function emailConfigured(): boolean {
   // Prefer the configured Gmail SMTP mailbox; use the API only when SMTP is absent.
   return smtpConfigured() || apiConfigured()
@@ -152,30 +167,24 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
     detail = 'Email belum terkirim. Penyedia email belum dikonfigurasi.'
   } else {
     try {
-      if (!smtpConfigured() && apiConfigured()) {
-        const response = await fetch(`${c.baseUrl}/emails`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
-          body: JSON.stringify({ from: c.from, to: [to], subject: input.subject, text: input.body }),
-          signal: AbortSignal.timeout(15000),
-          cache: 'no-store',
-        })
-        const payload = (await response.json().catch(() => null)) as { id?: string; message?: string } | null
-        if (response.ok) {
+      if (smtpConfigured()) {
+        try {
+          await gmailSmtp(input)
           status = 'sent'
-          detail = payload?.id ? `Diterima penyedia email (id ${payload.id}).` : 'Diterima penyedia email.'
-        } else {
-          status = 'failed'
-          detail = `Penyedia email menjawab ${response.status}${payload?.message ? `: ${payload.message}` : ''}.`
+          detail = 'Gmail menerima pesan melalui SMTP.'
+        } catch (smtpError) {
+          if (!apiConfigured()) throw smtpError
+          const fallbackDetail = await sendViaEmailApi(input)
+          status = 'sent'
+          detail = 'Gmail SMTP gagal; jalur cadangan aktif. ' + fallbackDetail
         }
       } else {
-        await gmailSmtp(input)
+        detail = await sendViaEmailApi(input)
         status = 'sent'
-        detail = 'Gmail menerima pesan melalui SMTP.'
       }
     } catch (error) {
       status = 'failed'
-      detail = error instanceof Error ? error.message.slice(0, 500) : 'Pengiriman email gagal.'
+      detail = error instanceof Error ? error.message.slice(0, 500) : String(error ?? 'Pengiriman email gagal.').slice(0, 500)
     }
   }
 
