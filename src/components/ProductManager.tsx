@@ -62,7 +62,7 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
     setBusy(true)
     setError(null)
     setNote(null)
-    const numericPrice = Number(price.replace(/[^\\d]/g, ''))
+    const numericPrice = Number(price.replace(/\D/g, ''))
     if (pricingMode === 'paid' && (!price.trim() || !Number.isSafeInteger(numericPrice) || numericPrice < 1)) {
       setError('Produk berbayar wajib memiliki harga minimal Rp1. Pilih Gratis secara terpisah jika memang tidak dipungut biaya.')
       setBusy(false)
@@ -77,7 +77,7 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
           summary,
           description,
           category,
-          priceIdr: Number(price.replace(/[^\d]/g, '')) || 0,
+          priceIdr: pricingMode === 'free' ? 0 : numericPrice,
           deliverableNote: deliverable || undefined,
           status: publishNow ? 'published' : 'draft',
         }),
@@ -94,7 +94,7 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
           name,
           summary,
           category,
-          priceIdr: Number(price.replace(/[^\d]/g, '')) || 0,
+          priceIdr: pricingMode === 'free' ? 0 : numericPrice,
           status: publishNow ? 'published' : 'draft',
           fileName: null,
           fileKey: null,
