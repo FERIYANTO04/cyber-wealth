@@ -1,10 +1,8 @@
 import type { GetServerSideProps } from 'next'
 import { useState } from 'react'
-import { and, desc, eq } from 'drizzle-orm'
 import { StoreFrame } from '@/components/StoreFrame'
 import { Badge, Button, Panel, PanelBody, PanelHead } from '@/components/ui'
-import { db } from '@/lib/db'
-import { servicePayments, serviceRequests } from '@/lib/db/schema'
+import { sqlClient } from '@/lib/db'
 import { money } from '@/lib/format'
 import type { PageWithFrame } from '@/lib/frame'
 
@@ -23,13 +21,18 @@ type Props = {
 
 export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const token = String(ctx.params?.token ?? '')
-  const [request] = await db.select().from(serviceRequests).where(eq(serviceRequests.proposalToken, token)).limit(1)
+  const [request] = await sqlClient`
+    select id, code, name, service_name as "serviceName", brief,
+      proposal_body as "proposalBody", proposal_amount_idr as "proposalAmountIdr", status
+    from service_request where proposal_token = ${token} limit 1
+  `
   if (!request) return { notFound: true }
 
-  const payments = await db.select().from(servicePayments)
-    .where(and(eq(servicePayments.serviceRequestId, request.id), eq(servicePayments.dataSource, 'live')))
-    .orderBy(desc(servicePayments.createdAt)).limit(1)
-  const payment = payments[0]
+  const [payment] = await sqlClient`
+    select status, invoice_url as "invoiceUrl" from service_payment
+    where service_request_id = ${request.id} and data_source = 'live'
+    order by created_at desc limit 1
+  `
 
   return {
     props: {
