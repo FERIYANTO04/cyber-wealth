@@ -33,6 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(409).json({ error: 'Penawaran ini sudah pernah dikirim.' })
   }
 
+  const portalUrl = request.proposalToken
+    ? (process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://cyber-wealth-web-production.up.railway.app').replace(/\\/$/, '') + '/permintaan/' + request.proposalToken
+    : null
+
   const result = await sendEmail({
     to: request.email,
     subject: `Penawaran Cyber Wealth — ${request.serviceName}`,
@@ -43,6 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       '',
       request.proposalBody,
       '',
+      ...(portalUrl ? ['Lihat penawaran dan lanjutkan pembayaran melalui portal privat:', portalUrl, ''] : []),
       `Nilai penawaran: ${money(Number(request.proposalAmountIdr))}`,
       '',
       'Jika Anda setuju, balas email ini. Kami akan mengonfirmasi langkah pembayaran dan jadwal pengerjaan setelah persetujuan Anda.',
