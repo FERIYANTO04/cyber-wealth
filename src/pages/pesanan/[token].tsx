@@ -6,7 +6,6 @@ import { db } from '@/lib/db'
 import { products } from '@/lib/db/schema'
 import { getOrderByToken } from '@/lib/revenue'
 import { eq } from 'drizzle-orm'
-import { fileUrl } from '@/lib/storage'
 import type { PageWithFrame } from '@/lib/frame'
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
@@ -26,12 +25,10 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if (order.status === 'paid') {
     const [product] = await db.select().from(products).where(eq(products.id, order.productId)).limit(1)
     deliverableNote = product?.deliverableNote ?? null
-    if (product?.slug === 'panduan-konten-media-sosial') {
-      // This bundled product has a real PDF deliverable; the API route checks the
-      // paid order token before streaming the file.
+    if (product?.fileKey || product?.slug === 'panduan-konten-media-sosial') {
+      // All paid digital products use the same token-gated download endpoint.
+      // The endpoint verifies paid status and streams the private object-store file.
       downloadUrl = `/api/orders/download?token=${encodeURIComponent(token)}`
-    } else if (product?.fileKey) {
-      downloadUrl = await fileUrl(product.fileKey, { download: product.fileName ?? undefined }).catch(() => null)
     }
   }
 
