@@ -208,12 +208,12 @@ export function ServiceDesk({
       setRows((old) =>
         old.map((item) =>
           item.id === row.id
-            ? { ...item, proposalBody: data.text, proposalAmountIdr: amount, proposalSource: `ai:${data.model}`, status: 'proposed' }
+            ? { ...item, proposalBody: data.text, proposalAmountIdr: amount, proposalSource: data.model?.startsWith('Template fallback') ? 'template:fallback' : `ai:${data.model}`, status: 'proposed' }
             : item
         )
       )
       setExpanded(row.id)
-      setNote('Draf penawaran siap. Baca dulu, lalu kirim ke klien lewat email Anda sendiri.')
+      setNote('Draf penawaran siap. Periksa isinya, lalu salin tautan portal privat untuk dibagikan ke klien. Email hanya kanal tambahan.')
     } catch {
       setError('Koneksi terputus. Coba lagi.')
     } finally {
