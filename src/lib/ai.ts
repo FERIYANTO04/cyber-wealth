@@ -169,7 +169,9 @@ export async function chatWithAi(args: {
     baseUrl: PRIMARY_BASE_URL,
     model: PRIMARY_MODEL,
     key: primaryKey,
-    label: primaryIsGroq ? 'Groq' : (NEON_BASE_URL || process.env.AI_BASE_URL ? 'AI Gateway' : 'Groq'),
+    label: PRIMARY_BASE_URL.includes('api.kiosapi.id')
+      ? 'KiosAPI'
+      : primaryIsGroq ? 'Groq' : 'AI Gateway',
   }
   const result = await requestProvider(primary, governedArgs)
   if (result.ok) return result
@@ -196,7 +198,9 @@ export async function chatWithAi(args: {
   }
 
   // A different Groq model is a final provider-specific fallback.
-  if (fallbackKey && FALLBACK_MODEL !== PRIMARY_MODEL) {
+  // When KiosAPI is configured, do not hide its failure behind the same
+  // exhausted Groq account. Surface the actual primary/Neon error instead.
+  if (fallbackKey && FALLBACK_MODEL !== PRIMARY_MODEL && !KIOSAPI_KEY) {
     fallbackProviders.push({
       baseUrl: FALLBACK_BASE_URL,
       model: FALLBACK_MODEL,
