@@ -5,12 +5,18 @@ import { requireOwnerPage } from '@/lib/auth'
 import { getOwnerServices, getServiceRequests } from '@/lib/services'
 import { aiConfigured } from '@/lib/ai'
 import type { PageWithFrame } from '@/lib/frame'
+import { sqlClient } from '@/lib/db'
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const guard = await requireOwnerPage(ctx)
   if ('redirectTo' in guard) return { redirect: { destination: guard.redirectTo, permanent: false } }
 
-  const [services, requests] = await Promise.all([getOwnerServices(), getServiceRequests(60)])
+  const [services, requests, tokenRows] = await Promise.all([
+    getOwnerServices(),
+    getServiceRequests(60),
+    sqlClient`select id, proposal_token from service_request where data_source = 'live' order by created_at desc limit 100`,
+  ])
+  const proposalTokens = new Map(tokenRows.map((row) => [String(row.id), row.proposal_token ? String(row.proposal_token) : null]))
 
   return {
     props: {
@@ -42,7 +48,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
           proposalBody: row.proposalBody,
           proposalAmountIdr: row.proposalAmountIdr === null ? null : Number(row.proposalAmountIdr),
           proposalSource: row.proposalSource,
-          proposalToken: row.proposalToken,
+          proposalToken: proposalTokens.get(row.id) ?? null,
           createdAt: row.createdAt.toISOString(),
         })
       ),
