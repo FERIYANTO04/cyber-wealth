@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }).returning()
 
   if (isFree) {
-    await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
+    await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken }).catch((error) => { console.error('[checkout buyer email]', error) })
     await db.insert(activity).values({ actor: 'system', action: 'Pesanan gratis dibuat', detail: product.name + ' — ' + code + '. Tidak ada pembayaran.', dataSource: 'live' })
     return res.status(201).json({ ok: true, token: accessToken, free: true })
   }
@@ -126,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     await db.update(orders).set({ invoiceId: payload.token, invoiceUrl: payload.redirect_url }).where(eq(orders.id, order.id))
-    await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken })
+    await sendOrderRecordedEmail({ code, productName: product.name, buyerName: parsed.data.name, buyerEmail: parsed.data.email, amountIdr: amount, accessToken }).catch((error) => { console.error('[checkout buyer email]', error) })
     await db.insert(activity).values({
       actor: 'system',
       action: 'Tagihan Midtrans diterbitkan',
