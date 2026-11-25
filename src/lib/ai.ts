@@ -12,7 +12,9 @@ const PRIMARY_BASE_URL = (
 const PRIMARY_MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
 const PRIMARY_KEY = PRIMARY_BASE_URL.includes('api.groq.com')
   ? (process.env.GROQ_API_KEY || '')
-  : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '')
+  : PRIMARY_BASE_URL.includes('api.kiosapi.id')
+    ? (process.env.KIOSAPI_API_KEY || '')
+    : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '')
 const FALLBACK_KEY = process.env.GROQ_API_KEY || ''
 const FALLBACK_BASE_URL = 'https://api.groq.com/openai/v1'
 const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || 'openai/gpt-oss-120b'
@@ -199,7 +201,7 @@ export async function chatWithAi(args: {
 
   // Kiosapi remains an additional route when its configured key is valid.
   const kiosapiKey = (process.env.KIOSAPI_API_KEY || '').trim()
-  if (kiosapiKey) {
+  if (kiosapiKey && !PRIMARY_BASE_URL.includes('api.kiosapi.id')) {
     fallbackProviders.push({
       baseUrl: 'https://api.kiosapi.id/v1',
       model: process.env.AI_KIOSAPI_FALLBACK_MODEL || 'google/gemma-4-26b',
