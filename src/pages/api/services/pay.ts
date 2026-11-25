@@ -29,6 +29,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(409).json({ error: 'Permintaan ini sudah ditutup.' })
   }
 
+  const [alreadyPaid] = await sqlClient`
+    select id from service_payment
+    where service_request_id = ${request.id} and status = 'paid' and data_source = 'live' limit 1
+  `
+  if (alreadyPaid) return res.status(200).json({ ok: true, paid: true })
+
   const [current] = await sqlClient`
     select id, code, amount_idr as "amountIdr", status, invoice_url as "invoiceUrl"
     from service_payment where service_request_id = ${request.id} and data_source = 'live'
