@@ -13,6 +13,7 @@ export function ServiceBriefForm({ slug }: { slug: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sentCode, setSentCode] = useState<string | null>(null)
+  const [proposalToken, setProposalToken] = useState<string | null>(null)
   const [receiptSent, setReceiptSent] = useState(false)
 
   async function submit(event: FormEvent) {
@@ -40,6 +41,7 @@ export function ServiceBriefForm({ slug }: { slug: string }) {
       }
       setReceiptSent(data.receiptSent === true)
       setSentCode(data.code)
+      setProposalToken(data.proposalToken ?? null)
     } catch {
       setError('Koneksi terputus. Coba lagi.')
     } finally {
@@ -54,6 +56,11 @@ export function ServiceBriefForm({ slug }: { slug: string }) {
         <p className="text-xs leading-relaxed text-ink-quiet">
           Nomor permintaan <span className="font-mono">{sentCode}</span>. Simpan nomor ini untuk referensi.
         </p>
+        {proposalToken && (
+          <p className="text-xs leading-relaxed text-ink-quiet">
+            Simpan tautan privat untuk melihat penawaran dan membayar setelah penawaran tersedia: <a className="font-semibold text-signal underline underline-offset-4" href={`/permintaan/${proposalToken}`}>Buka portal permintaan</a>.
+          </p>
+        )}
         <p className="text-xs leading-relaxed text-ink-quiet">
           {receiptSent
             ? 'Konfirmasi penerimaan juga sudah dikirim ke email Anda. Tim akan meninjau kebutuhan dan mengirimkan rincian harga serta pembayaran sebelum pekerjaan dimulai.'

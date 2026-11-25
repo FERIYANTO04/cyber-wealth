@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { serviceRequests } from '@/lib/db/schema'
+import { servicePayments, serviceRequests } from '@/lib/db/schema'
 import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 
@@ -11,9 +11,8 @@ const Body = z.object({
 })
 
 /**
- * Moves a job through its stages. Marking it delivered is the only place a service
- * becomes revenue, and only when the owner records what the client actually paid —
- * nothing is inferred from the brief.
+ * Moves a paid job through its delivery stages. Revenue is booked only by the
+ * Midtrans webhook after the provider confirms the exact amount; status edits never book money.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
@@ -27,6 +26,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const id = String(req.query.id ?? '')
   const [current] = await db.select().from(serviceRequests).where(eq(serviceRequests.id, id)).limit(1)
   if (!current) return res.status(404).json({ error: 'Permintaan tidak ditemukan.' })
+
+  if (['won', 'in_progress', 'delivered'].includes(parsed.data.status)) {
+    const [paid] = await db.select({ id: servicePayments.id }).from(servicePayments).where(and(
+      eq(servicePayments.serviceRequestId, id),
+      eq(servicePayments.status, 'paid'),
+      eq(servicePayments.dataSource, 'live')
+    )).limit(1)
+    if (!paid) return res.status(409).json({ error: 'Status ini hanya dapat dipilih setelah pembayaran jasa terverifikasi oleh Midtrans.' })
+  }
 
   await db
     .update(serviceRequests)

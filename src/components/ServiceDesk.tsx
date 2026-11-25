@@ -32,6 +32,7 @@ export type JobRow = {
   proposalBody: string | null
   proposalAmountIdr: number | null
   proposalSource: string | null
+  proposalToken: string | null
   createdAt: string
 }
 
@@ -169,6 +170,17 @@ export function ServiceDesk({
       setError('Koneksi terputus. Coba lagi.')
     } finally {
       setSending(null)
+    }
+  }
+
+  async function copyPortalLink(row: JobRow) {
+    if (!row.proposalToken) return
+    const url = `${window.location.origin}/permintaan/${row.proposalToken}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setNote('Tautan portal klien sudah disalin. Kirim melalui WhatsApp atau kanal yang Anda gunakan.')
+    } catch {
+      setNote(`Tautan portal klien: ${url}`)
     }
   }
 
@@ -350,6 +362,11 @@ export function ServiceDesk({
                         <Button size="sm" variant="secondary" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
                           {expanded === row.id ? 'Tutup penawaran' : 'Lihat penawaran'}
                         </Button>
+                        {row.proposalToken && (
+                          <Button size="sm" variant="secondary" onClick={() => copyPortalLink(row)}>
+                            Salin portal klien
+                          </Button>
+                        )}
                         <Button size="sm" onClick={() => sendOffer(row)} disabled={sending === row.id || row.status === 'proposal_sent'}>
                           {sending === row.id ? 'Mengirim…' : row.status === 'proposal_sent' ? 'Sudah dikirim' : 'Kirim penawaran'}
                         </Button>
