@@ -5,7 +5,7 @@ import { count, desc, eq, gte, sql } from 'drizzle-orm'
 import { Activity, ArrowDownLeft, ArrowUpRight, Boxes, CircleDollarSign, Clapperboard, LayoutDashboard, LogOut, Package, Settings2, ShieldCheck, Wallet, ExternalLink } from 'lucide-react'
 import { requireOwnerPage } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { activity as activityTable, agentRuns, agents, assets, ownerAccount, products, serviceRequests, transactions } from '@/lib/db/schema'
+import { activity as activityTable, agentRuns, agents, assets, customers, orders, ownerAccount, products, serviceRequests, transactions } from '@/lib/db/schema'
 import type { PageWithFrame } from '@/lib/frame'
 
 const idr = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
@@ -16,7 +16,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   ctx.res.setHeader('Cache-Control', 'private, no-store, max-age=0')
   const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-  const [ownerRows, txRows, assetRows, productRows, agentRows, activityRows, visitToday, visitorToday, visitWeek, dailyVisits, topPages, requestCount, runRows] = await Promise.all([
+  const [ownerRows, txRows, assetRows, productRows, agentRows, activityRows, visitToday, visitorToday, visitWeek, dailyVisits, topPages, requestCount, customerCount, paidOrderCount, runRows] = await Promise.all([
     db.select({ name: ownerAccount.name, email: ownerAccount.email, createdAt: ownerAccount.createdAt }).from(ownerAccount).where(eq(ownerAccount.id, guard.session.ownerId)).limit(1),
     db.select().from(transactions).where(eq(transactions.dataSource, 'live')).orderBy(desc(transactions.occurredAt)).limit(12),
     db.select().from(assets).where(eq(assets.dataSource, 'live')).orderBy(desc(assets.createdAt)).limit(50),
@@ -29,6 +29,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     db.execute(sql`SELECT to_char(date_trunc('day', viewed_at), 'YYYY-MM-DD') AS day, count(*)::int AS views, count(DISTINCT visitor_hash)::int AS visitors FROM site_visit WHERE viewed_at >= ${since7.toISOString()} GROUP BY date_trunc('day', viewed_at) ORDER BY date_trunc('day', viewed_at)`),
     db.execute(sql`SELECT path, count(*)::int AS views FROM site_visit WHERE viewed_at >= ${since7.toISOString()} GROUP BY path ORDER BY count(*) DESC LIMIT 5`),
     db.select({ value: count() }).from(serviceRequests),
+    db.select({ value: count() }).from(customers),
+    db.select({ value: count() }).from(orders).where(eq(orders.status, 'paid')),
     db.select({ agentName: agentRuns.agentName, status: agentRuns.status, startedAt: agentRuns.startedAt, finishedAt: agentRuns.finishedAt, itemsCreated: agentRuns.itemsCreated }).from(agentRuns).where(gte(agentRuns.startedAt, since7)).orderBy(desc(agentRuns.startedAt)).limit(300),
   ])
   const owner = ownerRows[0]
@@ -49,8 +51,10 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       daily: dailyVisits.map((r) => ({ day: r.day, views: Number(r.views), visitors: Number(r.visitors) })),
       topPages: topPages.map((r) => ({ path: r.path, views: Number(r.views) })),
       clientRequests: Number(requestCount[0]?.value ?? 0),
+      customers: Number(customerCount[0]?.value ?? 0),
+      paidOrders: Number(paidOrderCount[0]?.value ?? 0),
       agentRuns: runRows.length,
-      agentSuccess: runRows.filter((r) => /^(success|succeeded|completed|done)$/i.test(r.status)).length,
+      agentSuccess: runRows.filter((r) => /^(ok|success|succeeded|completed|done)$/i.test(r.status)).length,
       agentFailed: runRows.filter((r) => /^(failed|error|cancelled)$/i.test(r.status)).length,
       agentItems: runRows.reduce((sum, r) => sum + Number(r.itemsCreated || 0), 0),
     },
@@ -60,7 +64,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 }
 
 type Props = {
-  analytics: { todayViews: number; todayVisitors: number; weekViews: number; daily: { day: string; views: number; visitors: number }[]; topPages: { path: string; views: number }[]; clientRequests: number; agentRuns: number; agentSuccess: number; agentFailed: number; agentItems: number }
+  analytics: { todayViews: number; todayVisitors: number; weekViews: number; daily: { day: string; views: number; visitors: number }[]; topPages: { path: string; views: number }[]; clientRequests: number; customers: number; paidOrders: number; agentRuns: number; agentSuccess: number; agentFailed: number; agentItems: number }
   owner: { name: string; email: string; createdAt: string }
   revenue: number; expenses: number; netCash: number; assets: number; netWorth: number
   transactions: { id: string; kind: string; category: string; description: string; amount: number; date: string }[]
@@ -84,7 +88,7 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
         <p className="px-3 pb-3 font-mono text-[9px] uppercase tracking-[.2em] text-[#646d79]">Main workspace</p>
         <Link href="/owner" className="mb-1 flex items-center gap-3 rounded-xl border border-[#b7a16a]/15 bg-[#b7a16a]/[0.09] px-3 py-3 text-[13px] font-semibold text-[#d8c18b]"><LayoutDashboard size={16}/> Executive overview</Link>
         <Link href="/dashboard" className="mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] text-[#929ba8] transition hover:bg-white/[0.04] hover:text-white"><Activity size={16}/> Operations center</Link>
-        <Link href="/toko" className="mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] text-[#929ba8] transition hover:bg-white/[0.04] hover:text-white"><Package size={16}/> Public storefront <ExternalLink size={12} className="ml-auto opacity-60"/></Link>
+        <Link href="/" className="mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] text-[#929ba8] transition hover:bg-white/[0.04] hover:text-white"><Package size={16}/> Public website <ExternalLink size={12} className="ml-auto opacity-60"/></Link>
       </div>
       <div className="mt-7 px-4">
         <p className="px-3 pb-3 font-mono text-[9px] uppercase tracking-[.2em] text-[#646d79]">Company management</p>
@@ -106,7 +110,7 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
         <div className="flex h-[76px] items-center justify-between gap-4 px-5 sm:px-8 xl:px-10">
           <div><p className="font-mono text-[9px] uppercase tracking-[.22em] text-[#7f8995]">CYBER WEALTH <span className="px-1 text-[#b7a16a]">/</span> PRIVATE OFFICE</p><h1 className="mt-1 text-[15px] font-semibold tracking-wide">Executive overview</h1></div>
           <div className="flex items-center gap-3">
-            <Link href="/toko" target="_blank" className="inline-flex items-center gap-2 rounded-xl border border-[#b7a16a]/30 bg-[#b7a16a]/[0.08] px-3.5 py-2.5 text-[11px] font-semibold text-[#d8c18b] transition hover:bg-[#b7a16a]/[0.15]"><ExternalLink size={13}/> View public website</Link>
+            <Link href="/" target="_blank" className="inline-flex items-center gap-2 rounded-xl border border-[#b7a16a]/30 bg-[#b7a16a]/[0.08] px-3.5 py-2.5 text-[11px] font-semibold text-[#d8c18b] transition hover:bg-[#b7a16a]/[0.15]"><ExternalLink size={13}/> View public website</Link>
             <div className="hidden h-8 w-px bg-white/10 sm:block"/>
             <div className="flex size-9 items-center justify-center rounded-full border border-[#b7a16a]/30 bg-[#171a20] text-xs font-semibold text-[#d8c18b]">{owner.name.slice(0,1).toUpperCase()}</div>
           </div>
@@ -132,11 +136,13 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
         </section>
 
         <section className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <Metric label="Kunjungan hari ini" value={analytics.todayViews.toLocaleString('id-ID')} note="Tampilan halaman publik" />
             <Metric label="Pengunjung unik hari ini" value={analytics.todayVisitors.toLocaleString('id-ID')} note="Browser unik (perkiraan)" />
             <Metric label="Kunjungan 7 hari" value={analytics.weekViews.toLocaleString('id-ID')} note="Tampilan halaman publik" />
             <Metric label="Permintaan klien" value={analytics.clientRequests.toLocaleString('id-ID')} note="Brief yang masuk" />
+            <Metric label="Pelanggan" value={analytics.customers.toLocaleString('id-ID')} note="Akun pembeli tercatat" />
+            <Metric label="Pesanan lunas" value={analytics.paidOrders.toLocaleString('id-ID')} note="Pembayaran terkonfirmasi" />
           </div>
           <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
             <div className="rounded-[18px] border border-white/[0.075] bg-[#10161e] p-4">
