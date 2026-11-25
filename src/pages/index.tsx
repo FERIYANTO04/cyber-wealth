@@ -3,14 +3,10 @@ import Link from 'next/link'
 import { ArrowUpRight, Bot, Cpu, Film, Gem, Layers3, Palette } from 'lucide-react'
 import { StoreFrame } from '@/components/StoreFrame'
 import { PageStack } from '@/components/ui'
-import { getSession } from '@/lib/auth'
 import type { PageWithFrame } from '@/lib/frame'
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const session = await getSession(ctx.req)
-  if (session) return { redirect: { destination: '/owner', permanent: false } }
-  return { props: {} }
-}
+// Halaman utama selalu menjadi situs publik, termasuk saat pemilik sedang login.
+export const getServerSideProps: GetServerSideProps = async () => ({ props: {} })
 const divisions = [
   { n:'01', title:'Creator & Media', desc:'Ekosistem kreator, produksi video, editing, motion graphics, dan konten untuk berbagai kanal.', href:'/kreator', label:'Masuk ke Creator', icon:Film },
   { n:'02', title:'Creative Studio', desc:'Desain grafis, identitas brand, materi kampanye, visual produk, dan produksi kreatif.', href:'/jasa', label:'Jelajahi layanan', icon:Palette },
