@@ -67,5 +67,5 @@ function HomePage() {
   </div>
 }
 const Page = HomePage as PageWithFrame
-Page.getLayout = (page) => <StoreFrame eyebrow="Cyber Wealth / Official website" title="" intent="" variant="wide" description="Cyber Wealth — a global digital ecosystem for creative production, technology, AI, and digital products.">{page}</StoreFrame>
+Page.getLayout = (page) => <StoreFrame title="" variant="wide" description="Cyber Wealth — a global digital ecosystem for creative production, technology, AI, and digital products.">{page}</StoreFrame>
 export default Page
