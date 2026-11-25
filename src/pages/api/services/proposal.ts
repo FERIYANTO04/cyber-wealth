@@ -32,7 +32,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .limit(1)
   if (!request) return res.status(404).json({ error: 'Permintaan tidak ditemukan.' })
 
-  const [service] = await db.select().from(services).where(eq(services.id, request.serviceId)).limit(1)
+  const service = request.serviceId
+    ? (await db.select().from(services).where(eq(services.id, request.serviceId)).limit(1))[0] ?? null
+    : null
   const outcome = aiConfigured()
     ? await askAi({
         system:
