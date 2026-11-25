@@ -112,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       '',
       'Simpan nomor permintaan ini untuk referensi.',
       'Cyber Wealth',
-    ].join('\\n'),
+    ].join('\n'),
     kind: 'buyer-service-receipt',
     relatedType: 'service-request',
     relatedId: row.id,
