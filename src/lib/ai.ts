@@ -5,15 +5,21 @@
 import { isPlaceholder } from './env'
 
 const NEON_BASE_URL = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
-const PRIMARY_BASE_URL = (
+const KIOSAPI_KEY = (process.env.KIOSAPI_API_KEY || '').trim()
+const CONFIGURED_BASE_URL = (
   process.env.AI_BASE_URL ||
   (NEON_BASE_URL ? `${NEON_BASE_URL}/v1` : 'https://api.groq.com/openai/v1')
 ).replace(/\/+$/, '')
-const PRIMARY_MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b'
+// KiosAPI is the explicitly selected company provider. Prefer it whenever its
+// credential is present, even if an older Groq/Neon URL remains in the service env.
+const PRIMARY_BASE_URL = KIOSAPI_KEY ? 'https://api.kiosapi.id/v1' : CONFIGURED_BASE_URL
+const PRIMARY_MODEL = KIOSAPI_KEY
+  ? (process.env.AI_KIOSAPI_MODEL || process.env.AI_MODEL || 'minimax/minimax-m3')
+  : (process.env.AI_MODEL || 'openai/gpt-oss-120b')
 const PRIMARY_KEY = PRIMARY_BASE_URL.includes('api.groq.com')
   ? (process.env.GROQ_API_KEY || '')
   : PRIMARY_BASE_URL.includes('api.kiosapi.id')
-    ? (process.env.KIOSAPI_API_KEY || '')
+    ? KIOSAPI_KEY
     : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || '')
 const FALLBACK_KEY = process.env.GROQ_API_KEY || ''
 const FALLBACK_BASE_URL = 'https://api.groq.com/openai/v1'
