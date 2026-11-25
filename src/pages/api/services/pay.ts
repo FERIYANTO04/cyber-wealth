@@ -32,17 +32,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .where(and(eq(servicePayments.serviceRequestId, request.id), eq(servicePayments.dataSource, 'live')))
     .orderBy(desc(servicePayments.createdAt)).limit(1)
   const current = payments[0]
+  const amount = Number(request.proposalAmountIdr)
   if (current?.status === 'paid') return res.status(200).json({ ok: true, paid: true })
-  if (current?.status === 'pending' && current.invoiceUrl) {
+  if (current?.status === 'pending' && Number(current.amountIdr) === amount && current.invoiceUrl) {
     return res.status(200).json({ ok: true, paymentUrl: current.invoiceUrl })
+  }
+  if (current?.status === 'pending' && Number(current.amountIdr) !== amount) {
+    await db.update(servicePayments).set({ status: 'expired' }).where(eq(servicePayments.id, current.id))
   }
 
   const serverKey = process.env.MIDTRANS_SERVER_KEY?.trim() ?? ''
   if (!serverKey) return res.status(503).json({ error: 'Pembayaran online belum dikonfigurasi. Tidak ada tagihan dibuat.' })
   const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
   const base = production ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
-  const amount = Number(request.proposalAmountIdr)
-  const payment = current ?? (await db.insert(servicePayments).values({
+  const payment = current?.status === 'pending' && Number(current.amountIdr) === amount ? current : (await db.insert(servicePayments).values({
     code: paymentCode(),
     serviceRequestId: request.id,
     amountIdr: amount,
