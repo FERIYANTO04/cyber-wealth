@@ -14,7 +14,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const [services, requests, tokenRows] = await Promise.all([
     getOwnerServices(),
     getServiceRequests(60),
-    sqlClient`select id, proposal_token from service_request where data_source = 'live' order by created_at desc limit 100`,
+    sqlClient`select id, proposal_token from service_request order by created_at desc limit 100`,
   ])
   const proposalTokens = new Map(tokenRows.map((row) => [String(row.id), row.proposal_token ? String(row.proposal_token) : null]))
 
