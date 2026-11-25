@@ -92,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   await db.insert(proposals).values({
     title: `Penawaran ${request.serviceName} untuk ${request.name}`,
-    summary: `Draf penawaran AI sebesar Rp ${parsed.data.amountIdr.toLocaleString('id-ID')} untuk ${request.code}. Kirim hanya setelah Anda menyetujui isinya.`,
+    summary: `Draf penawaran sebesar Rp ${parsed.data.amountIdr.toLocaleString('id-ID')} untuk ${request.code}. Kirim hanya setelah Anda menyetujui isinya.`,
     category: 'contract',
     amountIdr: parsed.data.amountIdr,
     risk: 'low',
