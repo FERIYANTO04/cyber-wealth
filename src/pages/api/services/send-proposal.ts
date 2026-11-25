@@ -33,8 +33,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(409).json({ error: 'Penawaran ini sudah pernah dikirim.' })
   }
 
+  const portalBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://cyber-wealth-web-production.up.railway.app'
   const portalUrl = request.proposalToken
-    ? (process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://cyber-wealth-web-production.up.railway.app').replace(/\\/$/, '') + '/permintaan/' + request.proposalToken
+    ? `${portalBase.endsWith('/') ? portalBase.slice(0, -1) : portalBase}/permintaan/${request.proposalToken}`
     : null
 
   const result = await sendEmail({
