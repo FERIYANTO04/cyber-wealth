@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...(portalUrl ? ['Lihat penawaran dan lanjutkan pembayaran melalui portal privat:', portalUrl, ''] : []),
       `Nilai penawaran: ${money(Number(request.proposalAmountIdr))}`,
       '',
-      'Jika Anda setuju, balas email ini. Kami akan mengonfirmasi langkah pembayaran dan jadwal pengerjaan setelah persetujuan Anda.',
+      'Jika Anda setuju, buka tautan portal privat untuk melanjutkan pembayaran. Pengerjaan dimulai setelah pembayaran terverifikasi.',
       '',
       'Tidak ada pembayaran yang diproses melalui email ini.',
       '',
