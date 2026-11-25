@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { activity, orders, servicePayments, serviceRequests, transactions } from '@/lib/db/schema'
 import { settlePaidOrder } from '@/lib/revenue'
@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'paid',
         paidAt: new Date(),
         invoiceId: status.transaction_id ?? notification.transaction_id ?? payment.invoiceId,
-      }).where(and(eq(servicePayments.id, payment.id), eq(servicePayments.status, 'pending'))).returning()
+      }).where(and(eq(servicePayments.id, payment.id), inArray(servicePayments.status, ['pending', 'failed']))).returning()
 
       if (settled) {
         await db.update(serviceRequests).set({ status: 'won', updatedAt: new Date() })
