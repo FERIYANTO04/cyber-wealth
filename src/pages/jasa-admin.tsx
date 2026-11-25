@@ -42,6 +42,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
           proposalBody: row.proposalBody,
           proposalAmountIdr: row.proposalAmountIdr === null ? null : Number(row.proposalAmountIdr),
           proposalSource: row.proposalSource,
+          proposalToken: row.proposalToken,
           createdAt: row.createdAt.toISOString(),
         })
       ),
