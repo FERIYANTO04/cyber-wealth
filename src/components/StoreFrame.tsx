@@ -26,27 +26,27 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
         <meta name="theme-color" content="#080806" />
         <meta name="description" content={description ?? intent ?? 'Cyber Wealth — digital business solutions'} />
       </Head>
-      <div className="min-h-screen lg:grid lg:grid-cols-[238px_minmax(0,1fr)]">
-        <aside className="relative z-40 border-b border-[#c7a66a]/25 bg-[#0b0a08] lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:border-[#c7a66a]/20">
-          <div className="flex items-center justify-between px-5 py-5 lg:block lg:px-6 lg:py-8">
+      <div className="min-h-screen md:grid md:grid-cols-[238px_minmax(0,1fr)]">
+        <aside className="relative z-40 border-b border-[#c7a66a]/25 bg-[#0b0a08] md:sticky md:top-0 md:h-screen md:border-b-0 md:border-r md:border-[#c7a66a]/20">
+          <div className="flex items-center justify-between px-5 py-5 md:block md:px-6 md:py-8">
             <Link href="/" className="flex items-center gap-3">
               <span className="font-serif text-4xl leading-none text-[#d9bb7b]">CW</span>
               <span className="h-9 w-px bg-[#c7a66a]/45"/>
               <span><span className="block text-[11px] font-semibold tracking-[.2em] text-[#f4ead5]">CYBER WEALTH</span><span className="mt-1 block text-[7px] uppercase tracking-[.34em] text-[#9b8b6c]">Digital ecosystem</span></span>
             </Link>
-            <Link href="/kontak" className="inline-flex items-center gap-2 rounded-full border border-[#c7a66a]/60 px-3 py-2 text-[8px] font-bold uppercase tracking-[.14em] text-[#e4c789] lg:hidden">Contact <ArrowUpRight className="size-3"/></Link>
+            <Link href="/kontak" className="inline-flex items-center gap-2 rounded-full border border-[#c7a66a]/60 px-3 py-2 text-[8px] font-bold uppercase tracking-[.14em] text-[#e4c789] md:hidden">Contact <ArrowUpRight className="size-3"/></Link>
           </div>
-          <div className="hidden px-4 pb-8 lg:block">
+          <div className="hidden px-4 pb-8 md:block">
             {['DISCOVER','STUDIOS','BUSINESS'].map(group=><div key={group} className="mb-7">
               <p className="mb-3 px-3 font-mono text-[8px] tracking-[.24em] text-[#8c7955]">{group}</p>
               <nav className="grid gap-1">{links.filter(l=>l.group===group).map(l=><Link key={l.href} href={l.href} className={`group flex items-center justify-between rounded-sm border px-3 py-3 text-[11px] transition ${l.href==='/'?'border-[#c7a66a]/35 bg-gradient-to-r from-[#b38b4e]/20 to-transparent text-[#ecd29b]':'border-transparent text-[#aaa292] hover:border-[#c7a66a]/20 hover:bg-white/[.035] hover:text-[#e4c789]'}`}><span>{l.label}</span><ArrowUpRight className="size-3 text-[#786b52] opacity-0 transition group-hover:opacity-100"/></Link>)}</nav>
             </div>)}
             <div className="absolute bottom-7 left-7 right-7 border-t border-[#c7a66a]/20 pt-5"><p className="text-[8px] uppercase tracking-[.2em] text-[#b99a62]">Have a project?</p><Link href="/kontak" className="mt-2 inline-flex items-center gap-2 text-[11px] text-[#e2c78f]">Let’s talk <ArrowUpRight className="size-3"/></Link></div>
           </div>
-          <nav className="flex gap-2 overflow-x-auto border-t border-white/[.06] px-4 py-2.5 lg:hidden">{links.map(l=><Link key={l.href} href={l.href} className="shrink-0 whitespace-nowrap rounded-sm px-3 py-2 text-[10px] text-[#b6ad9c] hover:bg-white/[.05] hover:text-[#e4c789]">{l.label}</Link>)}</nav>
+          <nav className="flex gap-2 overflow-x-auto border-t border-white/[.06] px-4 py-2.5 md:hidden">{links.map(l=><Link key={l.href} href={l.href} className="shrink-0 whitespace-nowrap rounded-sm px-3 py-2 text-[10px] text-[#b6ad9c] hover:bg-white/[.05] hover:text-[#e4c789]">{l.label}</Link>)}</nav>
         </aside>
         <div className="relative min-w-0">
-          <header className="hidden h-[62px] items-center justify-between border-b border-[#c7a66a]/15 bg-[#090907]/75 px-7 lg:flex xl:px-10">
+          <header className="hidden h-[62px] items-center justify-between border-b border-[#c7a66a]/15 bg-[#090907]/75 px-7 md:flex xl:px-10">
             <p className="font-mono text-[8px] uppercase tracking-[.22em] text-[#837964]">CYBER WEALTH <span className="mx-2 text-[#b99a62]">/</span> DIGITAL ECOSYSTEM</p>
             <Link href="/kontak" className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[.15em] text-[#d8bd83] hover:text-white">Contact <ArrowUpRight className="size-3"/></Link>
           </header>
@@ -56,7 +56,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
           <main className="relative mx-auto w-full max-w-[1500px] px-4 pb-16 pt-6 sm:px-7 sm:pt-8 xl:px-10 xl:pt-10">
             {back && <Link href={back.href} className="mb-6 inline-flex items-center gap-2 text-xs text-[#a79c87] hover:text-[#e4c789]">← {back.label}</Link>}
             {(eyebrow || title || intent || actions) && <div className={variant === 'wide' ? 'mb-9 flex flex-col gap-5 border-b border-[#c7a66a]/20 pb-8 sm:flex-row sm:items-end sm:justify-between' : 'mb-8 flex flex-col gap-4 border-b border-[#c7a66a]/20 pb-7 sm:flex-row sm:items-end sm:justify-between'}>
-              <div>{eyebrow && <p className="mb-3 font-mono text-[9px] uppercase tracking-[.28em] text-[#d0ad6e]">{eyebrow}</p>}{title && <h1 className="max-w-4xl text-3xl font-semibold leading-[1.05] tracking-[-.045em] text-[#f5efe4] sm:text-4xl lg:text-5xl">{title}</h1>}{intent && <p className="mt-4 max-w-2xl text-sm leading-7 text-[#a49c8e]">{intent}</p>}</div>
+              <div>{eyebrow && <p className="mb-3 font-mono text-[9px] uppercase tracking-[.28em] text-[#d0ad6e]">{eyebrow}</p>}{title && <h1 className="max-w-4xl text-3xl font-semibold leading-[1.05] tracking-[-.045em] text-[#f5efe4] sm:text-4xl md:text-5xl">{title}</h1>}{intent && <p className="mt-4 max-w-2xl text-sm leading-7 text-[#a49c8e]">{intent}</p>}</div>
               {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
             </div>}
             {children}
