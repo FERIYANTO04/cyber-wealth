@@ -1,68 +1,71 @@
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, Bot, Clapperboard, Code2, Gem, Layers3, Palette, Play, Sparkles, Workflow } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Bot, Clapperboard, Code2, Gem, Layers3, Palette, Sparkles, Workflow } from 'lucide-react'
 import { StoreFrame } from '@/components/StoreFrame'
-import { PageStack } from '@/components/ui'
 import type { PageWithFrame } from '@/lib/frame'
 
-// Halaman utama selalu menjadi situs publik, termasuk saat pemilik sedang login.
 export const getServerSideProps: GetServerSideProps = async () => ({ props: {} })
 
-const divisions = [
-  { n: '01', title: 'Creator & Media', desc: 'Produksi video, editing, motion graphics, dan konten untuk kanal digital.', href: '/kreator', label: 'Jelajahi media', icon: Clapperboard, tag: 'MEDIA' },
-  { n: '02', title: 'Creative Studio', desc: 'Identitas brand, desain grafis, visual produk, dan materi kampanye.', href: '/jasa', label: 'Lihat layanan', icon: Palette, tag: 'DESIGN' },
-  { n: '03', title: 'Digital Products', desc: 'Template dan aset digital siap digunakan dengan akses setelah pembayaran.', href: '/toko', label: 'Buka katalog', icon: Layers3, tag: 'DOWNLOADS' },
-  { n: '04', title: 'Technology & AI', desc: 'Website, aplikasi, integrasi sistem, dan solusi otomasi berbasis AI.', href: '/marketplace', label: 'Temukan solusi', icon: Bot, tag: 'TECHNOLOGY' },
-  { n: '05', title: 'Innovation Lab', desc: 'Eksplorasi konsep produk, visualisasi 3D, dan pengembangan digital.', href: '/showroom', label: 'Masuk studio', icon: Workflow, tag: 'INNOVATION' },
-  { n: '06', title: 'Talent Network', desc: 'Kolaborasi proyek bersama editor, desainer, kreator, dan talenta teknologi.', href: '/karier', label: 'Gabung jaringan', icon: Gem, tag: 'NETWORK' },
+const categories = [
+  ['All', '/marketplace'], ['Corporate', '/jasa'], ['Portfolio', '/kreator'],
+  ['E-commerce', '/toko'], ['Technology', '/marketplace'], ['Creative', '/jasa'],
+  ['Media & Film', '/media'], ['Business', '/harga'], ['Innovation', '/showroom'],
 ]
-
+const showcases = [
+  { title: 'Creative Studio', type: 'Brand & visual identity', desc: 'Identity systems, graphic design, and product visuals.', href: '/jasa', icon: Palette, number: '01', visual: 'from-[#33291d] via-[#17130e] to-[#090908]', mark: 'CREATE' },
+  { title: 'Technology', type: 'Websites & applications', desc: 'Digital platforms and experiences designed to scale.', href: '/marketplace', icon: Code2, number: '02', visual: 'from-[#1a2935] via-[#0d141a] to-[#090908]', mark: 'BUILD' },
+  { title: 'AI Studio', type: 'Intelligence & automation', desc: 'Applied AI systems and smarter business workflows.', href: '/marketplace', icon: Bot, number: '03', visual: 'from-[#25221a] via-[#12110d] to-[#090908]', mark: 'INTELLIGENCE' },
+  { title: 'Drama Studio', type: 'Film & storytelling', desc: 'Video production, editing, and cinematic storytelling.', href: '/media', icon: Clapperboard, number: '04', visual: 'from-[#28201d] via-[#15100e] to-[#090908]', mark: 'STORY' },
+  { title: 'Digital Products', type: 'Tools & downloadable assets', desc: 'Practical digital products ready to use after purchase.', href: '/toko', icon: Layers3, number: '05', visual: 'from-[#28251c] via-[#15130e] to-[#090908]', mark: 'PRODUCT' },
+  { title: 'Innovation Lab', type: '3D & emerging ideas', desc: 'New concepts, spatial visuals, and experimental projects.', href: '/showroom', icon: Workflow, number: '06', visual: 'from-[#1e2925] via-[#101713] to-[#090908]', mark: 'EXPLORE' },
+]
 function HomePage() {
-  return <PageStack>
-    <section className="relative isolate overflow-hidden rounded-[28px] border border-[#b99b68]/25 bg-[#0d1117] shadow-[0_28px_90px_rgba(0,0,0,.28)]">
-      <div className="absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_78%_28%,rgba(191,157,99,.18),transparent_34%),radial-gradient(ellipse_at_18%_100%,rgba(48,91,91,.16),transparent_42%),linear-gradient(125deg,#15191e,#090d12_68%)]"/>
-      <div className="absolute inset-0 -z-10 opacity-[.13]" style={{backgroundImage:'linear-gradient(rgba(205,177,124,.35) 1px, transparent 1px),linear-gradient(90deg,rgba(205,177,124,.35) 1px,transparent 1px)',backgroundSize:'54px 54px',maskImage:'linear-gradient(90deg,transparent,black 60%)'}}/>
-      <div className="absolute -right-28 top-8 -z-10 size-[440px] rounded-full border border-[#c5a66a]/15"/><div className="absolute -right-8 top-28 -z-10 size-[290px] rounded-full border border-[#c5a66a]/20"/><div className="absolute right-[7.5rem] top-[13rem] -z-10 size-28 rounded-full bg-[#c5a66a]/10 blur-3xl"/>
-      <div className="grid min-h-[510px] items-center gap-12 px-7 py-12 sm:px-12 lg:grid-cols-[1.2fr_.8fr] lg:px-[4.5rem] lg:py-16">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#c5a66a]/30 bg-[#c5a66a]/[.07] px-3 py-2 font-mono text-[9px] tracking-[.19em] text-[#d7bd89]"><span className="size-1.5 rounded-full bg-[#c5a66a] shadow-[0_0_12px_#c5a66a]"/> INDEPENDENT DIGITAL COMPANY</div>
-          <h2 className="mt-8 text-[clamp(3.1rem,6.8vw,6.1rem)] font-medium leading-[.91] tracking-[-.075em] text-[#f4f0e8]">Build what<br/>comes <span className="font-serif italic font-normal text-[#c8ad78]">next.</span></h2>
-          <p className="mt-7 max-w-xl text-[13px] leading-7 text-[#a9a69f] sm:text-[15px]">Satu ekosistem untuk karya kreatif, produksi media, produk digital, dan teknologi. Dari kebutuhan sederhana hingga proyek digital yang lebih kompleks.</p>
-          <div className="mt-9 flex flex-wrap items-center gap-3">
-            <Link href="/marketplace" className="group inline-flex items-center gap-3 rounded-sm bg-[#c5a66a] px-6 py-4 text-[10px] font-bold uppercase tracking-[.16em] text-[#11130f] transition hover:bg-[#e0c58d]">Explore offerings <ArrowUpRight className="size-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"/></Link>
-            <Link href="/kontak" className="inline-flex items-center gap-2 px-4 py-4 text-[10px] font-semibold uppercase tracking-[.15em] text-[#ded9ce] transition hover:text-[#d9bd83]">Discuss a project <ArrowRight className="size-3.5"/></Link>
-          </div>
-          <div className="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/10 pt-6 text-[9px] uppercase tracking-[.16em] text-[#777b7d]"><span>Creative production</span><span>Digital commerce</span><span>Technology & AI</span></div>
-        </div>
-        <div className="hidden lg:block">
-          <div className="relative mx-auto aspect-[.84] max-w-[370px] overflow-hidden rounded-[190px_190px_18px_18px] border border-[#c5a66a]/30 bg-[linear-gradient(155deg,rgba(197,166,106,.15),rgba(16,22,27,.3)_48%,rgba(7,11,15,.9))] p-5">
-            <div className="absolute inset-x-8 top-8 bottom-8 rounded-[180px_180px_12px_12px] border border-[#c5a66a]/20"/>
-            <div className="absolute left-1/2 top-[22%] h-[48%] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#c5a66a]/60 to-transparent"/>
-            <div className="absolute left-[20%] right-[20%] top-1/2 h-px bg-gradient-to-r from-transparent via-[#c5a66a]/60 to-transparent"/>
-            <div className="absolute left-1/2 top-1/2 flex size-32 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#d1b77f]/35 bg-[#11171c]/80 shadow-[0_0_80px_rgba(197,166,106,.14)]"><span className="font-serif text-5xl italic text-[#d4b982]">CW</span></div>
-            <div className="absolute left-8 top-[24%]"><p className="font-mono text-[9px] tracking-[.2em] text-[#c5a66a]">01 / CREATE</p><p className="mt-2 text-[11px] text-[#d7d4cc]">Ideas into form</p></div>
-            <div className="absolute bottom-[23%] right-8 text-right"><p className="font-mono text-[9px] tracking-[.2em] text-[#c5a66a]">02 / BUILD</p><p className="mt-2 text-[11px] text-[#d7d4cc]">Systems that work</p></div>
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[8px] tracking-[.28em] text-[#817b6c]">DESIGN · TECHNOLOGY · MEDIA</div>
+  return <div className="space-y-12">
+    <section className="relative min-h-[390px] overflow-hidden rounded-[4px] border border-[#c7a66a]/30 bg-[#0a0a08] sm:min-h-[440px]">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_83%_44%,rgba(202,164,91,.19),transparent_32%),linear-gradient(110deg,#11100d_0%,#090908_58%,#12100b_100%)]"/>
+      <div className="absolute -right-20 top-[-9rem] size-[540px] rounded-full border border-[#d5b879]/20 shadow-[inset_0_0_70px_rgba(205,170,100,.06)]"/>
+      <div className="absolute -right-2 top-[-3rem] size-[420px] rounded-full border border-[#d5b879]/20"/>
+      <div className="absolute right-[4%] top-[15%] size-[320px] rounded-full bg-[radial-gradient(circle_at_35%_35%,#8d713e_0%,#342819_20%,#11100d_58%,#080807_72%)] opacity-80 shadow-[0_0_100px_rgba(198,160,88,.18)]"/>
+      <div className="absolute right-[8%] top-[24%] size-[270px] rounded-full border border-[#e4c98f]/20"/>
+      <div className="absolute right-[13%] top-[33%] size-[170px] rounded-full border border-[#e4c98f]/20"/>
+      <div className="absolute inset-0 bg-gradient-to-r from-[#090908] via-[#090908]/90 to-transparent"/>
+      <div className="relative flex min-h-[390px] items-center px-7 py-12 sm:min-h-[440px] sm:px-12 lg:px-16">
+        <div className="max-w-2xl">
+          <p className="font-mono text-[9px] uppercase tracking-[.32em] text-[#d2b477]">Independent digital company · Est. 2026</p>
+          <h2 className="mt-7 text-[clamp(3rem,7vw,6.3rem)] font-medium leading-[.9] tracking-[-.07em] text-[#f4eee2]">A world of<br/>digital <span className="font-serif italic font-normal text-[#d8b978]">possibilities.</span></h2>
+          <p className="mt-6 max-w-lg text-sm leading-7 text-[#aaa293]">Creative vision, advanced technology, and intelligent digital products — connected in one ecosystem built to move ideas forward.</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/marketplace" className="inline-flex items-center gap-3 bg-gradient-to-r from-[#d8bc80] to-[#a98243] px-6 py-3.5 text-[9px] font-bold uppercase tracking-[.16em] text-[#17120a] hover:brightness-110">Explore ecosystem <ArrowUpRight className="size-4"/></Link>
+            <Link href="/kontak" className="inline-flex items-center gap-2 border border-[#c7a66a]/45 px-5 py-3.5 text-[9px] font-semibold uppercase tracking-[.16em] text-[#e0cfaa] hover:bg-white/[.04]">Start a project <ArrowRight className="size-3.5"/></Link>
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-2 border-t border-[#c5a66a]/20 sm:grid-cols-4">{[{a:'01',b:'Create'},{a:'02',b:'Produce'},{a:'03',b:'Build'},{a:'04',b:'Innovate'}].map(x=><div key={x.a} className="flex items-center gap-3 border-r border-[#c5a66a]/15 px-6 py-5 last:border-r-0 sm:px-8"><span className="font-mono text-[9px] text-[#c5a66a]">{x.a}</span><span className="text-[11px] tracking-wide text-[#c8c4bb]">{x.b}</span></div>)}</div>
+      <div className="absolute bottom-0 left-0 right-0 grid grid-cols-2 border-t border-[#c7a66a]/20 bg-black/35 sm:grid-cols-4">{[['01','CREATE'],['02','PRODUCE'],['03','BUILD'],['04','INNOVATE']].map(([n,t])=><div key={n} className="flex items-center gap-3 border-r border-[#c7a66a]/15 px-5 py-4 last:border-0 sm:px-8"><span className="font-mono text-[9px] text-[#d2b477]">{n}</span><span className="text-[9px] tracking-[.2em] text-[#c8c0b1]">{t}</span></div>)}</div>
     </section>
 
-    <section className="pt-5">
-      <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono text-[9px] uppercase tracking-[.24em] text-[#c5a66a]">The ecosystem</p><h3 className="mt-3 text-3xl font-medium tracking-[-.055em] text-[#f1eee7] sm:text-[2.6rem]">One company. Many capabilities.</h3><p className="mt-3 max-w-2xl text-xs leading-6 text-[#8f969d]">Pilih jalur sesuai kebutuhan. Setiap penawaran memiliki ruang lingkup dan harga yang ditampilkan sebelum Anda memesan.</p></div><Link href="/marketplace" className="inline-flex shrink-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-[.15em] text-[#d3b77f] hover:text-[#f1d8a6]">View all offerings <ArrowUpRight className="size-3.5"/></Link></div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{divisions.map(({n,title,desc,href,label,icon:Icon,tag})=><Link key={n} href={href} className="group relative min-h-[220px] overflow-hidden rounded-xl border border-white/[.085] bg-[linear-gradient(145deg,#151a20,#0d1117)] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#c5a66a]/45 hover:shadow-[0_18px_45px_rgba(0,0,0,.22)]"><div className="absolute -right-10 -top-12 size-36 rounded-full border border-white/[.045] transition group-hover:border-[#c5a66a]/20"/><div className="relative flex items-center justify-between"><span className="flex size-10 items-center justify-center rounded-lg border border-[#c5a66a]/25 bg-[#c5a66a]/[.07] text-[#c9ae7b]"><Icon className="size-[18px]"/></span><span className="font-mono text-[9px] tracking-[.18em] text-[#626c76]">{tag} / {n}</span></div><h4 className="relative mt-7 text-[17px] font-medium tracking-[-.02em] text-[#eeeae2]">{title}</h4><p className="relative mt-2 min-h-[42px] max-w-sm text-[11px] leading-6 text-[#9299a0]">{desc}</p><span className="relative mt-5 inline-flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.15em] text-[#cbb27f]">{label}<ArrowUpRight className="size-3 transition group-hover:translate-x-1 group-hover:-translate-y-1"/></span></Link>)}</div>
+    <section className="overflow-hidden rounded-[4px] border border-[#c7a66a]/30 bg-[#0d0c09] shadow-[0_25px_80px_rgba(0,0,0,.35)]">
+      <div className="grid lg:grid-cols-[205px_minmax(0,1fr)]">
+        <aside className="border-b border-[#c7a66a]/20 bg-[#0a0a08] p-5 lg:border-b-0 lg:border-r">
+          <p className="font-serif text-lg text-[#dfc58f]">Explore</p><p className="mt-1 text-[9px] uppercase tracking-[.2em] text-[#766b57]">Our ecosystem</p>
+          <div className="mt-5 grid grid-cols-2 gap-1 lg:grid-cols-1">{categories.map(([label,href],i)=><Link key={label} href={href} className={i===0?'flex items-center gap-3 rounded-sm border border-[#d0ae6c]/40 bg-gradient-to-r from-[#b38b4e]/30 to-[#5c4729]/10 px-3 py-2.5 text-[11px] text-[#f1d69d]':'flex items-center gap-3 rounded-sm px-3 py-2.5 text-[11px] text-[#a69d8c] transition hover:bg-white/[.04] hover:text-[#e4c789]'}><span className="font-mono text-[9px] text-[#a98950]">{String(i+1).padStart(2,'0')}</span>{label}</Link>)}</div>
+          <div className="mt-8 hidden border-t border-white/10 pt-5 lg:block"><p className="text-[9px] uppercase tracking-[.2em] text-[#b99a62]">Have a brief?</p><p className="mt-2 text-xs leading-5 text-[#8e8779]">Tell us what you want to build.</p><Link href="/kontak" className="mt-4 inline-flex items-center gap-2 text-[10px] text-[#e0c58e]">Contact us <ArrowUpRight className="size-3"/></Link></div>
+        </aside>
+        <div className="min-w-0 p-5 sm:p-7 lg:p-8">
+          <div className="flex flex-col justify-between gap-4 border-b border-[#c7a66a]/20 pb-6 sm:flex-row sm:items-end"><div><p className="font-mono text-[9px] uppercase tracking-[.28em] text-[#c8a96e]">Discover Cyber Wealth</p><h3 className="mt-3 text-2xl font-semibold tracking-[-.045em] text-[#f1ebdf] sm:text-3xl">One ecosystem. Endless possibilities.</h3><p className="mt-2 max-w-xl text-xs leading-6 text-[#938b7d]">Explore our studios, capabilities, and digital offerings — designed to work together.</p></div><Link href="/marketplace" className="inline-flex shrink-0 items-center gap-2 text-[9px] font-bold uppercase tracking-[.15em] text-[#d6b879]">View all <ArrowUpRight className="size-3.5"/></Link></div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{showcases.map(({title,type,desc,href,icon:Icon,number,visual,mark})=><Link key={number} href={href} className="group overflow-hidden rounded-[3px] border border-white/10 bg-[#11100d] transition hover:-translate-y-1 hover:border-[#c7a66a]/50">
+            <div className={`relative flex h-[145px] items-center justify-center overflow-hidden bg-gradient-to-br ${visual}`}><div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(222,188,120,.16),transparent_48%)]"/><div className="absolute inset-4 rounded-full border border-[#d7b978]/15"/><div className="absolute inset-8 rounded-full border border-[#d7b978]/10"/><Icon className="relative size-12 stroke-[1.1] text-[#d7b978] drop-shadow-[0_0_20px_rgba(215,185,120,.35)]"/><span className="absolute left-4 top-4 font-mono text-[8px] tracking-[.22em] text-[#c6a66d]">{number} / {mark}</span><ArrowUpRight className="absolute right-4 top-4 size-4 text-[#9c8b69] transition group-hover:-translate-y-1 group-hover:translate-x-1"/></div>
+            <div className="p-4"><h4 className="text-sm font-semibold text-[#eee7d9]">{title}</h4><p className="mt-1 text-[9px] uppercase tracking-[.12em] text-[#c1a36c]">{type}</p><p className="mt-3 min-h-[38px] text-[11px] leading-5 text-[#928a7d]">{desc}</p><span className="mt-3 inline-flex items-center gap-2 text-[9px] font-semibold text-[#d5b879]">Explore studio <ArrowRight className="size-3 transition group-hover:translate-x-1"/></span></div>
+          </Link>)}</div>
+        </div>
+      </div>
     </section>
 
-    <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-      <div className="relative overflow-hidden rounded-2xl border border-[#c5a66a]/25 bg-[radial-gradient(ellipse_at_100%_0%,rgba(197,166,106,.14),transparent_48%),#11161c] p-7 sm:p-9"><div className="flex items-center gap-2 font-mono text-[9px] tracking-[.2em] text-[#c5a66a]"><Code2 className="size-4"/> FOR CLIENTS</div><h3 className="mt-5 max-w-md text-2xl font-medium tracking-[-.04em] text-[#f0ede6]">Bring the brief.<br/><span className="font-serif italic font-normal text-[#c8ad78]">We shape the work.</span></h3><p className="mt-4 max-w-md text-xs leading-6 text-[#9da2a6]">Temukan layanan dan produk yang tersedia. Untuk kebutuhan khusus, kirim brief agar tim dapat meninjau ruang lingkup, biaya, dan waktu pengerjaan.</p><Link href="/kontak" className="mt-7 inline-flex items-center gap-2 border-b border-[#c5a66a]/60 pb-2 text-[10px] font-bold uppercase tracking-[.15em] text-[#d5bc8b]">Start a project <ArrowRight className="size-3.5"/></Link></div>
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_100%_0%,rgba(83,127,128,.16),transparent_48%),#11161c] p-7 sm:p-9"><div className="flex items-center gap-2 font-mono text-[9px] tracking-[.2em] text-[#91b9b1]"><Sparkles className="size-4"/> FOR CREATORS & PARTNERS</div><h3 className="mt-5 max-w-md text-2xl font-medium tracking-[-.04em] text-[#f0ede6]">Good work is<br/><span className="font-serif italic font-normal text-[#9fc2b8]">built together.</span></h3><p className="mt-4 max-w-md text-xs leading-6 text-[#9da2a6]">Editor, filmmaker, desainer, animator, dan talenta teknologi dapat mengirim portofolio untuk dipertimbangkan pada proyek yang relevan.</p><Link href="/karier" className="mt-7 inline-flex items-center gap-2 border-b border-[#91b9b1]/60 pb-2 text-[10px] font-bold uppercase tracking-[.15em] text-[#a8c9c0]">Join talent network <ArrowRight className="size-3.5"/></Link></div>
+    <section className="relative flex flex-col gap-6 overflow-hidden border-y border-[#c7a66a]/25 bg-[linear-gradient(110deg,#17130c,#0a0907_65%,#1a140b)] px-7 py-9 sm:flex-row sm:items-center sm:justify-between sm:px-12">
+      <div><p className="font-mono text-[9px] uppercase tracking-[.28em] text-[#c8a96e]">Cyber Wealth · Digital ecosystem</p><h3 className="mt-3 max-w-3xl font-serif text-2xl leading-tight text-[#f2eadb] sm:text-3xl">A global digital company for a <span className="italic text-[#d9b979]">smarter future.</span></h3><p className="mt-3 text-xs text-[#9b9281]">Creative solutions. Advanced technology. Endless possibilities.</p></div>
+      <Link href="/kontak" className="inline-flex shrink-0 items-center gap-3 rounded-full border border-[#c7a66a]/60 px-6 py-3 text-[10px] font-semibold text-[#e4ca95] transition hover:bg-[#c7a66a] hover:text-black">Explore our ecosystem <ArrowUpRight className="size-4"/></Link>
     </section>
-
-    <section className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-[#0d1218] p-7 sm:flex-row sm:items-center sm:justify-between sm:p-9"><div><p className="font-mono text-[9px] uppercase tracking-[.22em] text-[#c5a66a]">A direct conversation</p><h3 className="mt-3 text-xl font-medium tracking-[-.035em] text-[#eeeae2]">Have something ambitious in mind?</h3><p className="mt-2 max-w-xl text-xs leading-6 text-[#8f969d]">Ceritakan tujuan Anda. Kami akan membantu menentukan jalur layanan yang paling sesuai.</p></div><Link href="/kontak" className="inline-flex shrink-0 items-center justify-center gap-3 rounded-sm border border-[#c5a66a]/50 px-6 py-4 text-[10px] font-bold uppercase tracking-[.15em] text-[#d5bc8b] transition hover:bg-[#c5a66a] hover:text-[#11130f]">Contact Cyber Wealth <ArrowUpRight className="size-4"/></Link></section>
-  </PageStack>
+  </div>
 }
-
 const Page = HomePage as PageWithFrame
-Page.getLayout = (page) => <StoreFrame eyebrow="Cyber Wealth / Official website" title="A connected digital ecosystem." intent="Creative production, creator services, technology, AI, digital products, and product innovation in one ecosystem." variant="wide" description="Cyber Wealth — creative, media, technology, AI and digital products.">{page}</StoreFrame>
+Page.getLayout = (page) => <StoreFrame eyebrow="Cyber Wealth / Official website" title="" intent="" variant="wide" description="Cyber Wealth — a global digital ecosystem for creative production, technology, AI, and digital products.">{page}</StoreFrame>
 export default Page
