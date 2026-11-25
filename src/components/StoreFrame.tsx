@@ -17,6 +17,8 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
     { href: '/jasa', label: 'Digital Services', group: 'BUSINESS' },
     { href: '/toko', label: 'Digital Products', group: 'BUSINESS' },
     { href: '/harga', label: 'Plans & Pricing', group: 'BUSINESS' },
+    { href: '/tentang', label: 'About Cyber Wealth', group: 'COMPANY' },
+    { href: '/kontak', label: 'Contact & Support', group: 'COMPANY' },
   ]
   return (
     <div data-frame="store" data-frame-variant={variant} className="min-h-screen bg-[#080806] text-[#f3eee3]">
@@ -37,7 +39,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
             <Link href="/kontak" className="inline-flex items-center gap-2 rounded-full border border-[#c7a66a]/60 px-3 py-2 text-[8px] font-bold uppercase tracking-[.14em] text-[#e4c789] md:hidden">Contact <ArrowUpRight className="size-3"/></Link>
           </div>
           <div className="hidden px-4 pb-8 md:block">
-            {['DISCOVER','STUDIOS','BUSINESS'].map(group=><div key={group} className="mb-7">
+            {['DISCOVER','STUDIOS','BUSINESS','COMPANY'].map(group=><div key={group} className="mb-7">
               <p className="mb-3 px-3 font-mono text-[8px] tracking-[.24em] text-[#8c7955]">{group}</p>
               <nav className="grid gap-1">{links.filter(l=>l.group===group).map(l=><Link key={l.href} href={l.href} className={`group flex items-center justify-between rounded-sm border px-3 py-3 text-[11px] transition ${l.href==='/'?'border-[#c7a66a]/35 bg-gradient-to-r from-[#b38b4e]/20 to-transparent text-[#ecd29b]':'border-transparent text-[#aaa292] hover:border-[#c7a66a]/20 hover:bg-white/[.035] hover:text-[#e4c789]'}`}><span>{l.label}</span><ArrowUpRight className="size-3 text-[#786b52] opacity-0 transition group-hover:opacity-100"/></Link>)}</nav>
             </div>)}
