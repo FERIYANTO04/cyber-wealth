@@ -115,7 +115,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transaction_details: { order_id: code, gross_amount: amount },
         customer_details: { first_name: parsed.data.name, email: parsed.data.email },
         item_details: [{ id: product.id, price: amount, quantity: 1, name: product.name.slice(0, 50) }],
-        callbacks: { finish: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cyber-wealth-web-production.up.railway.app') + '/pesanan/' + accessToken },
+        callbacks: { finish: (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://cyber-wealth-web-production.up.railway.app') + '/pesanan/' + accessToken },
+        notification_url: (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://cyber-wealth-web-production.up.railway.app') + '/api/webhooks/midtrans',
       }),
       signal: AbortSignal.timeout(15000),
     })
