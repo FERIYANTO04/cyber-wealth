@@ -48,6 +48,7 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('template')
   const [price, setPrice] = useState('')
+  const [pricingMode, setPricingMode] = useState<'paid' | 'free'>('paid')
   const [deliverable, setDeliverable] = useState('')
   const [publishNow, setPublishNow] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -61,6 +62,12 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
     setBusy(true)
     setError(null)
     setNote(null)
+    const numericPrice = Number(price.replace(/[^\\d]/g, ''))
+    if (pricingMode === 'paid' && (!price.trim() || !Number.isSafeInteger(numericPrice) || numericPrice < 1)) {
+      setError('Produk berbayar wajib memiliki harga minimal Rp1. Pilih Gratis secara terpisah jika memang tidak dipungut biaya.')
+      setBusy(false)
+      return
+    }
     try {
       const response = await fetch('/api/products', {
         method: 'POST',
@@ -98,6 +105,7 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
       setSummary('')
       setDescription('')
       setPrice('')
+      setPricingMode('paid')
       setDeliverable('')
       setPublishNow(false)
       setOpen(false)
@@ -239,9 +247,17 @@ export function ProductManager({ initial }: { initial: OwnerProduct[] }) {
                   ))}
                 </Select>
               </Field>
-              <Field label="Harga (Rp)" hint="Isi 0 untuk produk gratis.">
-                <Input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="numeric" placeholder="150000" />
+              <Field label="Jenis penawaran">
+                <Select value={pricingMode} onChange={(e) => setPricingMode(e.target.value as 'paid' | 'free')}>
+                  <option value="paid">Berbayar</option>
+                  <option value="free">Gratis — tanpa tagihan</option>
+                </Select>
               </Field>
+              {pricingMode === 'paid' && (
+                <Field label="Harga jual (Rp)" hint="Wajib diisi. Produk berbayar tidak boleh otomatis menjadi gratis.">
+                  <Input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="numeric" placeholder="150000" required />
+                </Field>
+              )}
             </div>
             <Field label="Catatan serahan" hint="Tampil di halaman pesanan pembeli setelah pembayaran.">
               <Input
