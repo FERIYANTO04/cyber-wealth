@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
+import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { activity, serviceRequests, services } from '@/lib/db/schema'
@@ -50,9 +51,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .limit(1)
   if (!service) return res.status(404).json({ error: 'Layanan tidak ditemukan atau tidak sedang ditawarkan.' })
 
+  const proposalToken = randomUUID().replace(/-/g, '')
   const [row] = await db
     .insert(serviceRequests)
     .values({
+      proposalToken,
       code: serviceRequestCode(),
       serviceId: service.id,
       serviceName: service.name,
@@ -115,5 +118,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     relatedId: row.id,
   }).catch(() => ({ sent: false, status: 'queued', detail: 'Email receipt could not be sent.' }));
 
-  return res.status(201).json({ ok: true, code: row.code, receiptSent: buyerReceipt.sent })
+  return res.status(201).json({ ok: true, code: row.code, proposalToken: row.proposalToken, receiptSent: buyerReceipt.sent })
 }
