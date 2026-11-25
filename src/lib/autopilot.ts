@@ -207,7 +207,7 @@ async function runCeo(trigger: string) {
       'Rancang arsitektur katalog multi-kategori dengan tiga rentang harga (ekonomis, standar, premium), contoh produk nyata per kategori, kebutuhan kemampuan/mitra, estimasi biaya dan margin yang belum diverifikasi, risiko IP/regulasi, serta urutan peluncuran berdasarkan permintaan. Pastikan produk ekonomis tetap berkualitas dan premium menawarkan nilai tambahan yang terukur. Jangan membuat semua produk mahal atau mengklaim menguasai semua industri sebelum ada bukti kapabilitas.' ,
       'Untuk setiap peluang teknologi/desain, siapkan dossier komersialisasi: pemilik IP dan status kebaruan, masalah pelanggan, bukti permintaan, spesifikasi, tahapan prototipe/pengujian, hasil yang benar-benar tercatat, risiko keselamatan/regulasi, kesiapan produksi, estimasi biaya dan margin, calon pembeli/manufaktur, serta skenario lisensi/royalti/penjualan. Pertahankan IP inti; bandingkan nilai penjualan putus, lisensi, dan royalti jangka panjang. Hitung proyeksi bagian Owner hanya dari laba yang dapat dibagikan, bukan omzet atau valuasi.' ,
     ].join('\\n'),
-    maxTokens: 1800,
+    maxTokens: 1000,
   })
 
   if (!outcome.ok) {
@@ -316,7 +316,7 @@ async function runResearch(trigger: string) {
         'ALASAN: <satu kalimat, hanya berdasarkan data di atas>',
         'UJI: <satu langkah kecil yang bisa dikerjakan minggu ini>',
       ].join('\n'),
-      maxTokens: 700,
+      maxTokens: 450,
     })
 
     if (!outcome.ok) {
@@ -394,7 +394,7 @@ async function runInnovationSpecialist(task: 'science' | 'patents' | 'engineerin
 Jenis keluaran wajib: ${spec.output}
 Pemicu: ${trigger}
 Buat satu kandidat kerja R&D yang tajam, dapat diuji, dan berpotensi menarik universitas/laboratorium. Jangan menyatakan novelty terbukti. Tandai semua hal yang membutuhkan pencarian prior-art atau eksperimen fisik.`,
-    maxTokens: 1400,
+    maxTokens: 850,
   })
 
   if (!outcome.ok) {
@@ -541,7 +541,7 @@ async function runProduct(trigger: string) {
       'DESKRIPSI: <isi produk, target pengguna, struktur buku/manual per bab, daftar spesifikasi, bahan/BOM, alat, biaya dan asumsi, langkah pembuatan/perakitan, uji kualitas/keselamatan, troubleshooting, perawatan, file sumber, serta hal yang belum tersedia>',
       'HARGA: <angka rupiah tanpa titik; 0 jika belum ada dasar harga>',
     ].join('\\n'),
-    maxTokens: 700,
+    maxTokens: 500,
   })
 
   if (!outcome.ok) {
@@ -686,7 +686,7 @@ async function runMarketing(trigger: string) {
         system:
           'Anda penulis konten pemasaran yang jujur, dalam bahasa yang sama dengan materinya. Jangan menjanjikan hasil, jangan mengarang testimoni, angka penjualan, atau klien.',
         prompt: material.prompt,
-        maxTokens: 400,
+        maxTokens: 250,
       })
       if (outcome.ok) {
         body = outcome.text
@@ -766,7 +766,7 @@ async function runSales(trigger: string) {
             `Kebutuhan yang dicatat: ${lead.interest}`,
             'Susun naskah pendekatan untuk CRM/dashboard: sebut kebutuhan calon pelanggan, tawarkan satu langkah kecil yang jelas, dan ajukan ajakan tindak lanjut. Jangan membuat subjek email atau bergantung pada alamat email.',
           ].join('\\n'),
-          maxTokens: 400,
+          maxTokens: 250,
         })
       : null
 
@@ -926,7 +926,7 @@ async function runCorporateSpecialist(task: 'security' | 'quality' | 'legal' | '
   const currentRoster = await db.select({ name: agents.name, role: agents.role, mandate: agents.mandate }).from(agents).orderBy(agents.sortOrder)
   const handoff = peers.filter((row) => row.task !== task).map((row) => row.agentName + ' [' + row.task + ']: ' + (row.summary ?? '') + ' ' + (row.detail ?? '').slice(0, 300)).join('\n')
   if (!aiConfigured()) { const summary = 'Spesialis terdaftar, tetapi model AI belum terhubung.'; await finishRun(run.id, 'skipped', summary, summary, 0); await noteAgent(spec[0], 'Audit dilewati', summary); return { summary } }
-  const out = await askAi({ system: 'Anda spesialis senior. Baca laporan rekan, lakukan koreksi silang, tunjukkan dependensi, risiko, dan tindakan yang harus diserahkan ke agen lain. Pisahkan fakta, dugaan, rekomendasi, dan kebutuhan ahli manusia.', prompt: 'Peran: ' + spec[0] + '. Fokus: ' + spec[1] + '. Pemicu: ' + trigger + '.\nLaporan rekan:\n' + handoff + '\nRoster agen saat ini: ' + currentRoster.map((agent) => agent.name + ' [' + agent.role + ']: ' + agent.mandate.slice(0, 160)).join('; ') + '\nBuat audit fondasi dan daftar tindakan prioritas serta agen penanggung jawab.' + (task === 'workforce' ? ' Untuk membuat agen, keluarkan JSON valid: {"new_agents":[{"name":"...","role":"...","mandate":"..."}],"skill_gaps":[...],"handoffs":[...]}. Maksimal 3 agen baru. Buat hanya spesialisasi yang belum ada dalam roster; mandat minimal 40 karakter.' : ''), maxTokens: 1300 })
+  const out = await askAi({ system: 'Anda spesialis senior. Baca laporan rekan, lakukan koreksi silang, tunjukkan dependensi, risiko, dan tindakan yang harus diserahkan ke agen lain. Pisahkan fakta, dugaan, rekomendasi, dan kebutuhan ahli manusia.', prompt: 'Peran: ' + spec[0] + '. Fokus: ' + spec[1] + '. Pemicu: ' + trigger + '.\nLaporan rekan:\n' + handoff + '\nRoster agen saat ini: ' + currentRoster.map((agent) => agent.name + ' [' + agent.role + ']: ' + agent.mandate.slice(0, 160)).join('; ') + '\nBuat audit fondasi dan daftar tindakan prioritas serta agen penanggung jawab.' + (task === 'workforce' ? ' Untuk membuat agen, keluarkan JSON valid: {"new_agents":[{"name":"...","role":"...","mandate":"..."}],"skill_gaps":[...],"handoffs":[...]}. Maksimal 3 agen baru. Buat hanya spesialisasi yang belum ada dalam roster; mandat minimal 40 karakter.' : ''), maxTokens: 700 })
   if (!out.ok) { const summary = 'Audit gagal: ' + out.reason; await finishRun(run.id, 'failed', summary, summary, 0); await noteAgent(spec[0], 'Audit gagal', summary); return { summary } }
   let report = out.text
   if (task === 'workforce') {
@@ -1010,7 +1010,7 @@ async function runIntelligence(trigger: string) {
       system:
         'Anda analis bisnis. Hanya gunakan angka yang diberikan. Jangan mengarang angka, tren, atau perkiraan. Tulis 2-3 kalimat dalam Bahasa Indonesia: apa yang tampak bekerja dan satu langkah berikutnya.',
       prompt: `Data tercatat hari ini: ${facts.join('; ')}.`,
-      maxTokens: 260,
+      maxTokens: 220,
     })
     if (outcome.ok) {
       await finishRun(run.id, 'ok', summary, `${outcome.text.trim()} (disusun ${outcome.model} dari angka di atas.)`, 0)
@@ -1168,7 +1168,7 @@ export async function runAutopilot(trigger: 'owner' | 'schedule'): Promise<Autop
     const customResult = await askAi({
       system: 'Anda agen spesialis Cyber Wealth. Patuhi mandat. Baca laporan rekan untuk koordinasi dan koreksi silang. Jangan mengklaim tindakan eksternal, eksperimen fisik, atau hasil yang belum diverifikasi. Berikan temuan, tindakan, dependensi, risiko, dan serah-terima yang dapat diperiksa.',
       prompt: 'Mandat: ' + custom.mandate + '\\nLaporan rekan:\\n' + handoff + '\\nLakukan pekerjaan spesialis yang paling relevan dan sebutkan agen penerima serah-terima.',
-      maxTokens: 1000,
+      maxTokens: 550,
     })
     if (customResult.ok) {
       const summary = custom.name + ' menyelesaikan laporan spesialis.'
