@@ -93,29 +93,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (status.transaction_status === 'capture' && (!status.fraud_status || status.fraud_status === 'accept'))
 
     if (isPaid) {
-      const [settled] = await db.update(servicePayments).set({
-        status: 'paid',
-        paidAt: new Date(),
-        invoiceId: status.transaction_id ?? notification.transaction_id ?? payment.invoiceId,
-      }).where(and(eq(servicePayments.id, payment.id), inArray(servicePayments.status, ['pending', 'failed']))).returning()
+      const settled = await db.transaction(async (tx) => {
+        const [updated] = await tx.update(servicePayments).set({
+          status: 'paid',
+          paidAt: new Date(),
+          invoiceId: status.transaction_id ?? notification.transaction_id ?? payment.invoiceId,
+        }).where(and(eq(servicePayments.id, payment.id), inArray(servicePayments.status, ['pending', 'failed']))).returning()
 
-      if (settled) {
-        await db.update(serviceRequests).set({ status: 'won', updatedAt: new Date() })
+        if (!updated) return false
+        await tx.update(serviceRequests).set({ status: 'won', updatedAt: new Date() })
           .where(eq(serviceRequests.id, payment.serviceRequestId))
-        await db.insert(transactions).values({
+        await tx.insert(transactions).values({
           kind: 'revenue',
           category: 'Jasa digital',
           description: `Layanan jasa — pembayaran ${payment.code}`,
           amountIdr: paidAmount,
           dataSource: 'live',
         })
-        await db.insert(activity).values({
+        await tx.insert(activity).values({
           actor: 'system',
           action: 'Pembayaran jasa terverifikasi',
           detail: `Permintaan ${payment.serviceRequestId} dibayar ${paidAmount.toLocaleString('id-ID')} melalui Midtrans.`,
           dataSource: 'live',
         })
-      }
+        return true
+      })
       return res.status(200).json({ received: true, settled: Boolean(settled) })
     }
 
