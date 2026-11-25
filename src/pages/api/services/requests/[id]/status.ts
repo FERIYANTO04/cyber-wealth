@@ -11,9 +11,8 @@ const Body = z.object({
 })
 
 /**
- * Moves a job through its stages. Marking it delivered is the only place a service
- * becomes revenue, and only when the owner records what the client actually paid —
- * nothing is inferred from the brief.
+ * Moves a paid job through its delivery stages. Revenue is booked only by the
+ * Midtrans webhook after the provider confirms the exact amount; status edits never book money.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' })
