@@ -218,6 +218,13 @@
       "when": 1795620000000,
       "tag": "0030_service_proposal_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795621000000,
+      "tag": "0031_service_detail_quality",
+      "breakpoints": true
     }
   ]
 }
