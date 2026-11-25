@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { and, eq, inArray } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { activity, orders, servicePayments, serviceRequests, transactions } from '@/lib/db/schema'
+import { randomUUID } from 'node:crypto'
+import { and, eq } from 'drizzle-orm'
+import { db, sqlClient } from '@/lib/db'
+import { orders } from '@/lib/db/schema'
 import { settlePaidOrder } from '@/lib/revenue'
 
 type Notification = { order_id?: string; transaction_id?: string }
@@ -73,13 +74,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // Service proposal checkout. This path records service revenue only after a
-  // provider-confirmed payment and only once, even when Midtrans retries a webhook.
-  const [payment] = await db.select().from(servicePayments).where(and(
-    eq(servicePayments.code, orderCode),
-    eq(servicePayments.provider, 'midtrans'),
-    eq(servicePayments.dataSource, 'live')
-  )).limit(1)
+  // Service proposal checkout. Existing service_payment table is queried directly
+  // so this feature does not create a second Drizzle schema for legacy data.
+  const [payment] = await sqlClient`
+    select id, service_request_id as "serviceRequestId", code,
+      amount_idr as "amountIdr", status, invoice_id as "invoiceId"
+    from service_payment
+    where code = ${orderCode} and provider = 'midtrans' and data_source = 'live'
+    limit 1
+  `
   if (!payment) return res.status(404).json({ error: 'Order not found' })
   if (payment.status === 'paid') return res.status(200).json({ received: true, duplicate: true })
 
@@ -93,37 +96,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (status.transaction_status === 'capture' && (!status.fraud_status || status.fraud_status === 'accept'))
 
     if (isPaid) {
-      const settled = await db.transaction(async (tx) => {
-        const [updated] = await tx.update(servicePayments).set({
-          status: 'paid',
-          paidAt: new Date(),
-          invoiceId: status.transaction_id ?? notification.transaction_id ?? payment.invoiceId,
-        }).where(and(eq(servicePayments.id, payment.id), inArray(servicePayments.status, ['pending', 'failed']))).returning()
-
+      const settled = await sqlClient.begin(async (tx) => {
+        const [updated] = await tx`
+          update service_payment
+          set status = 'paid', paid_at = now(),
+              invoice_id = ${status.transaction_id ?? notification.transaction_id ?? payment.invoiceId}
+          where id = ${payment.id} and status in ('pending', 'failed')
+          returning id
+        `
         if (!updated) return false
-        await tx.update(serviceRequests).set({ status: 'won', updatedAt: new Date() })
-          .where(eq(serviceRequests.id, payment.serviceRequestId))
-        await tx.insert(transactions).values({
-          kind: 'revenue',
-          category: 'Jasa digital',
-          description: `Layanan jasa — pembayaran ${payment.code}`,
-          amountIdr: paidAmount,
-          dataSource: 'live',
-        })
-        await tx.insert(activity).values({
-          actor: 'system',
-          action: 'Pembayaran jasa terverifikasi',
-          detail: `Permintaan ${payment.serviceRequestId} dibayar ${paidAmount.toLocaleString('id-ID')} melalui Midtrans.`,
-          dataSource: 'live',
-        })
+        await tx`update service_request set status = 'won', updated_at = now() where id = ${payment.serviceRequestId}`
+        await tx`
+          insert into "transaction" (id, kind, category, description, amount_idr, occurred_at, data_source, created_at)
+          values (${randomUUID()}, 'revenue', 'Jasa digital', ${'Layanan jasa — pembayaran ' + payment.code}, ${paidAmount}, now(), 'live', now())
+        `
+        await tx`
+          insert into activity_entry (id, actor, action, detail, data_source, created_at)
+          values (
+            ${randomUUID()}, 'system', 'Pembayaran jasa terverifikasi',
+            ${'Permintaan ' + payment.serviceRequestId + ' dibayar ' + paidAmount.toLocaleString('id-ID') + ' melalui Midtrans.'},
+            'live', now()
+          )
+        `
         return true
       })
-      return res.status(200).json({ received: true, settled: Boolean(settled) })
+      return res.status(200).json({ received: true, settled })
     }
 
     if (['expire', 'cancel', 'deny'].includes(status.transaction_status ?? '')) {
-      await db.update(servicePayments).set({ status: 'expired' })
-        .where(and(eq(servicePayments.id, payment.id), eq(servicePayments.status, 'pending')))
+      await sqlClient`update service_payment set status = 'expired' where id = ${payment.id} and status = 'pending'`
     }
     return res.status(200).json({ received: true, settled: false, transactionStatus: status.transaction_status ?? 'unknown' })
   } catch {
