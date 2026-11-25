@@ -1,6 +1,6 @@
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
-import { ArrowUpRight, Clapperboard, Image as ImageIcon, Package, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Clapperboard, Film, Image as ImageIcon, Package, Sparkles } from 'lucide-react'
 import { StoreFrame } from '@/components/StoreFrame'
 import { ServiceCatalog, type ServiceItem } from '@/components/ServiceCatalog'
 import { ProductCatalog } from '@/components/ProductCatalog'
@@ -43,24 +43,42 @@ type Props = { isOwner: boolean; services: ServiceItem[]; products: StoreProduct
 function MarketplacePage({ services, products, isOwner }: Props) {
   return (
     <div className="flex flex-col gap-14">
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Link href="/jasa" className="group border border-[#b99a5b]/25 bg-[#101113] p-5 transition hover:border-[#c5a66a]/70">
           <Clapperboard className="size-5 text-[#c5a66a]" />
-          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Pesan layanan kreatif</p>
-          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Video editing, iklan, motion graphics, dan produksi konten sesuai brief.</p>
-          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Lihat layanan <ArrowUpRight className="size-3.5" /></span>
-        </Link>
-        <Link href="/jasa" className="group border border-[#b99a5b]/25 bg-[#101113] p-5 transition hover:border-[#c5a66a]/70">
-          <ImageIcon className="size-5 text-[#c5a66a]" />
-          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Desain & identitas merek</p>
-          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Logo, poster, banner, branding, dan materi visual untuk bisnis.</p>
-          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Pilih desain <ArrowUpRight className="size-3.5" /></span>
+          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Creative & production services</p>
+          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Video editing, motion graphics, iklan, desain, branding, dan produksi sesuai brief.</p>
+          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Jelajahi layanan <ArrowUpRight className="size-3.5" /></span>
         </Link>
         <Link href="/toko" className="group border border-[#b99a5b]/25 bg-[#101113] p-5 transition hover:border-[#c5a66a]/70">
           <Package className="size-5 text-[#c5a66a]" />
-          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Produk digital siap pakai</p>
-          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Template, video, aset desain, toolkit, dan materi digital yang tersedia.</p>
-          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Buka toko <ArrowUpRight className="size-3.5" /></span>
+          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Digital products</p>
+          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Template, toolkit, dokumen, video, audio, dan aset digital siap digunakan.</p>
+          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Buka katalog <ArrowUpRight className="size-3.5" /></span>
+        </Link>
+        <Link href="/media" className="group border border-[#b99a5b]/25 bg-[#101113] p-5 transition hover:border-[#c5a66a]/70">
+          <Film className="size-5 text-[#c5a66a]" />
+          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Media releases</p>
+          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Katalog rilis video, motion, dan audio yang telah diterbitkan.</p>
+          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Jelajahi media <ArrowUpRight className="size-3.5" /></span>
+        </Link>
+        <Link href="/kreator" className="group border border-[#b99a5b]/25 bg-[#101113] p-5 transition hover:border-[#c5a66a]/70">
+          <ImageIcon className="size-5 text-[#c5a66a]" />
+          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Creator network</p>
+          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Kapabilitas kreatif dan jalur produksi untuk kebutuhan konten dan kampanye.</p>
+          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Lihat creator studio <ArrowUpRight className="size-3.5" /></span>
+        </Link>
+        <Link href="/showroom" className="group border border-[#b99a5b]/25 bg-[#101113] p-5 transition hover:border-[#c5a66a]/70">
+          <Sparkles className="size-5 text-[#c5a66a]" />
+          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Private 3D showroom</p>
+          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Ruang pamer digital untuk anggota yang memenuhi akses berbayar.</p>
+          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Periksa akses <ArrowUpRight className="size-3.5" /></span>
+        </Link>
+        <Link href="/harga" className="group border border-[#b99a5b]/25 bg-[#101113] p-5 transition hover:border-[#c5a66a]/70">
+          <ArrowUpRight className="size-5 text-[#c5a66a]" />
+          <p className="mt-4 text-sm font-medium text-[#f3f0e9]">Membership & access</p>
+          <p className="mt-2 text-xs leading-6 text-[#a9a49a]">Lihat paket, manfaat, dan batas akses sebelum berlangganan.</p>
+          <span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-[#d8bd83]">Lihat paket <ArrowUpRight className="size-3.5" /></span>
         </Link>
       </section>
 
