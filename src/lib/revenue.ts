@@ -160,6 +160,9 @@ async function deliverOrder(order: typeof orders.$inferSelect, amount: number, p
     deliverableNote: product?.deliverableNote ?? null,
   })
 
+  // Email is a notification, not the payment ledger or the download gate.
+  // Never turn a verified Midtrans payment into a failed webhook because SMTP/Resend
+  // is unavailable. The paid order remains accessible from /pesanan/[token].
   await sendEmail({
     to: order.buyerEmail,
     subject: email.subject,
@@ -167,6 +170,14 @@ async function deliverOrder(order: typeof orders.$inferSelect, amount: number, p
     kind: 'order-paid',
     relatedType: 'order',
     relatedId: order.code,
+  }).catch(async (error) => {
+    console.error('[paid order email]', error)
+    await db.insert(activity).values({
+      actor: 'system',
+      action: 'Notifikasi email pesanan gagal',
+      detail: `Pembayaran ${order.code} tetap terverifikasi. Pembeli dapat membuka halaman pesanan untuk mengakses produk.`,
+      dataSource: 'live',
+    }).catch(() => undefined)
   })
 
   await notifyOwner({
