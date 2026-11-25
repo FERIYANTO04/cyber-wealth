@@ -207,26 +207,10 @@ export const serviceRequests = pgTable('service_request', {
   proposalBody: text('proposal_body'),
   proposalAmountIdr: bigint('proposal_amount_idr', { mode: 'number' }),
   proposalSource: text('proposal_source'),
-  proposalToken: text('proposal_token').unique(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdateFn(() => new Date()),
 })
 
-export const servicePayments = pgTable('service_payment', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  code: text('code').notNull().unique(),
-  serviceRequestId: text('service_request_id').notNull(),
-  amountIdr: bigint('amount_idr', { mode: 'number' }).notNull(),
-  buyerName: text('buyer_name').notNull(),
-  buyerEmail: text('buyer_email').notNull(),
-  status: text('status').notNull().default('pending'),
-  provider: text('provider').notNull().default('midtrans'),
-  invoiceId: text('invoice_id'),
-  invoiceUrl: text('invoice_url'),
-  paidAt: timestamp('paid_at'),
-  dataSource: text('data_source').notNull().default('live'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-})
 
 // ── Engine 3: affiliate marketing ─────────────────────────────────────────
 // Clicks and conversions are events this app observes itself. A commission row is

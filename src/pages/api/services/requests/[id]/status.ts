@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { and, eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { servicePayments, serviceRequests } from '@/lib/db/schema'
+import { db, sqlClient } from '@/lib/db'
+import { serviceRequests } from '@/lib/db/schema'
 import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
 
@@ -28,11 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!current) return res.status(404).json({ error: 'Permintaan tidak ditemukan.' })
 
   if (['won', 'in_progress', 'delivered'].includes(parsed.data.status)) {
-    const [paid] = await db.select({ id: servicePayments.id }).from(servicePayments).where(and(
-      eq(servicePayments.serviceRequestId, id),
-      eq(servicePayments.status, 'paid'),
-      eq(servicePayments.dataSource, 'live')
-    )).limit(1)
+    const [paid] = await sqlClient`select id from service_payment where service_request_id = ${id} and status = 'paid' and data_source = 'live' limit 1`
     if (!paid) return res.status(409).json({ error: 'Status ini hanya dapat dipilih setelah pembayaran jasa terverifikasi oleh Midtrans.' })
   }
 

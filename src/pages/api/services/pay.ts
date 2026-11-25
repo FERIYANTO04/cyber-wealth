@@ -1,9 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
-import { and, desc, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
-import { db } from '@/lib/db'
-import { servicePayments, serviceRequests } from '@/lib/db/schema'
+import { sqlClient } from '@/lib/db'
 
 const Body = z.object({ token: z.string().trim().min(24).max(64) })
 
@@ -18,8 +16,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const parsed = Body.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ error: 'Tautan permintaan tidak valid.' })
 
-  const [request] = await db.select().from(serviceRequests)
-    .where(eq(serviceRequests.proposalToken, parsed.data.token)).limit(1)
+  const [request] = await sqlClient`
+    select id, proposal_body as "proposalBody", proposal_amount_idr as "proposalAmountIdr",
+      status, name, email, service_name as "serviceName"
+    from service_request where proposal_token = ${parsed.data.token} limit 1
+  `
   if (!request) return res.status(404).json({ error: 'Permintaan tidak ditemukan.' })
   if (!request.proposalBody || request.proposalAmountIdr === null || Number(request.proposalAmountIdr) <= 0) {
     return res.status(409).json({ error: 'Penawaran belum tersedia atau belum memiliki nilai pembayaran.' })
@@ -28,37 +29,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(409).json({ error: 'Permintaan ini sudah ditutup.' })
   }
 
-  const payments = await db.select().from(servicePayments)
-    .where(and(eq(servicePayments.serviceRequestId, request.id), eq(servicePayments.dataSource, 'live')))
-    .orderBy(desc(servicePayments.createdAt)).limit(1)
-  const current = payments[0]
+  const [alreadyPaid] = await sqlClient`
+    select id from service_payment
+    where service_request_id = ${request.id} and status = 'paid' and data_source = 'live' limit 1
+  `
+  if (alreadyPaid) return res.status(200).json({ ok: true, paid: true })
+
+  const [current] = await sqlClient`
+    select id, code, amount_idr as "amountIdr", status, invoice_url as "invoiceUrl"
+    from service_payment where service_request_id = ${request.id} and data_source = 'live'
+    order by created_at desc limit 1
+  `
   const amount = Number(request.proposalAmountIdr)
   if (current?.status === 'paid') return res.status(200).json({ ok: true, paid: true })
   if (current?.status === 'pending' && Number(current.amountIdr) === amount && current.invoiceUrl) {
     return res.status(200).json({ ok: true, paymentUrl: current.invoiceUrl })
   }
   if (current?.status === 'pending' && Number(current.amountIdr) !== amount) {
-    await db.update(servicePayments).set({ status: 'expired' }).where(eq(servicePayments.id, current.id))
+    await sqlClient`update service_payment set status = 'expired' where id = ${current.id}`
   }
 
   const serverKey = process.env.MIDTRANS_SERVER_KEY?.trim() ?? ''
   if (!serverKey) return res.status(503).json({ error: 'Pembayaran online belum dikonfigurasi. Tidak ada tagihan dibuat.' })
   const production = process.env.MIDTRANS_IS_PRODUCTION === 'true'
   const base = production ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
-  const payment = current?.status === 'pending' && Number(current.amountIdr) === amount ? current : (await db.insert(servicePayments).values({
-    code: paymentCode(),
-    serviceRequestId: request.id,
-    amountIdr: amount,
-    buyerName: request.name,
-    buyerEmail: request.email,
-    status: 'pending',
-    provider: 'midtrans',
-    dataSource: 'live',
-  }).returning())[0]
+  const payment = current?.status === 'pending' && Number(current.amountIdr) === amount
+    ? current
+    : (await sqlClient`
+        insert into service_payment (
+          id, code, service_request_id, amount_idr, buyer_name, buyer_email,
+          status, provider, data_source, created_at
+        ) values (
+          ${randomUUID()}, ${paymentCode()}, ${request.id}, ${amount}, ${request.name},
+          ${request.email}, 'pending', 'midtrans', 'live', now()
+        ) returning id, code
+      `)[0]
 
   if (!payment) return res.status(500).json({ error: 'Catatan pembayaran tidak dapat dibuat.' })
 
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://cyber-wealth-web-production.up.railway.app').replace(/\/$/, '')
+  const siteBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://cyber-wealth-web-production.up.railway.app'
+  const site = siteBase.endsWith('/') ? siteBase.slice(0, -1) : siteBase
   try {
     const response = await fetch(base + '/snap/v1/transactions', {
       method: 'POST',
@@ -76,20 +86,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }),
       signal: AbortSignal.timeout(15000),
     })
-    const payload = await response.json().catch(() => ({})) as { token?: string; redirect_url?: string; error_messages?: string[] }
+    const payload = await response.json().catch(() => ({})) as { token?: string; redirect_url?: string }
     if (!response.ok || !payload.token || !payload.redirect_url) {
-      await db.update(servicePayments).set({ status: 'failed' }).where(eq(servicePayments.id, payment.id))
+      await sqlClient`update service_payment set status = 'failed' where id = ${payment.id}`
       return res.status(502).json({ error: 'Midtrans belum dapat membuat tagihan. Coba lagi nanti.' })
     }
 
-    await db.update(servicePayments).set({
-      invoiceId: payload.token,
-      invoiceUrl: payload.redirect_url,
-      status: 'pending',
-    }).where(eq(servicePayments.id, payment.id))
+    await sqlClient`
+      update service_payment set invoice_id = ${payload.token}, invoice_url = ${payload.redirect_url}, status = 'pending'
+      where id = ${payment.id}
+    `
     return res.status(201).json({ ok: true, paymentUrl: payload.redirect_url })
   } catch {
-    await db.update(servicePayments).set({ status: 'failed' }).where(eq(servicePayments.id, payment.id))
+    await sqlClient`update service_payment set status = 'failed' where id = ${payment.id}`
     return res.status(502).json({ error: 'Tidak dapat menghubungi Midtrans. Tidak ada pembayaran yang diproses.' })
   }
 }

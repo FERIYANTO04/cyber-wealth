@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
+import { db, sqlClient } from '@/lib/db'
 import { serviceRequests } from '@/lib/db/schema'
 import { requireOwnerSession } from '@/lib/auth'
 import { logActivity } from '@/lib/data'
@@ -33,9 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(409).json({ error: 'Penawaran ini sudah pernah dikirim.' })
   }
 
+  const [tokenRow] = await sqlClient`select proposal_token from service_request where id = ${request.id} limit 1`
   const portalBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'https://cyber-wealth-web-production.up.railway.app'
-  const portalUrl = request.proposalToken
-    ? `${portalBase.endsWith('/') ? portalBase.slice(0, -1) : portalBase}/permintaan/${request.proposalToken}`
+  const portalUrl = tokenRow?.proposal_token
+    ? `${portalBase.endsWith('/') ? portalBase.slice(0, -1) : portalBase}/permintaan/${tokenRow.proposal_token}`
     : null
 
   const result = await sendEmail({
