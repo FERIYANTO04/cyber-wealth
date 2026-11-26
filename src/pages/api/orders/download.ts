@@ -4,7 +4,7 @@ import path from 'node:path'
 import { getOrderByToken, getProductById } from '@/lib/revenue'
 import { getFile } from '@/lib/storage'
 
-const bundledFiles: Record<string, { file: string; name: string }> = {
+const bundledFiles: Record<string, { file: string; name: string; contentType?: string }> = {\n  'kalkulator-hpp-umkm': {\n    file: 'kalkulator-hpp-umkm.html',\n    name: 'Cyber-Wealth-Kalkulator-HPP-UMKM.html',\n    contentType: 'text/html; charset=utf-8',\n  },
   'panduan-konten-media-sosial': {
     file: 'panduan-konten-media-sosial.pdf',
     name: 'Panduan-Konten-Media-Sosial-30-Hari.pdf',
