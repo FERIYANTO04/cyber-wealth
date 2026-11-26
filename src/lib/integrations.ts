@@ -24,17 +24,28 @@ export type IntegrationCheck = {
 
 export function aiConfig() {
   const neonBaseUrl = (process.env.NEON_AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '')
+  const kiosapiKey = (process.env.KIOSAPI_API_KEY || '').trim()
+  const kiosapiReady = Boolean(kiosapiKey) && !isPlaceholder(kiosapiKey)
+  const configuredBaseUrl = (
+    process.env.AI_BASE_URL ||
+    (neonBaseUrl ? `${neonBaseUrl}/v1` : 'https://api.groq.com/openai/v1')
+  ).replace(/\/+$/, '')
+
+  // Keep the owner-facing diagnostics aligned with the same KiosAPI-first
+  // provider selection used by chatWithAi. A saved key alone is not success:
+  // testAi still makes a real completion request and reports the actual result.
   return {
-    key: (process.env.AI_BASE_URL || '').includes('api.groq.com')
-      ? (process.env.GROQ_API_KEY || '')
-      : (process.env.AI_BASE_URL || '').includes('api.kiosapi.id')
-        ? (process.env.KIOSAPI_API_KEY || '')
-        : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''),
-    model: process.env.AI_MODEL || 'openai/gpt-oss-120b',
-    baseUrl: (
-      process.env.AI_BASE_URL ||
-      (neonBaseUrl ? `${neonBaseUrl}/v1` : 'https://api.groq.com/openai/v1')
-    ).replace(/\/+$/, ''),
+    key: kiosapiReady
+      ? kiosapiKey
+      : configuredBaseUrl.includes('api.groq.com')
+        ? (process.env.GROQ_API_KEY || '')
+        : configuredBaseUrl.includes('api.kiosapi.id')
+          ? (process.env.KIOSAPI_API_KEY || '')
+          : (process.env.NEON_AI_GATEWAY_TOKEN || process.env.GROQ_API_KEY || ''),
+    model: kiosapiReady
+      ? (process.env.AI_KIOSAPI_MODEL || process.env.AI_MODEL || 'minimax/minimax-m3')
+      : (process.env.AI_MODEL || 'openai/gpt-oss-120b'),
+    baseUrl: kiosapiReady ? 'https://api.kiosapi.id/v1' : configuredBaseUrl,
   }
 }
 
