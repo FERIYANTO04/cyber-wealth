@@ -104,12 +104,13 @@ export async function putFile(
     headers: { 'Content-Type': contentType },
     body: data as BodyInit,
     cache: 'no-store',
+    signal: AbortSignal.timeout(15000),
   })
   if (!response.ok) throw new StorageError(response.status, 'Gagal menyimpan berkas ke Neon Object Storage.')
 }
 
 export async function getFile(key: string): Promise<{ data: ArrayBuffer; contentType: string } | null> {
-  const response = await fetch(presign('GET', key, 900), { cache: 'no-store' })
+  const response = await fetch(presign('GET', key, 900), { cache: 'no-store', signal: AbortSignal.timeout(15000) })
   if (response.status === 404 || response.status === 403) return null
   if (!response.ok) throw new StorageError(response.status, 'Gagal mengambil berkas dari Neon Object Storage.')
   return { data: await response.arrayBuffer(), contentType: response.headers.get('content-type') || 'application/octet-stream' }
@@ -117,7 +118,7 @@ export async function getFile(key: string): Promise<{ data: ArrayBuffer; content
 
 export async function deleteFile(keys: string | string[]): Promise<void> {
   for (const key of Array.isArray(keys) ? keys : [keys]) {
-    const response = await fetch(presign('DELETE', key, 900), { method: 'DELETE', cache: 'no-store' })
+    const response = await fetch(presign('DELETE', key, 900), { method: 'DELETE', cache: 'no-store', signal: AbortSignal.timeout(15000) })
     if (!response.ok && response.status !== 404) {
       throw new StorageError(response.status, 'Gagal menghapus berkas dari Neon Object Storage.')
     }
