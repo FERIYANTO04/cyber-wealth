@@ -69,6 +69,13 @@ function HomePage({ services, products, isOwner }: Props) {
         <ProductCatalog products={products} isOwner={isOwner} />
       </section>
 
+      <section className="border border-[#c7a66a]/25 bg-[linear-gradient(110deg,#17130d,#0b0b09)] p-6 sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="font-mono text-[9px] uppercase tracking-[.22em] text-[#c5a66a]">03 / Exhibition & innovation</p><h2 className="mt-2 text-2xl font-semibold text-[#f3f0e9]">Lihat karya, produk, dan prototipe Cyber Wealth</h2><p className="mt-2 max-w-2xl text-xs leading-6 text-[#a9a49a]">Pameran publik berisi produk siap beli, eksplorasi teknologi, dan karya kreatif. Status setiap item ditampilkan dengan jelas.</p></div>
+          <Link href="/pameran" className="inline-flex shrink-0 items-center gap-2 bg-[#d5b879] px-5 py-3 text-[10px] font-bold uppercase tracking-[.14em] text-[#15110a]">Masuk pameran <ArrowUpRight className="size-3.5"/></Link>
+        </div>
+      </section>
+
       <section className="grid gap-4 border-t border-[#c7a66a]/20 pt-7 sm:grid-cols-2">
         <Link href="/marketplace" className="group border border-[#c7a66a]/20 bg-[#0d0c09] p-5 hover:border-[#c7a66a]/55"><Sparkles className="size-5 text-[#c5a66a]"/><h3 className="mt-4 text-sm font-semibold text-[#eee6d8]">Explore the marketplace</h3><p className="mt-2 text-xs leading-5 text-[#938b7d]">Lihat seluruh katalog layanan dan produk Cyber Wealth.</p><span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.14em] text-[#d8bd83]">Open marketplace <ArrowUpRight className="size-3.5"/></span></Link>
         <Link href="/kontak" className="group border border-[#c7a66a]/20 bg-[#0d0c09] p-5 hover:border-[#c7a66a]/55"><Package className="size-5 text-[#c5a66a]"/><h3 className="mt-4 text-sm font-semibold text-[#eee6d8]">Request a custom project</h3><p className="mt-2 text-xs leading-5 text-[#938b7d]">Jelaskan kebutuhan khusus yang belum tersedia di katalog.</p><span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.14em] text-[#d8bd83]">Contact the studio <ArrowUpRight className="size-3.5"/></span></Link>
