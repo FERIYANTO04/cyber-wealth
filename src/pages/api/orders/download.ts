@@ -17,8 +17,7 @@ const bundledFiles: Record<string, { file: string; name: string; contentType?: s
 }
 
 function safeDownloadName(value: string): string {
-  return value.replace(/[\r
-"\\]/g, '_').slice(0, 160) || 'unduhan'
+  return value.split('\r').join('_').split('\n').join('_').split('"').join('_').split('\\').join('_').slice(0, 160) || 'unduhan'
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
