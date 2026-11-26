@@ -28,10 +28,6 @@ const studios = [
 ]
 
 export function ServiceCatalog({ services, isOwner }: { services: ServiceItem[]; isOwner: boolean }) {
-  if (services.length === 0) {
-    return <Panel><EmptyState title="Studio sedang menyiapkan penawaran" body={isOwner ? 'Terbitkan layanan dari konsol agar tampil di sini.' : 'Penawaran baru akan segera tersedia.'} action={isOwner ? <SignalLink href="/jasa-admin">Kelola layanan</SignalLink> : undefined} /></Panel>
-  }
-
   return (
     <div className="space-y-16">
       <section aria-labelledby="studios-heading">
@@ -52,6 +48,9 @@ export function ServiceCatalog({ services, isOwner }: { services: ServiceItem[];
         </div>
       </section>
 
+      {services.length === 0 ? (
+        <Panel><EmptyState title="Studio sedang menyiapkan penawaran" body={isOwner ? 'Terbitkan layanan dari konsol agar tampil di sini.' : 'Penawaran baru akan segera tersedia.'} action={isOwner ? <SignalLink href="/jasa-admin">Kelola layanan</SignalLink> : undefined} /></Panel>
+      ) : (
       <section aria-labelledby="offers-heading">
         <div className="mb-6 flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="font-mono text-[10px] uppercase tracking-[.24em] text-[#55d6b5]">Selected capabilities</p><h2 id="offers-heading" className="mt-2 text-2xl font-semibold tracking-[-.04em] text-white sm:text-3xl">Explore what we create.</h2></div>
@@ -74,6 +73,7 @@ export function ServiceCatalog({ services, isOwner }: { services: ServiceItem[];
           ))}
         </div>
       </section>
+      )}
 
       <section className="relative overflow-hidden rounded-2xl border border-[#55d6b5]/20 bg-[radial-gradient(circle_at_85%_20%,rgba(85,214,181,.12),transparent_35%),linear-gradient(120deg,#111a25,#0b1018)] p-7 sm:p-10">
         <p className="font-mono text-[10px] uppercase tracking-[.24em] text-[#55d6b5]">Start a conversation</p>
