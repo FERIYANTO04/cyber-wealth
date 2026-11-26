@@ -67,9 +67,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (running) return res.status(409).json({ ran: false, reason: 'Putaran sedang berjalan pada instance ini.' })
 
   running = true
+  let handedOffToBackground = false
   try {
-    // The billing pass and the tidy-up run on every call: reminders, expiry and stale
-    // links must not wait for the autopilot's own cadence.
+    // Billing, housekeeping, migrations, and integration probes are short,
+    // bounded operations and finish before the scheduler response.
     const billing = await runBillingPass('schedule').catch((error) => {
       console.error('[cron billing]', error)
       return { error: 'Proses billing gagal; periksa log server.' }
@@ -80,21 +81,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Cyber Wealth is website-first: the scheduled autopilot never publishes social posts.
-
-    // Move the two approved catalogue Markdown deliverables into private object storage.
-    // This runs only inside the authenticated cron, never from a public endpoint.
     const productFileMigration = await migrateProductFiles().catch((error) => {
       console.error('[cron product file migration]', error)
       return ['Migrasi berkas gagal; periksa log server.']
     })
 
-    // Provider checks are read-only except for a temporary storage probe file that is
-    // deleted immediately. This gives the owner verified status rather than just key presence.
     const [aiCheck, emailCheck, storageCheck, paymentCheck] = await Promise.all([
-      testAi().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'AI check failed' })),
-      testEmail().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Email check failed' })),
-      storageStatus().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Storage check failed' })),
-      testMidtrans().catch((error) => ({ state: 'error', message: error instanceof Error ? error.message : 'Midtrans check failed' })),
+      testAi().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'AI check failed' })),
+      testEmail().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'Email check failed' })),
+      storageStatus().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'Storage check failed' })),
+      testMidtrans().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'Midtrans check failed' })),
     ])
     const integrations = { ai: aiCheck, email: emailCheck, storage: storageCheck, midtrans: paymentCheck }
     await logActivity({
@@ -108,21 +104,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ ran: false, reason: 'Autopilot belum jatuh tempo atau dijeda.', billing, housekeeping, productFileMigration, integrations })
     }
 
-    const result = await runAutopilot('schedule')
-    if (result.paused) {
-      return res.status(200).json({ ran: false, reason: 'Operasi dijeda.', billing, housekeeping, productFileMigration, integrations })
-    }
+    // Do not hold the cron HTTP request open for the entire multi-agent cycle.
+    // Railway's request window is shorter than a full CEO + specialist run. The
+    // web process continues this promise after returning 202; each agent persists
+    // its own run record, and stale "running" records are recovered by autopilotDue.
+    handedOffToBackground = true
+    void runAutopilot('schedule')
+      .then(async (result) => {
+        if (result.paused) return
+        await logActivity({
+          actor: 'system',
+          action: 'Putaran terjadwal autopilot selesai',
+          detail: result.results.map((item) => `${item.label}: ${item.summary}`).join(' · '),
+        })
+      })
+      .catch(async (error) => {
+        const message = error instanceof Error ? error.message : 'Kesalahan tidak diketahui'
+        console.error('[cron autopilot background]', error)
+        await logActivity({
+          actor: 'system',
+          action: 'Putaran terjadwal autopilot gagal',
+          detail: message.slice(0, 500),
+        }).catch(() => undefined)
+      })
+      .finally(() => {
+        running = false
+      })
 
-    await logActivity({
-      actor: 'system',
-      action: 'Putaran terjadwal autopilot berjalan',
-      detail: result.results.map((item) => `${item.label}: ${item.summary}`).join(' · '),
-    })
-    return res.status(200).json({ ran: true, results: result.results, billing, housekeeping, productFileMigration, integrations })
+    return res.status(202).json({ ran: true, queued: true, message: 'Putaran autopilot berjalan di latar belakang.', billing, housekeeping, productFileMigration, integrations })
   } catch (error) {
     console.error('[cron autopilot]', error)
     return res.status(500).json({ ran: false, reason: 'Putaran gagal. Periksa log server.' })
   } finally {
-    running = false
+    if (!handedOffToBackground) running = false
   }
 }
