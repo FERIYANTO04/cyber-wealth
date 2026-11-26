@@ -52,38 +52,48 @@ async function requestProvider(provider: Provider, args: {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 45_000)
   try {
-    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${provider.key}`,
-      },
-      body: JSON.stringify({
-        model: provider.model,
-        temperature: args.temperature ?? 0.3,
-        max_tokens: args.maxTokens ?? 2400,
-        // GPT-OSS-120B gets the highest supported reasoning budget for deliberate
-        // planning, multi-step analysis, and agent decisions.
-        ...(provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-')
-          ? { reasoning_effort: 'medium', reasoning_format: 'hidden' }
-          : {}),
-        messages: args.messages,
-      }),
-      signal: controller.signal,
-      cache: 'no-store',
+    const requestBody = JSON.stringify({
+      model: provider.model,
+      temperature: args.temperature ?? 0.3,
+      max_tokens: args.maxTokens ?? 2400,
+      ...(provider.baseUrl.includes('api.groq.com') && provider.model.startsWith('openai/gpt-oss-')
+        ? { reasoning_effort: 'medium', reasoning_format: 'hidden' }
+        : {}),
+      messages: args.messages,
     })
 
-    const body = (await response.json().catch(() => null)) as
+    // Provider rate limits are often short rolling windows. Retry 429 responses
+    // using the provider's Retry-After hint, bounded so a specialist cannot hang
+    // the entire company run indefinitely.
+    let response: Response | null = null
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      response = await fetch(`${provider.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${provider.key}`,
+        },
+        body: requestBody,
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+      if (response.status !== 429 || attempt === 2) break
+      const retryAfter = Number(response.headers.get('retry-after') || 0)
+      const waitMs = Math.min(8000, Math.max(1500, retryAfter * 1000 || (attempt + 1) * 2500))
+      await new Promise((resolve) => setTimeout(resolve, waitMs))
+    }
+
+    const body = (await response!.json().catch(() => null)) as
       | { choices?: { message?: { content?: string | null }; finish_reason?: string }[]; error?: { message?: string } }
       | null
 
-    if (!response.ok) {
+    if (!response!.ok) {
       const detail = body?.error?.message
-      const reason = response.status === 401 || response.status === 403
-        ? `${provider.label} menolak autentikasi (${response.status})${detail ? `: ${detail.slice(0, 300)}` : '.'}`
-        : response.status === 429
-          ? `Kuota ${provider.label} tercapai (429).`
-          : `${provider.label} menolak permintaan (${response.status})${detail ? `: ${detail.slice(0, 300)}` : '.'}`
+      const reason = response!.status === 401 || response!.status === 403
+        ? `${provider.label} menolak autentikasi (${response!.status})${detail ? `: ${detail.slice(0, 300)}` : '.'}`
+        : response!.status === 429
+          ? `Kuota ${provider.label} tercapai (429) setelah percobaan ulang.`
+          : `${provider.label} menolak permintaan (${response!.status})${detail ? `: ${detail.slice(0, 300)}` : '.'}`
       return { ok: false, reason }
     }
 
