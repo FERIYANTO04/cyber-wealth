@@ -8,7 +8,7 @@ export function LandingIntro({ needsSetup: _needsSetup }: { needsSetup: boolean 
     <div className="flex flex-col gap-section pb-section">
       <header className="flex items-center justify-between gap-4 border-b border-line pb-4">
         <Link href="/" className="text-sm font-semibold tracking-[0.18em] text-ink">
-          CYBER WEALTH
+          CYBER TEKNOLOGI
         </Link>
         <nav className="hidden items-center gap-5 text-xs text-ink-quiet sm:flex" aria-label="Navigasi utama">
           <SignalLink href="/jasa">Layanan</SignalLink>
@@ -26,7 +26,7 @@ export function LandingIntro({ needsSetup: _needsSetup }: { needsSetup: boolean 
 
       <section className="grid gap-8 py-8 sm:grid-cols-[1.2fr_0.8fr] sm:items-center sm:py-14">
         <div className="flex flex-col items-start gap-5">
-          <p className="eyebrow">CYBER WEALTH · LAYANAN DIGITAL</p>
+          <p className="eyebrow">CYBER TEKNOLOGI · LAYANAN DIGITAL</p>
           <h1 className="heading-tight max-w-2xl text-[2.35rem] leading-[1.04] sm:text-[3.5rem]">
             Konten usaha lebih terencana. Promosi lebih konsisten.
           </h1>
@@ -67,7 +67,7 @@ export function LandingIntro({ needsSetup: _needsSetup }: { needsSetup: boolean 
       </section>
 
       <footer className="flex flex-col gap-2 border-t border-line pt-5 text-xs text-ink-quiet sm:flex-row sm:items-center sm:justify-between">
-        <span>© {new Date().getFullYear()} Cyber Wealth. Penawaran mengikuti ruang lingkup yang disepakati.</span>
+        <span>© {new Date().getFullYear()} Cyber Teknologi. Penawaran mengikuti ruang lingkup yang disepakati.</span>
         <div className="flex flex-wrap gap-4">
           <SignalLink href="/faq">Bantuan</SignalLink>
           <SignalLink href="/syarat">Syarat layanan</SignalLink>
