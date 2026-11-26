@@ -1,36 +1,82 @@
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Package, Sparkles } from 'lucide-react'
 import { StoreFrame } from '@/components/StoreFrame'
+import { ServiceCatalog, type ServiceItem } from '@/components/ServiceCatalog'
+import { ProductCatalog } from '@/components/ProductCatalog'
+import type { StoreProduct } from '@/components/ProductCard'
+import { getPublishedServices } from '@/lib/services'
+import { getStoreProducts } from '@/lib/revenue'
+import { getSession } from '@/lib/auth'
 import type { PageWithFrame } from '@/lib/frame'
 
-export const getServerSideProps: GetServerSideProps = async () => ({ props: {} })
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const [serviceRows, productRows, session] = await Promise.all([
+    getPublishedServices(),
+    getStoreProducts(),
+    getSession(ctx.req),
+  ])
+  return {
+    props: {
+      isOwner: Boolean(session),
+      services: serviceRows.map((row): ServiceItem => ({
+        slug: row.slug,
+        name: row.name,
+        summary: row.summary,
+        category: row.category,
+        priceFromIdr: Number(row.priceFromIdr),
+        deliveryDays: row.deliveryDays,
+      })),
+      products: productRows.map((row): StoreProduct => ({
+        slug: row.slug,
+        name: row.name,
+        summary: row.summary,
+        category: row.category,
+        priceIdr: Number(row.priceIdr),
+      })),
+    },
+  }
+}
 
-const items = [
-  { n:'01', name:'Creative Studio', type:'Agency / Design', desc:'Brand identity, graphic design and visual campaigns.', href:'/jasa', theme:'creative' },
-  { n:'02', name:'Digital Experiences', type:'Technology / Web', desc:'Websites, platforms and digital product experiences.', href:'/marketplace', theme:'tech' },
-  { n:'03', name:'AI & Automation', type:'Artificial intelligence', desc:'Intelligent systems and workflows for modern business.', href:'/marketplace', theme:'ai' },
-  { n:'04', name:'Film & Motion', type:'Video / Production', desc:'Cinematic content, editing and motion graphics.', href:'/media', theme:'film' },
-  { n:'05', name:'Digital Products', type:'Products / Downloads', desc:'Useful digital tools, templates and ready-to-use assets.', href:'/toko', theme:'product' },
-  { n:'06', name:'3D & Innovation', type:'3D / Experimental', desc:'Three-dimensional visuals and emerging concepts.', href:'/showroom', theme:'innovation' },
-]
-function Preview({theme}:{theme:string}) {
-  const base='relative h-[150px] overflow-hidden border-b border-[#c7a66a]/20'
-  if(theme==='creative') return <div className={base+' bg-[#21170f]'}><div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_35%,rgba(217,185,120,.4),transparent_35%),linear-gradient(125deg,#35251a,#0b0907)]"/><div className="absolute left-6 top-7 font-serif text-3xl italic text-[#ead6ac]">Form & feeling</div><div className="absolute bottom-5 left-6 h-px w-24 bg-[#d5b879]"/><div className="absolute -right-5 -top-8 size-44 rounded-full border border-[#d5b879]/40"/></div>
-  if(theme==='tech') return <div className={base+' bg-[#101a20]'}><div className="absolute inset-4 border border-[#91b0b5]/30 bg-[#0b1217]/80 p-3"><div className="flex gap-1"><i className="size-1.5 rounded-full bg-[#c7a66a]"/><i className="size-1.5 rounded-full bg-white/30"/><i className="size-1.5 rounded-full bg-white/30"/></div><div className="mt-4 h-2 w-2/3 bg-[#d6c49d]/70"/><div className="mt-2 h-1 w-1/2 bg-white/20"/><div className="mt-5 grid grid-cols-3 gap-2">{[1,2,3].map(x=><div key={x} className="h-12 border border-[#91b0b5]/30 bg-[#263b43]/50"/> )}</div></div></div>
-  if(theme==='ai') return <div className={base+' bg-[#15120d]'}><div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(198,164,100,.25),transparent_45%)]"/><div className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#d7bd83]/50 shadow-[0_0_40px_rgba(215,189,131,.2)]"/><div className="absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#d7bd83]/70"/><div className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e7cb91] shadow-[0_0_20px_8px_rgba(231,203,145,.25)]"/></div>
-  if(theme==='film') return <div className={base+' bg-[#191311]'}><div className="absolute inset-0 bg-[linear-gradient(120deg,transparent_20%,rgba(211,173,111,.2),transparent_65%),radial-gradient(ellipse_at_70%_40%,#5a3b2b,#15100d_60%)]"/><div className="absolute bottom-5 left-5 font-serif text-2xl tracking-widest text-[#f0dfc2]">CINEMA</div><div className="absolute bottom-4 right-5 h-8 w-12 border border-[#d7bd83]/50"/></div>
-  if(theme==='product') return <div className={base+' bg-[#211c13]'}><div className="absolute left-1/2 top-1/2 h-28 w-20 -translate-x-1/2 -translate-y-1/2 rotate-[-7deg] border border-[#d8bc80]/60 bg-gradient-to-br from-[#51412b] to-[#0d0b08] shadow-2xl"/><div className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-1 font-serif text-sm text-[#ead6ac]">THE KIT</div></div>
-  return <div className={base+' bg-[#101915]'}><div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(157,174,143,.2),transparent_55%),linear-gradient(135deg,#26352b,#090d0a)]"/><div className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-[#d8bc80]/50"/><div className="absolute left-1/2 top-1/2 size-20 -translate-x-1/2 -translate-y-1/2 rotate-12 border border-[#d8bc80]/30"/></div>
+type Props = { isOwner: boolean; services: ServiceItem[]; products: StoreProduct[] }
+
+function HomePage({ services, products, isOwner }: Props) {
+  return (
+    <div className="space-y-12">
+      <section className="relative overflow-hidden border border-[#c7a66a]/25 bg-[radial-gradient(ellipse_at_82%_20%,rgba(190,151,79,.2),transparent_42%),linear-gradient(120deg,#17130d,#090907_65%)] px-6 py-10 sm:px-10 sm:py-14">
+        <p className="font-mono text-[9px] uppercase tracking-[.28em] text-[#c9a96d]">Cyber Wealth / Official Store</p>
+        <h2 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight tracking-[-.045em] text-[#f3ecdf] sm:text-5xl">Digital services and products, ready to move your business forward.</h2>
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-[#aaa08f]">Pesan layanan kreatif dan teknologi, atau beli produk digital langsung dari website Cyber Wealth. Ruang lingkup dan harga layanan dikonfirmasi sebelum pekerjaan dimulai. Produk berbayar dibuka setelah pembayaran terverifikasi.</p>
+        <div className="mt-7 flex flex-wrap gap-3">
+          <Link href="/jasa" className="inline-flex items-center gap-2 bg-[#d5b879] px-5 py-3 text-[10px] font-bold uppercase tracking-[.14em] text-[#15110a] hover:bg-[#ead6ac]">Jelajahi layanan <ArrowUpRight className="size-3.5"/></Link>
+          <Link href="/toko" className="inline-flex items-center gap-2 border border-[#c7a66a]/50 px-5 py-3 text-[10px] font-semibold uppercase tracking-[.14em] text-[#e4c789] hover:bg-white/[.04]">Lihat produk <ArrowUpRight className="size-3.5"/></Link>
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-5 flex items-end justify-between gap-4 border-b border-[#c7a66a]/20 pb-4">
+          <div><p className="font-mono text-[9px] uppercase tracking-[.22em] text-[#c5a66a]">01 / Services</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#f3f0e9]">Hire Cyber Wealth</h2><p className="mt-2 max-w-2xl text-xs leading-6 text-[#a9a49a]">Pilih layanan, kirim brief, lalu tinjau penawaran sebelum menyetujui pekerjaan.</p></div>
+          <Link href="/jasa" className="shrink-0 text-[10px] uppercase tracking-[.14em] text-[#d8bd83]">Semua layanan ↗</Link>
+        </div>
+        <ServiceCatalog services={services} isOwner={isOwner} />
+      </section>
+
+      <section>
+        <div className="mb-5 flex items-end justify-between gap-4 border-b border-[#c7a66a]/20 pb-4">
+          <div><p className="font-mono text-[9px] uppercase tracking-[.22em] text-[#c5a66a]">02 / Digital store</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#f3f0e9]">Products available now</h2><p className="mt-2 max-w-2xl text-xs leading-6 text-[#a9a49a]">Pilih produk digital, selesaikan checkout di website, lalu akses berkas setelah pembayaran dikonfirmasi.</p></div>
+          <Link href="/toko" className="shrink-0 text-[10px] uppercase tracking-[.14em] text-[#d8bd83]">Semua produk ↗</Link>
+        </div>
+        <ProductCatalog products={products} isOwner={isOwner} />
+      </section>
+
+      <section className="grid gap-4 border-t border-[#c7a66a]/20 pt-7 sm:grid-cols-2">
+        <Link href="/marketplace" className="group border border-[#c7a66a]/20 bg-[#0d0c09] p-5 hover:border-[#c7a66a]/55"><Sparkles className="size-5 text-[#c5a66a]"/><h3 className="mt-4 text-sm font-semibold text-[#eee6d8]">Explore the marketplace</h3><p className="mt-2 text-xs leading-5 text-[#938b7d]">Lihat seluruh katalog layanan dan produk Cyber Wealth.</p><span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.14em] text-[#d8bd83]">Open marketplace <ArrowUpRight className="size-3.5"/></span></Link>
+        <Link href="/kontak" className="group border border-[#c7a66a]/20 bg-[#0d0c09] p-5 hover:border-[#c7a66a]/55"><Package className="size-5 text-[#c5a66a]"/><h3 className="mt-4 text-sm font-semibold text-[#eee6d8]">Request a custom project</h3><p className="mt-2 text-xs leading-5 text-[#938b7d]">Jelaskan kebutuhan khusus yang belum tersedia di katalog.</p><span className="mt-4 inline-flex items-center gap-2 text-[10px] uppercase tracking-[.14em] text-[#d8bd83]">Contact the studio <ArrowUpRight className="size-3.5"/></span></Link>
+      </section>
+    </div>
+  )
 }
-function HomePage() {
- return <section className="min-w-0">
-   <div className="border-b border-[#c7a66a]/20 pb-5"><p className="font-mono text-[9px] uppercase tracking-[.28em] text-[#c9a96d]">Cyber Wealth / Digital ecosystem</p><h1 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-[#f3ecdf] sm:text-4xl">Explore our ecosystem</h1><p className="mt-2 max-w-2xl text-xs leading-6 text-[#9b9385]">A curated collection of creative studios, digital products, technology and media — built to bring ambitious ideas to life.</p></div>
-   <div className="mt-5 flex items-center justify-between"><p className="text-[9px] uppercase tracking-[.2em] text-[#bda16d]">Selected work & offerings</p><span className="font-mono text-[9px] text-[#756b58]">06 COLLECTIONS</span></div>
-   <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map(item=><Link href={item.href} key={item.n} className="group overflow-hidden border border-[#c7a66a]/20 bg-[#0d0c09] transition hover:-translate-y-1 hover:border-[#c7a66a]/60"><Preview theme={item.theme}/><div className="p-4"><div className="flex items-center justify-between"><span className="font-mono text-[8px] tracking-[.18em] text-[#b89a63]">{item.n} / {item.type}</span><ArrowUpRight className="size-3.5 text-[#a58a59] transition group-hover:-translate-y-1 group-hover:translate-x-1"/></div><h2 className="mt-3 text-sm font-semibold text-[#eee6d8]">{item.name}</h2><p className="mt-2 text-[10px] leading-5 text-[#938b7d]">{item.desc}</p></div></Link>)}</div>
-   <div className="mt-8 border-t border-[#c7a66a]/20 pt-5"><Link href="/kontak" className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[.16em] text-[#ddc18a]">Discuss a project <ArrowUpRight className="size-3.5"/></Link></div>
-  </section>
-}
-const Page = HomePage as PageWithFrame
-Page.getLayout = (page) => <StoreFrame title="Cyber Wealth" variant="wide" description="Explore Cyber Wealth studios, services, products, technology and media.">{page}</StoreFrame>
+
+const Page = HomePage as PageWithFrame<Props>
+Page.getLayout = (page) => <StoreFrame title="Cyber Wealth" variant="wide" eyebrow="Cyber Wealth / Official Store" intent="Belanja produk digital dan pesan layanan langsung melalui website resmi Cyber Wealth." description="Cyber Wealth official website — digital services and products.">{page}</StoreFrame>
 export default Page
