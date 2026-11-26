@@ -1212,14 +1212,14 @@ export async function autopilotDue(): Promise<boolean> {
     .orderBy(asc(agentRuns.startedAt))
   if (activeRuns.length) {
     const now = Date.now()
-    const freshRuns = activeRuns.filter(run => now - run.startedAt.getTime() < 20 * 60 * 1000)
+    const freshRuns = activeRuns.filter(run => now - run.startedAt.getTime() < 5 * 60 * 1000)
     if (freshRuns.length > 0) return false
     const staleRuns = activeRuns
     for (const run of staleRuns) {
       await db.update(agentRuns)
         .set({
           status: 'failed',
-          summary: 'Run otomatis dihentikan karena tidak selesai dalam 10 menit.',
+          summary: 'Run otomatis dihentikan karena tidak selesai dalam 5 menit.',
           detail: 'Permintaan server sebelumnya terputus atau macet. Tugas akan dicoba kembali pada siklus autopilot berikutnya.',
           finishedAt: new Date(),
         })
