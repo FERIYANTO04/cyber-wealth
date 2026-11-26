@@ -1231,8 +1231,8 @@ export async function autopilotDue(): Promise<boolean> {
   const last = await getLastRun()
   if (!last) return true
   // A cycle may finish with a successful final agent after earlier specialists
-  // failed. Treat nearby failures as a partial-cycle failure and retry after
-  // 30 minutes instead of waiting the full five-hour healthy-cycle interval.
+  // failed. Retry partial cycles after a short cooldown instead of waiting the
+  // full five-hour healthy-cycle interval; provider calls now include bounded 429 retries.
   const [latestFailure] = await db.select().from(agentRuns)
     .where(eq(agentRuns.status, 'failed'))
     .orderBy(desc(agentRuns.startedAt))
@@ -1241,10 +1241,10 @@ export async function autopilotDue(): Promise<boolean> {
     latestFailure &&
     latestFailure.startedAt.getTime() >= last.startedAt.getTime() - 15 * 60 * 1000
   ) {
-    return Date.now() - latestFailure.startedAt.getTime() > 30 * 60 * 1000
+    return Date.now() - latestFailure.startedAt.getTime() > 10 * 60 * 1000
   }
   if (last.status === 'failed') {
-    return Date.now() - last.startedAt.getTime() > 30 * 60 * 1000
+    return Date.now() - last.startedAt.getTime() > 10 * 60 * 1000
   }
   // The Railway cron normally runs every five hours. A configurable guard
   // limits completed cycles while allowing a recovered stale run to retry now.
