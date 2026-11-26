@@ -96,7 +96,6 @@ async function requestProvider(provider: Provider, args: {
         cache: 'no-store',
       })
       if (response.status !== 429 || attempt === 2) break
-      const retryAfter = Number(response.headers.get('retry-after') || 0)
       const waitMs = retryDelayMs(response, attempt)
       await new Promise((resolve) => setTimeout(resolve, waitMs))
     }
