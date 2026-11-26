@@ -136,6 +136,24 @@ async function requestProvider(provider: Provider, args: {
   }
 }
 
+export async function testPrimaryAi(): Promise<AiOutcome> {
+  const key = isPlaceholder(PRIMARY_KEY) ? '' : PRIMARY_KEY
+  const label = PRIMARY_BASE_URL.includes('api.kiosapi.id')
+    ? 'KiosAPI'
+    : PRIMARY_BASE_URL.includes('api.groq.com') ? 'Groq utama' : 'AI Gateway'
+  if (!key) return { ok: false, reason: `${label} credential belum tersedia atau masih placeholder.` }
+  return requestProvider({
+    baseUrl: PRIMARY_BASE_URL,
+    model: PRIMARY_MODEL,
+    key,
+    label,
+  }, {
+    messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
+    maxTokens: 128,
+    temperature: 0,
+  })
+}
+
 function canFailOver(reason: string): boolean {
   return /menolak autentikasi \((401|403)\)|kuota|429|menolak permintaan \(5\d\d\)|tidak bisa menghubungi|tidak menjawab dalam 45 detik|terpotong sebelum selesai|tidak mengembalikan jawaban/i.test(reason)
 }
