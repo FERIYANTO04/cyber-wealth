@@ -56,7 +56,7 @@ async function waitForProviderSlot(): Promise<void> {
 function retryDelayMs(response: Response, attempt: number): number {
   const retryAfter = Number(response.headers.get('retry-after') || 0)
   const reset = response.headers.get('x-ratelimit-reset-tokens') || ''
-  const match = reset.match(/^(?:(\\d+(?:\\.\\d+)?)m)?(?:(\\d+(?:\\.\\d+)?)s)?$/)
+  const match = reset.match(/^(?:(\d+(?:\.\d+)?)m)?(?:(\d+(?:\.\d+)?)s)?$/)
   const resetSeconds = match ? Number(match[1] || 0) * 60 + Number(match[2] || 0) : 0
   return Math.min(12_000, Math.max(2_000, retryAfter * 1000 || resetSeconds * 1000 || (attempt + 1) * 3_000))
 }
