@@ -1204,15 +1204,15 @@ export async function autopilotDue(): Promise<boolean> {
   const current = await getSettings()
   if (current.aiPaused) return false
 
-  // Recover a request-driven agent left running after a crashed/502 web request.
-  // The app does not run background work after its response, so a 10-minute
-  // running record is stale and must not block the next complete cycle.
+  // Recover an agent cycle left running after a process crash or deployment.
+  // Background cycles can legitimately exceed one HTTP request window, so allow
+  // up to 20 minutes before treating an in-progress record as stale.
   const activeRuns = await db.select().from(agentRuns)
     .where(eq(agentRuns.status, 'running'))
     .orderBy(asc(agentRuns.startedAt))
   if (activeRuns.length) {
     const now = Date.now()
-    const freshRuns = activeRuns.filter(run => now - run.startedAt.getTime() < 10 * 60 * 1000)
+    const freshRuns = activeRuns.filter(run => now - run.startedAt.getTime() < 20 * 60 * 1000)
     if (freshRuns.length > 0) return false
     const staleRuns = activeRuns
     for (const run of staleRuns) {
