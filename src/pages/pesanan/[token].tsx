@@ -59,7 +59,7 @@ type Props = { order: OrderDetail; downloadUrl: string | null; deliverableNote: 
 function OrderPage({ order, downloadUrl, deliverableNote, bankTransfer }: Props) {
   return (
     <PageStack>
-      <OrderStatusPanel order={order} downloadUrl={downloadUrl} deliverableNote={deliverableNote} bankTransfer={bankTransfer} />
+      <OrderStatusPanel order={order} orderToken={token} downloadUrl={downloadUrl} deliverableNote={deliverableNote} bankTransfer={bankTransfer} />
       <InlineNote>
         Simpan halaman ini. Alamatnya adalah kunci pesanan Anda dan hanya bisa dibuka oleh siapa pun yang memilikinya.
       </InlineNote>
