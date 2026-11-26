@@ -54,10 +54,10 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
         onPointerCancel={pointerUp}
         onLostPointerCapture={pointerUp}
         role="application"
-        aria-label="Showroom 3D. Geser kiri-kanan untuk rotasi 360 derajat dan atas-bawah untuk melihat bagian atas atau bawah produk."
+        aria-label="Showroom 3D. Geser untuk memutar objek 360 derajat. Latar dan panggung tetap diam."
       >
         <div className="cw-horizon absolute inset-0"/>
-        <div className="cw-world" style={{ transform: `rotateX(${pitch}deg) rotateY(${-yaw}deg)` }}>
+        <div className="cw-world">
           <div className="cw-floor"/>
           <div className="cw-ceiling"/>
           {Array.from({ length: 6 }, (_, index) => (
@@ -68,11 +68,13 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
             </div>
           ))}
           <div className="cw-exhibit cw-center-exhibit" style={{ transform: 'translateZ(0)' }}>
+            <div className="cw-object-rotator" style={{ transform: `rotateX(${pitch}deg) rotateY(${-yaw}deg)` }}>
             <div className={`cw-object cw-object-${selectedIndex % 4}`}>
               <div className="cw-object-top"/>
               <div className="cw-object-front"/>
               <div className="cw-object-side"/>
               <div className="cw-object-glow"/>
+            </div>
             </div>
             <div className="cw-plinth"><span/><span/><span/></div>
             <div className="cw-caption">
@@ -84,13 +86,13 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
 
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-between px-4 pb-4 sm:px-6">
-          <span className="rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[9px] tracking-[.14em] text-white/55 backdrop-blur">DRAG: 360° + UP / DOWN</span>
+          <span className="rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[9px] tracking-[.14em] text-white/55 backdrop-blur">DRAG: ROTATE OBJECT</span>
           <span className="rounded-full border border-[#c5a66a]/25 bg-black/45 px-3 py-2 text-[9px] tracking-[.14em] text-[#d8bd83] backdrop-blur">OBJECT CENTER STAGE</span>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-4 py-3 sm:px-6">
-        <p className="max-w-xl text-[11px] leading-5 text-slate-500"><ShieldCheck className="mr-1 inline size-3.5 text-[#c5a66a]"/>Objek dipajang di tengah ruangan. Geser untuk memutar sudut pandang 360° dan pilih objek pameran berikutnya.</p>
+        <p className="max-w-xl text-[11px] leading-5 text-slate-500"><ShieldCheck className="mr-1 inline size-3.5 text-[#c5a66a]"/>Objek dipajang di tengah ruangan. Geser untuk memutar objek 360°. Latar dan panggung tetap diam.</p>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setSelectedIndex(value => samples.length ? (value - 1 + samples.length) % samples.length : 0)} className="flex h-9 items-center justify-center rounded-lg border border-white/10 px-3 text-[9px] text-slate-300" aria-label="Objek sebelumnya">PREV</button>
           <button type="button" onClick={() => rotate(-35)} className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 transition hover:border-[#c5a66a]/50 hover:text-[#d8bd83]" aria-label="Putar ke kiri"><ArrowLeft className="size-4"/></button>
@@ -105,7 +107,8 @@ export function VirtualShowroom({ samples }: { samples: ShowroomSample[] }) {
       <style jsx>{`
         .cw-viewport { perspective: 1050px; perspective-origin: 50% 46%; touch-action: pan-y; background: radial-gradient(ellipse at 50% 42%, #1a2028 0%, #0c1118 48%, #07090d 100%); }
         .cw-horizon { background: radial-gradient(ellipse at 50% 82%, rgba(197,166,106,.13), transparent 42%), linear-gradient(180deg, transparent 48%, rgba(0,0,0,.5)); }
-        .cw-world { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .08s linear; }
+        .cw-world { position:absolute; inset:0; transform-style:preserve-3d; }
+        .cw-object-rotator { position:relative; width:100%; height:104px; transform-style:preserve-3d; transition:transform .08s linear; }
         .cw-floor { position:absolute; left:50%; top:61%; width:1150px; height:1150px; margin-left:-575px; border-radius:50%; transform:rotateX(90deg) translateZ(-210px); transform-style:preserve-3d; background:repeating-linear-gradient(0deg,rgba(197,166,106,.12) 0 1px,transparent 1px 78px),repeating-linear-gradient(90deg,rgba(197,166,106,.12) 0 1px,transparent 1px 78px),radial-gradient(circle,#202630 0%,#10151d 55%,#080b10 78%); box-shadow:0 0 100px rgba(0,0,0,.8); }
         .cw-ceiling { position:absolute; left:50%; top:40%; width:1000px; height:1000px; margin-left:-500px; border-radius:50%; transform:rotateX(90deg) translateZ(390px); border:1px solid rgba(197,166,106,.12); background:radial-gradient(circle,rgba(197,166,106,.07),transparent 62%); }
         .cw-wall { position:absolute; left:50%; top:10%; width:660px; height:78%; margin-left:-330px; transform-style:preserve-3d; border:1px solid rgba(197,166,106,.24); background:linear-gradient(90deg,rgba(8,12,18,.98),rgba(24,30,38,.96) 50%,rgba(8,12,18,.98)); box-shadow:inset 0 0 70px rgba(0,0,0,.75); }
