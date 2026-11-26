@@ -78,11 +78,11 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
   const activeAgents = agents.filter((a) => /active|running|online/i.test(a.status)).length
   const money = (n: number) => idr(n)
   return <div className="min-h-screen bg-[#070a0f] text-[#f2f5f8] lg:h-screen lg:overflow-hidden">
-    <Head><title>Cyber Wealth — Executive Office</title><meta name="robots" content="noindex,nofollow" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="theme-color" content="#070a0f" /></Head>
+    <Head><title>Cyber Teknologi — Executive Office</title><meta name="robots" content="noindex,nofollow" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="theme-color" content="#070a0f" /></Head>
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] flex-col border-r border-white/[0.065] bg-[#0a0e14] lg:flex">
       <Link href="/owner" className="flex h-[76px] items-center gap-3 border-b border-white/[0.065] px-6">
-        <span className="flex size-10 items-center justify-center rounded-[13px] border border-[#b7a16a]/30 bg-gradient-to-br from-[#b7a16a] to-[#78613a] text-sm font-black tracking-tight text-[#090c10] shadow-[0_4px_24px_rgba(183,161,106,.16)]">CW</span>
-        <span><b className="block text-[13px] font-semibold tracking-[.17em]">CYBER WEALTH</b><small className="mt-1 block font-mono text-[9px] tracking-[.19em] text-[#8c929c]">EXECUTIVE OFFICE</small></span>
+        <span className="flex size-10 items-center justify-center rounded-[13px] border border-[#b7a16a]/30 bg-gradient-to-br from-[#b7a16a] to-[#78613a] text-sm font-black tracking-tight text-[#090c10] shadow-[0_4px_24px_rgba(183,161,106,.16)]">CT</span>
+        <span><b className="block text-[13px] font-semibold tracking-[.17em]">CYBER TEKNOLOGI</b><small className="mt-1 block font-mono text-[9px] tracking-[.19em] text-[#8c929c]">EXECUTIVE OFFICE</small></span>
       </Link>
       <div className="px-4 pt-7">
         <p className="px-3 pb-3 font-mono text-[9px] uppercase tracking-[.2em] text-[#646d79]">Main workspace</p>
@@ -108,7 +108,7 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
     <div className="lg:pl-[252px]">
       <header className="sticky top-0 z-20 border-b border-white/[0.065] bg-[#090d13]/90 backdrop-blur-2xl">
         <div className="flex h-[76px] items-center justify-between gap-4 px-5 sm:px-8 xl:px-10">
-          <div><p className="font-mono text-[9px] uppercase tracking-[.22em] text-[#7f8995]">CYBER WEALTH <span className="px-1 text-[#b7a16a]">/</span> PRIVATE OFFICE</p><h1 className="mt-1 text-[15px] font-semibold tracking-wide">Executive overview</h1></div>
+          <div><p className="font-mono text-[9px] uppercase tracking-[.22em] text-[#7f8995]">CYBER TEKNOLOGI <span className="px-1 text-[#b7a16a]">/</span> PRIVATE OFFICE</p><h1 className="mt-1 text-[15px] font-semibold tracking-wide">Executive overview</h1></div>
           <div className="flex items-center gap-3">
             <Link href="/" target="_blank" className="inline-flex items-center gap-2 rounded-xl border border-[#b7a16a]/30 bg-[#b7a16a]/[0.08] px-3.5 py-2.5 text-[11px] font-semibold text-[#d8c18b] transition hover:bg-[#b7a16a]/[0.15]"><ExternalLink size={13}/> View public website</Link>
             <div className="hidden h-8 w-px bg-white/10 sm:block"/>
@@ -170,7 +170,7 @@ function OwnerDashboard({ analytics, owner, revenue, expenses, netCash, assets, 
           </Panel>
         </section>
         <section className="grid gap-4 lg:hidden"><Panel title="Products" subtitle="Latest catalogue records">{products.length?<div className="divide-y divide-white/[0.055]">{products.map(p=><div key={p.id} className="flex items-center justify-between gap-3 py-3"><div><p className="text-sm font-medium">{p.name}</p><p className="text-[10px] text-[#778391]">{p.status}</p></div><span className="text-xs font-semibold">{money(p.price)}</span></div>)}</div>:<Empty text="No products recorded yet."/>}</Panel><Panel title="Recent system activity" subtitle="Recorded operational logs">{activity.length?<div className="divide-y divide-white/[0.055]">{activity.map(item=><div key={item.id} className="py-3"><p className="text-xs font-medium">{item.agentName||item.actor}: {item.action}</p><p className="mt-1 text-[10px] leading-5 text-[#778391]">{item.detail}</p></div>)}</div>:<Empty text="No activity recorded yet."/>}</Panel></section>
-        <footer className="flex flex-wrap justify-between gap-2 border-t border-white/[0.07] py-4 text-[9px] text-[#626d79]"><span>PRIVATE ACCOUNT · {owner.email}</span><span>CYBER WEALTH © EXECUTIVE OFFICE</span></footer>
+        <footer className="flex flex-wrap justify-between gap-2 border-t border-white/[0.07] py-4 text-[9px] text-[#626d79]"><span>PRIVATE ACCOUNT · {owner.email}</span><span>CYBER TEKNOLOGI © EXECUTIVE OFFICE</span></footer>
       </main>
     </div>
   </div>
