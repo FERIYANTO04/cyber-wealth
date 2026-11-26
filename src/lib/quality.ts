@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { getFile } from './storage'
 
 export type DeliverableInspection = {
@@ -22,27 +24,69 @@ export async function inspectProductDeliverable(
   if (/^https?:\/\//i.test(fileKey)) return { passed: false, wordCount: 0, headingCount: 0, byteCount: 0, issues: ['Berkas harus tersimpan privat di object storage.'] }
   if (/(?:draft|draf|placeholder|temp)/i.test(fileName ?? '')) issues.push('Nama berkas masih menandakan draf atau placeholder.')
 
-  let stored: Awaited<ReturnType<typeof getFile>>
-  try {
-    stored = await getFile(fileKey)
-  } catch {
-    return { passed: false, wordCount: 0, headingCount: 0, byteCount: 0, issues: [...issues, 'Object storage gagal diperiksa.'] }
+  let rawBytes: Uint8Array
+  let contentType = ''
+  // This one bundled interactive tool is intentionally shipped with the app,
+  // rather than Object Storage. Validate the exact allow-listed asset instead
+  // of incorrectly reporting it as missing from private storage.
+  if (
+    fileKey === 'bundled:kalkulator-hpp-umkm.html' &&
+    fileName === 'Cyber-Wealth-Kalkulator-HPP-UMKM.html'
+  ) {
+    try {
+      rawBytes = new Uint8Array(await readFile(join(process.cwd(), 'public', 'downloads', 'kalkulator-hpp-umkm.html')))
+      contentType = 'text/html'
+    } catch {
+      return { passed: false, wordCount: 0, headingCount: 0, byteCount: 0, issues: [...issues, 'Berkas HTML bawaan aplikasi tidak ditemukan.'] }
+    }
+  } else {
+    let stored: Awaited<ReturnType<typeof getFile>>
+    try {
+      stored = await getFile(fileKey)
+    } catch {
+      return { passed: false, wordCount: 0, headingCount: 0, byteCount: 0, issues: [...issues, 'Object storage gagal diperiksa.'] }
+    }
+    if (!stored) return { passed: false, wordCount: 0, headingCount: 0, byteCount: 0, issues: [...issues, 'Berkas tidak ditemukan atau tidak dapat diakses di object storage.'] }
+    rawBytes = new Uint8Array(stored.data)
+    contentType = stored.contentType
   }
-  if (!stored) return { passed: false, wordCount: 0, headingCount: 0, byteCount: 0, issues: [...issues, 'Berkas tidak ditemukan atau tidak dapat diakses di object storage.'] }
 
-  const bytes = new Uint8Array(stored.data)
-  const byteCount = bytes.byteLength
-  const isText = /\.(md|markdown|txt)$/i.test(fileName ?? '') || stored.contentType.startsWith('text/')
+  const byteCount = rawBytes.byteLength
+  const isHtml = /\.html?$/i.test(fileName ?? '') && contentType.startsWith('text/')
+  const isText = /\.(md|markdown|txt)$/i.test(fileName ?? '') || contentType.startsWith('text/')
   if (!isText) return { passed: false, wordCount: 0, headingCount: 0, byteCount, issues: [...issues, 'Format berkas belum didukung pemeriksaan isi otomatis; perlu pemeriksaan isi sebelum dijual.'] }
   if (byteCount < 1200) issues.push('Berkas terlalu pendek untuk dianggap sebagai produk digital lengkap.')
 
-  const content = new TextDecoder('utf-8', { fatal: false }).decode(bytes).replace(/\u0000/g, '').trim()
+  let content = new TextDecoder('utf-8', { fatal: false }).decode(rawBytes).replace(/\u0000/g, '').trim()
+  let headingCount = 0
+  if (isHtml) {
+    const headings = content.match(/<h[1-3]\b[^>]*>[\s\S]*?<\/h[1-3]>/gi) ?? []
+    const sections = content.match(/<section\b/gi) ?? []
+    const inputs = content.match(/<input\b/gi) ?? []
+    const hasWorkingCalculator = /function\s+calc\s*\(/i.test(content) && /addEventListener\(['"]input['"]/i.test(content)
+    headingCount = headings.length
+    content = content
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;|&#160;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;|&#34;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+    if (sections.length < 2 || inputs.length < 5 || !hasWorkingCalculator) {
+      issues.push('Alat HTML belum memiliki struktur interaktif dan fungsi kalkulasi yang cukup.')
+    }
+  } else {
+    const headings = content.match(/^#{1,3}\s+\S.+$/gm) ?? []
+    headingCount = headings.length
+  }
+
   const words = content.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) ?? []
-  const headings = content.match(/^#{1,3}\s+\S.+$/gm) ?? []
   const wordCount = words.length
-  const headingCount = headings.length
   if (wordCount < 220) issues.push('Isi kurang dari 220 kata; materi perlu dilengkapi.')
-  if (headingCount < 4) issues.push('Struktur kurang dari 4 bagian utama; materi perlu ditata.')
+  if (!isHtml && headingCount < 4) issues.push('Struktur kurang dari 4 bagian utama; materi perlu ditata.')
   if (/(?:^|\n)\s*(?:TODO|TBD|LOREM IPSUM|ISI DI SINI|TULIS DI SINI|BELUM DILENGKAPI|PLACEHOLDER)\b/im.test(content)) issues.push('Masih ditemukan teks placeholder atau instruksi penyusunan.')
   if (/\uFFFD{3,}/.test(content)) issues.push('Terdapat indikasi teks rusak atau encoding bermasalah.')
 
