@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { chatWithAi } from './ai'
+import { chatWithAi, testPrimaryAi } from './ai'
 import { putFile, deleteFile } from './storage'
 import { isPlaceholder } from './env'
 
@@ -67,25 +67,33 @@ export function bankTransferStatus(): { state: CheckState; message: string } {
 
 /** Calls the model with a one-token prompt. The answer is not used as content. */
 export async function testAi(): Promise<{ state: CheckState; message: string }> {
-  // Exercise the same primary-plus-fallback path used by the agents. Testing only
-  // the primary provider can report a false failure when Neon is unavailable but
-  // the configured Groq fallback is healthy.
-  const outcome = await chatWithAi({
+  // Test the configured primary provider separately so a successful Groq
+  // fallback cannot hide a broken KiosAPI/Neon primary credential.
+  const primary = await testPrimaryAi()
+  if (primary.ok) {
+    return { state: 'ready', message: `Penyedia AI utama ${primary.model} menjawab. Jalur utama siap digunakan.` }
+  }
+
+  // Agents may still operate on an available fallback. Report both facts:
+  // primary readiness and whether the fallback path can currently answer.
+  const fallback = await chatWithAi({
     messages: [{ role: 'user', content: 'Balas dengan satu kata: siap' }],
-    maxTokens: 256,
+    maxTokens: 128,
     temperature: 0,
   })
-
-  if (outcome.ok) {
-    return { state: 'ready', message: `Model ${outcome.model} menjawab. Jalur AI siap digunakan.` }
+  if (fallback.ok) {
+    return {
+      state: 'ready',
+      message: `Penyedia utama belum siap: ${primary.reason} Jalur cadangan ${fallback.model} masih menjawab.`,
+    }
   }
-  if (/belum ada kredensial/i.test(outcome.reason)) {
-    return { state: 'missing', message: outcome.reason }
+  if (/credential belum tersedia|belum ada kredensial/i.test(primary.reason)) {
+    return { state: 'missing', message: `${primary.reason} Jalur cadangan juga gagal: ${fallback.reason}` }
   }
-  if (/menolak autentikasi \((401|403)\)/i.test(outcome.reason)) {
-    return { state: 'invalid', message: outcome.reason }
+  if (/menolak autentikasi ((401|403))/i.test(primary.reason)) {
+    return { state: 'invalid', message: `${primary.reason} Jalur cadangan juga gagal: ${fallback.reason}` }
   }
-  return { state: 'error', message: outcome.reason }
+  return { state: 'error', message: `${primary.reason} Jalur cadangan juga gagal: ${fallback.reason}` }
 }
 
 export async function storageStatus(): Promise<{ state: CheckState; message: string }> {
