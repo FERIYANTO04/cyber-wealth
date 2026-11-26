@@ -85,7 +85,7 @@ export async function inspectProductDeliverable(
 
   const words = content.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) ?? []
   const wordCount = words.length
-  if (wordCount < 220) issues.push('Isi kurang dari 220 kata; materi perlu dilengkapi.')
+  if (wordCount < (isHtml ? 100 : 220)) issues.push(isHtml ? 'Konten alat interaktif terlalu minim untuk menjelaskan penggunaan.' : 'Isi kurang dari 220 kata; materi perlu dilengkapi.')
   if (!isHtml && headingCount < 4) issues.push('Struktur kurang dari 4 bagian utama; materi perlu ditata.')
   if (/(?:^|\n)\s*(?:TODO|TBD|LOREM IPSUM|ISI DI SINI|TULIS DI SINI|BELUM DILENGKAPI|PLACEHOLDER)\b/im.test(content)) issues.push('Masih ditemukan teks placeholder atau instruksi penyusunan.')
   if (/\uFFFD{3,}/.test(content)) issues.push('Terdapat indikasi teks rusak atau encoding bermasalah.')
