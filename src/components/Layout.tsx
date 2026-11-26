@@ -7,7 +7,7 @@ interface LayoutProps {
   children: ReactNode
 }
 
-export function Layout({ title = 'My App', description, children }: LayoutProps) {
+export function Layout({ title = 'Cyber Teknologi', description, children }: LayoutProps) {
   return (
     <>
       <Head>
