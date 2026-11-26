@@ -93,13 +93,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return ['Migrasi berkas gagal; periksa log server.']
     })
 
-    const [aiCheck, emailCheck, storageCheck, paymentCheck] = await Promise.all([
-      testAi().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'AI check failed' })),
+    // Avoid consuming paid/rate-limited AI tokens on a health probe every five minutes.
+    // Owner-triggered integration tests verify the provider; agent runs report live failures.
+    const [emailCheck, storageCheck, paymentCheck] = await Promise.all([
       testEmail().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'Email check failed' })),
       storageStatus().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'Storage check failed' })),
       testMidtrans().catch((error) => ({ state: 'error' as const, message: error instanceof Error ? error.message : 'Midtrans check failed' })),
     ])
-    const integrations = { ai: aiCheck, email: emailCheck, storage: storageCheck, midtrans: paymentCheck }
+    const integrations = {
+      ai: { state: 'unverified' as const, message: 'Pemeriksaan AI dilewati scheduler untuk menghemat kuota. Jalankan tes AI dari halaman Integrasi atau lihat hasil eksekusi agen.' },
+      email: emailCheck,
+      storage: storageCheck,
+      midtrans: paymentCheck,
+    }
     await logActivity({
       actor: 'system',
       action: 'Pemeriksaan integrasi terjadwal',
