@@ -34,6 +34,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   return {
     props: {
+      orderToken: token,
       order: {
         code: order.code,
         productName: order.productName,
@@ -54,12 +55,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   }
 }
 
-type Props = { order: OrderDetail; downloadUrl: string | null; deliverableNote: string | null; bankTransfer: { bankName: string; accountName: string; accountNumber: string; instructions: string } | null }
+type Props = { orderToken: string; order: OrderDetail; downloadUrl: string | null; deliverableNote: string | null; bankTransfer: { bankName: string; accountName: string; accountNumber: string; instructions: string } | null }
 
-function OrderPage({ order, downloadUrl, deliverableNote, bankTransfer }: Props) {
+function OrderPage({ orderToken, order, downloadUrl, deliverableNote, bankTransfer }: Props) {
   return (
     <PageStack>
-      <OrderStatusPanel order={order} orderToken={token} downloadUrl={downloadUrl} deliverableNote={deliverableNote} bankTransfer={bankTransfer} />
+      <OrderStatusPanel order={order} orderToken={orderToken} downloadUrl={downloadUrl} deliverableNote={deliverableNote} bankTransfer={bankTransfer} />
       <InlineNote>
         Simpan halaman ini. Alamatnya adalah kunci pesanan Anda dan hanya bisa dibuka oleh siapa pun yang memilikinya.
       </InlineNote>
