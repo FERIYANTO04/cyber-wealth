@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { cn } from '@/lib/utils'
 import { CheckCircle2, Clock, Download, XCircle } from 'lucide-react'
 import { Badge, Button, Panel, PanelBody, PanelHead, SignalLink } from '@/components/ui'
@@ -65,12 +67,43 @@ export function OrderStatusPanel({
   downloadUrl,
   deliverableNote,
   bankTransfer,
+  orderToken,
 }: {
   order: OrderDetail
   downloadUrl: string | null
   deliverableNote: string | null
   bankTransfer: { bankName: string; accountName: string; accountNumber: string; instructions: string } | null
+  orderToken: string
 }) {
+  const router = useRouter()
+  useEffect(() => {
+    if (order.status !== 'pending' || order.provider !== 'midtrans' || !orderToken) return
+    let attempts = 0
+    let stopped = false
+    const timer = window.setInterval(async () => {
+      attempts += 1
+      try {
+        const response = await fetch('/api/orders/status?token=' + encodeURIComponent(orderToken), { cache: 'no-store' })
+        if (response.ok) {
+          const current = await response.json() as { status?: string }
+          if (!stopped && current.status && current.status !== order.status) {
+            stopped = true
+            window.clearInterval(timer)
+            router.reload()
+            return
+          }
+        }
+      } catch {
+        // A temporary network issue should not stop the next status check.
+      }
+      if (attempts >= 36) window.clearInterval(timer)
+    }, 5000)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+    }
+  }, [order.status, order.provider, orderToken, router])
+
   const tag = STATUS_TAG[order.status] ?? { label: order.status, tone: 'hold' as const }
 
   return (
@@ -134,7 +167,7 @@ export function OrderStatusPanel({
               icon="wait"
               tone="hold"
               title="Menunggu pembayaran"
-              body="Selesaikan pembayaran melalui halaman resmi penyedia. Produk dikirim setelah pembayaran dikonfirmasi."
+              body="Selesaikan pembayaran melalui halaman resmi penyedia. Status pesanan diperiksa otomatis setiap beberapa detik; produk tersedia setelah pembayaran dikonfirmasi."
             />
             <a href={order.invoiceUrl} className="w-fit">
               <Button size="sm">Lanjutkan pembayaran</Button>
