@@ -4,7 +4,12 @@ import path from 'node:path'
 import { getOrderByToken, getProductById } from '@/lib/revenue'
 import { getFile } from '@/lib/storage'
 
-const bundledFiles: Record<string, { file: string; name: string; contentType?: string }> = {\n  'kalkulator-hpp-umkm': {\n    file: 'kalkulator-hpp-umkm.html',\n    name: 'Cyber-Wealth-Kalkulator-HPP-UMKM.html',\n    contentType: 'text/html; charset=utf-8',\n  },
+const bundledFiles: Record<string, { file: string; name: string; contentType?: string }> = {
+  'kalkulator-hpp-umkm': {
+    file: 'kalkulator-hpp-umkm.html',
+    name: 'Cyber-Wealth-Kalkulator-HPP-UMKM.html',
+    contentType: 'text/html; charset=utf-8',
+  },
   'panduan-konten-media-sosial': {
     file: 'panduan-konten-media-sosial.pdf',
     name: 'Panduan-Konten-Media-Sosial-30-Hari.pdf',
@@ -12,7 +17,8 @@ const bundledFiles: Record<string, { file: string; name: string; contentType?: s
 }
 
 function safeDownloadName(value: string): string {
-  return value.replace(/[\r\n"\\]/g, '_').slice(0, 160) || 'unduhan'
+  return value.replace(/[\r
+"\\]/g, '_').slice(0, 160) || 'unduhan'
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -31,6 +37,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // customer delivery aligned with the Owner's current uploaded file, rather
     // than silently serving an older bundled copy.
     const product = await getProductById(order.productId)
+    if (product?.fileKey?.startsWith('bundled:')) {
+      const deliverable = bundledFiles[order.productSlug]
+      if (!deliverable || product.fileKey !== 'bundled:' + deliverable.file) return res.status(404).json({ error: 'Berkas produk belum tersedia.' })
+      const filePath = path.join(process.cwd(), 'public', 'downloads', deliverable.file)
+      const file = await readFile(filePath)
+      res.setHeader('Content-Type', deliverable.contentType || 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename="${safeDownloadName(deliverable.name)}"`)
+      res.setHeader('Content-Length', String(file.byteLength))
+      res.setHeader('Cache-Control', 'private, no-store, max-age=0')
+      return res.status(200).send(file)
+    }
     if (product?.fileKey) {
       const stored = await getFile(product.fileKey)
       if (!stored) {
