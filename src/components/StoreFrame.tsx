@@ -17,24 +17,24 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
     { href: '/jasa', label: 'Digital Services', group: 'BUSINESS' },
     { href: '/toko', label: 'Digital Products', group: 'BUSINESS' },
     { href: '/harga', label: 'Plans & Pricing', group: 'BUSINESS' },
-    { href: '/tentang', label: 'About Cyber Wealth', group: 'COMPANY' },
+    { href: '/tentang', label: 'About Cyber Teknologi', group: 'COMPANY' },
     { href: '/kontak', label: 'Contact & Support', group: 'COMPANY' },
   ]
   return (
     <div data-frame="store" data-frame-variant={variant} className="min-h-screen bg-[#080806] text-[#f3eee3]">
       <Head>
-        <title>{title || 'Cyber Wealth'} — Cyber Wealth</title>
+        <title>{title || 'Cyber Teknologi'} — Cyber Teknologi</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#080806" />
-        <meta name="description" content={description ?? intent ?? 'Cyber Wealth — digital business solutions'} />
+        <meta name="description" content={description ?? intent ?? 'Cyber Teknologi — digital business solutions'} />
       </Head>
       <div className="min-h-screen md:grid md:grid-cols-[238px_minmax(0,1fr)]">
         <aside className="relative z-40 border-b border-[#c7a66a]/25 bg-[#0b0a08] md:sticky md:top-0 md:h-screen md:border-b-0 md:border-r md:border-[#c7a66a]/20">
           <div className="flex items-center justify-between px-5 py-5 md:block md:px-6 md:py-8">
             <Link href="/" className="flex items-center gap-3">
-              <span className="font-serif text-4xl leading-none text-[#d9bb7b]">CW</span>
+              <span className="font-serif text-4xl leading-none text-[#d9bb7b]">CT</span>
               <span className="h-9 w-px bg-[#c7a66a]/45"/>
-              <span><span className="block text-[11px] font-semibold tracking-[.2em] text-[#f4ead5]">CYBER WEALTH</span><span className="mt-1 block text-[7px] uppercase tracking-[.34em] text-[#9b8b6c]">Digital ecosystem</span></span>
+              <span><span className="block text-[11px] font-semibold tracking-[.2em] text-[#f4ead5]">CYBER TEKNOLOGI</span><span className="mt-1 block text-[7px] uppercase tracking-[.34em] text-[#9b8b6c]">Technology ecosystem</span></span>
             </Link>
             <Link href="/kontak" className="inline-flex items-center gap-2 rounded-full border border-[#c7a66a]/60 px-3 py-2 text-[8px] font-bold uppercase tracking-[.14em] text-[#e4c789] md:hidden">Contact <ArrowUpRight className="size-3"/></Link>
           </div>
@@ -49,7 +49,7 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
         </aside>
         <div className="relative min-w-0">
           <header className="hidden h-[62px] items-center justify-between border-b border-[#c7a66a]/15 bg-[#090907]/75 px-7 md:flex xl:px-10">
-            <p className="font-mono text-[8px] uppercase tracking-[.22em] text-[#837964]">CYBER WEALTH <span className="mx-2 text-[#b99a62]">/</span> DIGITAL ECOSYSTEM</p>
+            <p className="font-mono text-[8px] uppercase tracking-[.22em] text-[#837964]">CYBER TEKNOLOGI <span className="mx-2 text-[#b99a62]">/</span> DIGITAL ECOSYSTEM</p>
             <Link href="/kontak" className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[.15em] text-[#d8bd83] hover:text-white">Contact <ArrowUpRight className="size-3"/></Link>
           </header>
           <div className="pointer-events-none absolute -right-48 -top-36 size-[580px] rounded-full border border-[#c7a66a]/10"/>
@@ -65,9 +65,9 @@ export function StoreFrame({ title, eyebrow, intent, actions, back, variant = 'r
           </main>
           <footer className="border-t border-[#c7a66a]/20 bg-[#090907]">
             <div className="grid gap-7 px-5 py-8 sm:grid-cols-3 sm:px-7 xl:px-10">
-              <div><div className="font-serif text-2xl text-[#d9bb7b]">CW <span className="font-sans text-[10px] font-semibold tracking-[.2em] text-[#f1e8d8]">CYBER WEALTH</span></div><p className="mt-3 max-w-sm text-[10px] leading-6 text-[#817969]">A global digital ecosystem for creative production, technology, intelligence, and ideas built for what comes next.</p></div>
+              <div><div className="font-serif text-2xl text-[#d9bb7b]">CT <span className="font-sans text-[10px] font-semibold tracking-[.2em] text-[#f1e8d8]">CYBER TEKNOLOGI</span></div><p className="mt-3 max-w-sm text-[10px] leading-6 text-[#817969]">A technology company for creative production, technology, intelligence, and ideas built for what comes next.</p></div>
               <div><p className="text-[8px] uppercase tracking-[.24em] text-[#c7a66a]">Explore</p><div className="mt-3 grid gap-2 text-[10px] text-[#a49c8e]"><Link href="/marketplace">Marketplace</Link><Link href="/jasa">Digital services</Link><Link href="/toko">Digital products</Link></div></div>
-              <div><p className="text-[8px] uppercase tracking-[.24em] text-[#c7a66a]">Company</p><div className="mt-3 grid gap-2 text-[10px] text-[#a49c8e]"><Link href="/tentang">About Cyber Wealth</Link><Link href="/kontak">Contact</Link><Link href="/privasi">Privacy</Link></div></div>
+              <div><p className="text-[8px] uppercase tracking-[.24em] text-[#c7a66a]">Company</p><div className="mt-3 grid gap-2 text-[10px] text-[#a49c8e]"><Link href="/tentang">About Cyber Teknologi</Link><Link href="/kontak">Contact</Link><Link href="/privasi">Privacy</Link></div></div>
             </div>
           </footer>
         </div>
