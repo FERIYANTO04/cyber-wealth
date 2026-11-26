@@ -15,6 +15,7 @@ import { putFile } from '@/lib/storage'
 // Scheduled hosts call this endpoint with: Authorization: Bearer <CRON_SECRET>.
 // Keep CRON_SECRET private; never expose it through NEXT_PUBLIC_* variables.
 let running = false
+let runningSince = 0
 
 function authorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET
@@ -64,9 +65,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!authorized(req)) {
     return res.status(401).json({ error: 'Otorisasi cron tidak valid atau CRON_SECRET belum dikonfigurasi.' })
   }
+  if (running && Date.now() - runningSince > 20 * 60 * 1000) {
+    console.warn('[cron autopilot] Releasing an in-memory lock older than 20 minutes; database run recovery will decide whether work can resume.')
+    running = false
+    runningSince = 0
+  }
   if (running) return res.status(409).json({ ran: false, reason: 'Putaran sedang berjalan pada instance ini.' })
 
   running = true
+  runningSince = Date.now()
   let handedOffToBackground = false
   try {
     // Billing, housekeeping, migrations, and integration probes are short,
@@ -129,6 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       .finally(() => {
         running = false
+        runningSince = 0
       })
 
     return res.status(202).json({ ran: true, queued: true, message: 'Putaran autopilot berjalan di latar belakang.', billing, housekeeping, productFileMigration, integrations })
@@ -136,6 +144,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('[cron autopilot]', error)
     return res.status(500).json({ ran: false, reason: 'Putaran gagal. Periksa log server.' })
   } finally {
-    if (!handedOffToBackground) running = false
+    if (!handedOffToBackground) {
+      running = false
+      runningSince = 0
+    }
   }
 }
